@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
@@ -25,14 +27,25 @@ export default function Home() {
             </div>
             
             <div className="space-y-3">
-              <a 
+              <Link 
                 href="/chat"
                 className="block w-full bg-gradient-to-r from-purple-600 to-blue-600 
                          hover:from-purple-700 hover:to-blue-700 text-white font-medium 
-                         py-3 px-6 rounded-lg transition-all duration-200 text-center"
+                         py-3 px-6 rounded-lg transition-all duration-200 text-center
+                         cursor-pointer"
               >
                 🚀 开始AI聊天测试
-              </a>
+              </Link>
+              
+              <Link 
+                href="/debug"
+                className="block w-full bg-gradient-to-r from-gray-600 to-gray-700 
+                         hover:from-gray-700 hover:to-gray-800 text-white font-medium 
+                         py-2 px-4 rounded-lg transition-all duration-200 text-center
+                         cursor-pointer text-sm"
+              >
+                🔧 调试面板
+              </Link>
               
               <div className="text-xs text-gray-500 text-center">
                 体验与AI的流式对话

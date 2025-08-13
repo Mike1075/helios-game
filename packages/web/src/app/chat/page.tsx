@@ -2,6 +2,7 @@
 
 import { useChat } from 'ai/react'
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function ChatPage() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
@@ -20,9 +21,18 @@ export default function ChatPage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-            Helios Chat
-          </h1>
+          <div className="flex items-center justify-center mb-4">
+            <Link 
+              href="/"
+              className="mr-4 text-gray-400 hover:text-white transition-colors"
+              title="返回主页"
+            >
+              ← 返回
+            </Link>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+              Helios Chat
+            </h1>
+          </div>
           <p className="text-gray-300">与AI对话，体验意识的交流</p>
         </div>
 
