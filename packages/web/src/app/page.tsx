@@ -53,7 +53,7 @@ export default function Home() {
                 transition: 'all 0.2s'
               }}
             >
-              🚀 开始AI聊天测试 (已修复)
+              🚀 开始AI聊天 (直连AI Gateway)
             </Link>
             
             <Link 
@@ -91,7 +91,7 @@ export default function Home() {
             </Link>
             
             <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', marginTop: '10px' }}>
-              体验与AI的流式对话
+              基于AI SDK 5 + Vercel AI Gateway
             </div>
           </div>
         </div>
