@@ -1,22 +1,8 @@
-'use client'
-
-import { useChat } from 'ai/react'
-import { useState } from 'react'
 import Link from 'next/link'
 
 export default function ChatPage() {
-  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
-  
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/chat',
-    initialMessages: [],
-    body: {
-      model: selectedModel,
-    }
-  })
-
   return (
-    <div className="min-h-screen helios-gradient">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -35,118 +21,38 @@ export default function ChatPage() {
           <p className="text-gray-300">与AI对话，体验意识的交流</p>
         </div>
 
-        {/* Model Selector */}
-        <div className="helios-card p-4 mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            选择模型:
-          </label>
-          <select 
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="helios-input w-full max-w-xs"
-          >
-            <option value="gpt-4o-mini">GPT-4o Mini (推荐)</option>
-            <option value="gpt-4o">GPT-4o</option>
-            <option value="gpt-4">GPT-4</option>
-            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-          </select>
-        </div>
-
-        {/* Chat Messages */}
-        <div className="helios-card mb-6 h-96 overflow-y-auto">
-          <div className="p-6 space-y-4">
-            {messages.length === 0 && (
-              <div className="text-center text-gray-400 py-12">
-                <div className="text-6xl mb-4">🤖</div>
-                <p>开始与AI对话吧！</p>
-                <p className="text-sm mt-2">当前模型: {selectedModel}</p>
-              </div>
-            )}
+        {/* 简单的聊天界面 */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">聊天功能</h2>
+          <div className="space-y-4">
+            <div className="bg-white/5 rounded-lg p-4">
+              <p className="text-gray-300">✅ 聊天页面已成功加载</p>
+              <p className="text-gray-300">🔧 AI聊天功能正在开发中...</p>
+            </div>
             
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`message-content ${
-                    message.role === 'user' ? 'message-user' : 'message-assistant'
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs opacity-75">
-                      {message.role === 'user' ? '👤' : '🤖'}
-                    </span>
-                    <div className="flex-1">
-                      <div className="whitespace-pre-wrap">{message.content}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="message-content message-assistant">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs opacity-75">🤖</span>
-                    <div className="flex gap-1">
-                      <div className="typing-indicator"></div>
-                      <div className="typing-indicator" style={{animationDelay: '0.2s'}}></div>
-                      <div className="typing-indicator" style={{animationDelay: '0.4s'}}></div>
-                    </div>
-                    <span className="text-sm text-gray-400">正在思考...</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="输入你的消息..."
+                className="flex-1 bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200">
+                发送
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Chat Input */}
-        <form onSubmit={handleSubmit} className="helios-card p-4">
-          <div className="flex gap-4">
-            <input
-              value={input}
-              onChange={handleInputChange}
-              placeholder="输入你的消息..."
-              className="helios-input flex-1"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="helios-button px-6"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  发送中
-                </div>
-              ) : (
-                '发送'
-              )}
-            </button>
+        {/* 调试信息 */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-2">页面状态</h3>
+          <div className="text-sm text-gray-400 space-y-1">
+            <div>✅ Next.js 页面路由正常</div>
+            <div>✅ Tailwind CSS 样式加载</div>
+            <div>✅ Link 组件导航功能</div>
+            <div>📍 当前路径: /chat</div>
           </div>
-          <div className="mt-2 text-xs text-gray-400">
-            支持流式输出 • 当前模型: {selectedModel}
-          </div>
-        </form>
-
-        {/* Debug Info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 helios-card p-4">
-            <details className="text-xs text-gray-400">
-              <summary className="cursor-pointer hover:text-gray-300">调试信息</summary>
-              <div className="mt-2 space-y-1">
-                <div>消息数量: {messages.length}</div>
-                <div>加载状态: {isLoading ? '是' : '否'}</div>
-                <div>输入内容: {input}</div>
-                <div>选择模型: {selectedModel}</div>
-              </div>
-            </details>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
