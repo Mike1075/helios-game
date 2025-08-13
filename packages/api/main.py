@@ -163,10 +163,21 @@ async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGener
     从Vercel AI Gateway获取流式响应
     """
     try:
-        # 使用标准OpenAI兼容端点
-        api_url = f"{VERCEL_AI_GATEWAY_URL.rstrip('/')}/v1/chat/completions"
+        # 智能构建API URL，避免重复路径
+        base_url = VERCEL_AI_GATEWAY_URL.rstrip('/')
         
-        print(f"DEBUG: Making request to: {api_url}")
+        # 检查URL是否已经包含chat/completions路径
+        if base_url.endswith('/chat/completions'):
+            api_url = base_url
+        elif base_url.endswith('/v1'):
+            api_url = f"{base_url}/chat/completions"  
+        elif '/v1/chat/completions' in base_url:
+            api_url = base_url  # URL已经是完整的
+        else:
+            api_url = f"{base_url}/v1/chat/completions"
+        
+        print(f"DEBUG: Base URL: {VERCEL_AI_GATEWAY_URL}")
+        print(f"DEBUG: Constructed API URL: {api_url}")
         print(f"DEBUG: Headers: {dict(h for h in headers.items() if h[0] != 'Authorization')}")
         
         response = requests.post(
