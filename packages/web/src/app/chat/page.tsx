@@ -7,18 +7,28 @@ import Link from 'next/link'
 export default function ChatPage() {
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: '/api/chat',
     initialMessages: [],
     body: {
       model: selectedModel,
       stream: true
     },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     onError: (error) => {
       console.error('Chat error:', error)
+      console.error('Error details:', error.message)
     },
     onFinish: (message) => {
       console.log('Chat finished:', message)
+    },
+    onResponse: (response) => {
+      console.log('Response received:', response.status, response.statusText)
+      if (!response.ok) {
+        console.error('Response not OK:', response)
+      }
     }
   })
 
@@ -109,7 +119,26 @@ export default function ChatPage() {
           marginBottom: '20px',
           padding: '20px'
         }}>
-          {messages.length === 0 && (
+          {error && (
+            <div style={{ 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              padding: '15px',
+              marginBottom: '15px',
+              color: '#fca5a5'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>❌</span>
+                <div>
+                  <div style={{ fontWeight: '500' }}>连接错误</div>
+                  <div style={{ fontSize: '14px', marginTop: '4px' }}>{error.message}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {messages.length === 0 && !error && (
             <div style={{ textAlign: 'center', color: '#9ca3af', paddingTop: '100px' }}>
               <div style={{ fontSize: '3rem', marginBottom: '15px' }}>🤖</div>
               <p>开始与AI对话吧！</p>
@@ -262,6 +291,8 @@ export default function ChatPage() {
               <div>选择模型: {selectedModel}</div>
               <div>API端点: /api/chat</div>
               <div>环境: {typeof window !== 'undefined' ? '浏览器' : '服务器'}</div>
+              <div>错误状态: {error ? '有错误' : '正常'}</div>
+              <div>最后错误: {error?.message?.slice(0, 30) || '无'}</div>
             </div>
           </details>
         </div>

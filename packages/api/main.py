@@ -67,27 +67,32 @@ async def chat_endpoint(request: ChatRequest):
             )
         
         # 生产环境 - 调用Vercel AI Gateway
+        # 使用标准OpenAI兼容的认证和请求头
         headers = {
             "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream"
         }
 
-        # 将消息格式转换为OpenAI API格式
+        # 将消息格式转换为标准OpenAI API格式
         openai_messages = [
             {"role": msg.role, "content": msg.content} 
             for msg in request.messages
         ]
 
+        # 标准OpenAI API负载格式
         payload = {
             "model": request.model,
             "messages": openai_messages,
-            "stream": True,  # 强制使用流式输出
+            "stream": True,
             "max_tokens": 2048,
             "temperature": 0.7
         }
 
-        print(f"DEBUG: Calling AI Gateway with model {request.model}")
-        print(f"DEBUG: Payload: {json.dumps(payload, indent=2)}")
+        print(f"DEBUG: Calling Vercel AI Gateway")
+        print(f"DEBUG: Model: {request.model}")
+        print(f"DEBUG: Gateway URL: {VERCEL_AI_GATEWAY_URL}")
+        print(f"DEBUG: Messages: {len(openai_messages)}")
         
         # 调用Vercel AI Gateway
         return StreamingResponse(
@@ -150,44 +155,57 @@ async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGener
     从Vercel AI Gateway获取流式响应
     """
     try:
-        # 调用Vercel AI Gateway - 使用标准OpenAI兼容端点
-        api_url = f"{VERCEL_AI_GATEWAY_URL}/v1/chat/completions" if VERCEL_AI_GATEWAY_URL.endswith('/v1') else f"{VERCEL_AI_GATEWAY_URL}/v1/chat/completions"
-        if VERCEL_AI_GATEWAY_URL.endswith('/chat/completions'):
-            api_url = VERCEL_AI_GATEWAY_URL
-        else:
-            api_url = f"{VERCEL_AI_GATEWAY_URL}/chat/completions"
+        # 使用标准OpenAI兼容端点
+        api_url = f"{VERCEL_AI_GATEWAY_URL.rstrip('/')}/v1/chat/completions"
+        
+        print(f"DEBUG: Making request to: {api_url}")
+        print(f"DEBUG: Headers: {dict(h for h in headers.items() if h[0] != 'Authorization')}")
         
         response = requests.post(
             api_url,
             headers=headers,
             json=payload,
-            stream=True
+            stream=True,
+            timeout=30
         )
+        
+        print(f"DEBUG: Response status: {response.status_code}")
         response.raise_for_status()
 
         # 处理流式响应
         for line in response.iter_lines():
             if line:
-                line = line.decode('utf-8')
-                if line.startswith('data: '):
-                    data = line[6:]  # 移除 'data: ' 前缀
+                line_str = line.decode('utf-8').strip()
+                print(f"DEBUG: Received line: {line_str}")
+                
+                if line_str.startswith('data: '):
+                    data = line_str[6:]  # 移除 'data: ' 前缀
+                    
                     if data.strip() == '[DONE]':
+                        print("DEBUG: Received [DONE], ending stream")
                         yield "data: [DONE]\n\n"
                         break
                     
                     try:
-                        # 直接转发AI Gateway的响应
-                        json.loads(data)  # 验证JSON格式
+                        # 验证并转发AI Gateway的响应
+                        parsed = json.loads(data)
+                        print(f"DEBUG: Valid JSON chunk received")
                         yield f"data: {data}\n\n"
-                    except json.JSONDecodeError:
+                    except json.JSONDecodeError as e:
+                        print(f"DEBUG: Invalid JSON in response: {data}, error: {e}")
                         continue
 
     except Exception as e:
+        print(f"DEBUG: Exception in stream_ai_gateway_response: {str(e)}")
         # 发送错误信息
         error_chunk = {
+            "id": "error",
+            "object": "chat.completion.chunk",
+            "created": 1700000000,
+            "model": payload.get("model", "unknown"),
             "choices": [{
-                "delta": {"content": f"\n\n❌ 连接AI服务失败: {str(e)}"},
                 "index": 0,
+                "delta": {"content": f"\n\n❌ 连接AI服务失败: {str(e)}"},
                 "finish_reason": "stop"
             }]
         }
