@@ -5,16 +5,15 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 export default function ChatPage() {
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
+  
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/chat',
     initialMessages: [],
     body: {
-      model: 'gpt-4o-mini',
-      stream: true
+      model: selectedModel,
     }
   })
-
-  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
 
   return (
     <div className="min-h-screen helios-gradient">
