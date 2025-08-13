@@ -47,8 +47,14 @@ async def chat_endpoint(request: ChatRequest):
     AI聊天端点，直接调用Vercel AI Gateway，支持流式输出
     """
     try:
-        # 检查环境变量
+        # 检查环境变量并添加调试信息
+        print(f"DEBUG: VERCEL_AI_GATEWAY_URL = {VERCEL_AI_GATEWAY_URL}")
+        print(f"DEBUG: VERCEL_AI_GATEWAY_API_KEY exists = {bool(VERCEL_AI_GATEWAY_API_KEY)}")
+        print(f"DEBUG: Request model = {request.model}")
+        print(f"DEBUG: Messages count = {len(request.messages)}")
+        
         if not VERCEL_AI_GATEWAY_URL or not VERCEL_AI_GATEWAY_API_KEY:
+            print("DEBUG: Using mock response (local development)")
             # 本地开发环境 - 返回模拟响应
             return StreamingResponse(
                 mock_streaming_response(request.messages, request.model),
@@ -80,6 +86,9 @@ async def chat_endpoint(request: ChatRequest):
             "temperature": 0.7
         }
 
+        print(f"DEBUG: Calling AI Gateway with model {request.model}")
+        print(f"DEBUG: Payload: {json.dumps(payload, indent=2)}")
+        
         # 调用Vercel AI Gateway
         return StreamingResponse(
             stream_ai_gateway_response(headers, payload),
@@ -146,9 +155,15 @@ async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGener
     从Vercel AI Gateway获取流式响应
     """
     try:
-        # 调用Vercel AI Gateway
+        # 调用Vercel AI Gateway - 使用标准OpenAI兼容端点
+        api_url = f"{VERCEL_AI_GATEWAY_URL}/v1/chat/completions" if VERCEL_AI_GATEWAY_URL.endswith('/v1') else f"{VERCEL_AI_GATEWAY_URL}/v1/chat/completions"
+        if VERCEL_AI_GATEWAY_URL.endswith('/chat/completions'):
+            api_url = VERCEL_AI_GATEWAY_URL
+        else:
+            api_url = f"{VERCEL_AI_GATEWAY_URL}/chat/completions"
+        
         response = requests.post(
-            f"{VERCEL_AI_GATEWAY_URL}/v1/chat/completions",
+            api_url,
             headers=headers,
             json=payload,
             stream=True
