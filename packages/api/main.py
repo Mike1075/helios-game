@@ -110,17 +110,16 @@ async def chat_endpoint(request: ChatRequest):
 
 async def mock_streaming_response(messages: List[Message], model: str = "gpt-4o-mini") -> AsyncGenerator[str, None]:
     """
-    本地开发环境的模拟流式响应 - 符合Vercel AI SDK格式
+    本地开发环境的模拟流式响应 - 完全符合OpenAI/Vercel AI SDK格式
     """
     user_message = messages[-1].content if messages else "无消息"
     
     mock_response = f"你好！我是Helios AI助手，收到了你的消息：「{user_message}」\n\n当前使用模型：{model}\n这是模拟响应，用于测试流式输出功能。"
 
-    # 使用简化的流式格式，兼容Vercel AI SDK
-    words = mock_response.split()
-    for i, word in enumerate(words):
-        content = word + (" " if i < len(words) - 1 else "")
-        # 使用标准的OpenAI API格式
+    print(f"DEBUG: Starting mock streaming response")
+    
+    # 按字符分割，更精确地模拟真实AI流式输出
+    for i, char in enumerate(mock_response):
         chunk_data = {
             "id": f"chatcmpl-mock-{i}",
             "object": "chat.completion.chunk",
@@ -128,14 +127,19 @@ async def mock_streaming_response(messages: List[Message], model: str = "gpt-4o-
             "model": model,
             "choices": [{
                 "index": 0,
-                "delta": {"content": content},
+                "delta": {"content": char},
                 "finish_reason": None
             }]
         }
-        yield f"data: {json.dumps(chunk_data)}\n\n"
-        await asyncio.sleep(0.1)  # 更慢的速度便于观察
+        
+        # 确保JSON格式正确且无多余字符
+        json_str = json.dumps(chunk_data, ensure_ascii=False, separators=(',', ':'))
+        yield f"data: {json_str}\n\n"
+        await asyncio.sleep(0.02)  # 快速字符流式输出
     
-    # 发送结束标志
+    print(f"DEBUG: Sending final chunk")
+    
+    # 发送结束标志 - 严格按OpenAI格式
     final_chunk = {
         "id": "chatcmpl-mock-final",
         "object": "chat.completion.chunk", 
@@ -147,8 +151,12 @@ async def mock_streaming_response(messages: List[Message], model: str = "gpt-4o-
             "finish_reason": "stop"
         }]
     }
-    yield f"data: {json.dumps(final_chunk)}\n\n"
+    
+    json_str = json.dumps(final_chunk, ensure_ascii=False, separators=(',', ':'))
+    yield f"data: {json_str}\n\n"
     yield "data: [DONE]\n\n"
+    
+    print(f"DEBUG: Mock streaming response completed")
 
 async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGenerator[str, None]:
     """
@@ -173,10 +181,10 @@ async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGener
         response.raise_for_status()
 
         # 处理流式响应
-        for line in response.iter_lines():
+        for line in response.iter_lines(decode_unicode=True):
             if line:
-                line_str = line.decode('utf-8').strip()
-                print(f"DEBUG: Received line: {line_str}")
+                line_str = line.strip()
+                print(f"DEBUG: Received line: {repr(line_str)}")
                 
                 if line_str.startswith('data: '):
                     data = line_str[6:]  # 移除 'data: ' 前缀
@@ -187,17 +195,21 @@ async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGener
                         break
                     
                     try:
-                        # 验证并转发AI Gateway的响应
+                        # 验证JSON格式并重新序列化确保格式正确
                         parsed = json.loads(data)
-                        print(f"DEBUG: Valid JSON chunk received")
-                        yield f"data: {data}\n\n"
+                        
+                        # 重新序列化确保格式一致
+                        clean_json = json.dumps(parsed, ensure_ascii=False, separators=(',', ':'))
+                        print(f"DEBUG: Valid JSON chunk, re-serialized")
+                        yield f"data: {clean_json}\n\n"
+                        
                     except json.JSONDecodeError as e:
-                        print(f"DEBUG: Invalid JSON in response: {data}, error: {e}")
+                        print(f"DEBUG: Invalid JSON in response: {repr(data)}, error: {e}")
                         continue
 
     except Exception as e:
         print(f"DEBUG: Exception in stream_ai_gateway_response: {str(e)}")
-        # 发送错误信息
+        # 发送错误信息 - 使用正确的格式
         error_chunk = {
             "id": "error",
             "object": "chat.completion.chunk",
@@ -209,7 +221,10 @@ async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGener
                 "finish_reason": "stop"
             }]
         }
-        yield f"data: {json.dumps(error_chunk)}\n\n"
+        
+        # 确保错误响应也使用相同的JSON序列化格式
+        error_json = json.dumps(error_chunk, ensure_ascii=False, separators=(',', ':'))
+        yield f"data: {error_json}\n\n"
         yield "data: [DONE]\n\n"
 
 @app.get("/api/models")

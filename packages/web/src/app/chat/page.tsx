@@ -17,17 +17,23 @@ export default function ChatPage() {
     headers: {
       'Content-Type': 'application/json',
     },
+    streamMode: 'text',  // 明确指定文本流模式
     onError: (error) => {
       console.error('Chat error:', error)
       console.error('Error details:', error.message)
+      console.error('Error stack:', error.stack)
     },
     onFinish: (message) => {
       console.log('Chat finished:', message)
     },
-    onResponse: (response) => {
+    onResponse: async (response) => {
       console.log('Response received:', response.status, response.statusText)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+      
       if (!response.ok) {
         console.error('Response not OK:', response)
+        const text = await response.text()
+        console.error('Response text:', text)
       }
     }
   })
