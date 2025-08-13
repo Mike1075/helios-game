@@ -105,45 +105,40 @@ async def chat_endpoint(request: ChatRequest):
 
 async def mock_streaming_response(messages: List[Message], model: str = "gpt-4o-mini") -> AsyncGenerator[str, None]:
     """
-    本地开发环境的模拟流式响应 - 符合AI SDK格式
+    本地开发环境的模拟流式响应 - 符合Vercel AI SDK格式
     """
     user_message = messages[-1].content if messages else "无消息"
     
-    mock_response = f"""你好！我是Helios AI助手。
+    mock_response = f"你好！我是Helios AI助手，收到了你的消息：「{user_message}」\n\n当前使用模型：{model}\n这是模拟响应，用于测试流式输出功能。"
 
-🌟 当前状态：本地开发模式（模拟响应）
-🤖 选择模型：{model}
-📝 消息数量：{len(messages)}
-💬 最后消息："{user_message}"
-
-这是流式输出演示。在生产环境中，我将通过Vercel AI Gateway连接到真实的{model}模型。
-
-✨ Helios项目核心特性：
-- 🔮 信念系统驱动的对话体验
-- 🤖 高性能NPC代理核心
-- 🪞 回响之室自我反思机制  
-- 🎭 智能导演引擎
-
-📍 零信任开发：本地编码 + 云端测试
-🚀 现在你看到的是模拟的逐字符流式输出效果..."""
-
-    # 模拟AI SDK的流式输出格式
-    for i, char in enumerate(mock_response):
-        chunk = {
+    # 使用简化的流式格式，兼容Vercel AI SDK
+    words = mock_response.split()
+    for i, word in enumerate(words):
+        content = word + (" " if i < len(words) - 1 else "")
+        # 使用标准的OpenAI API格式
+        chunk_data = {
+            "id": f"chatcmpl-mock-{i}",
+            "object": "chat.completion.chunk",
+            "created": 1700000000,
+            "model": model,
             "choices": [{
-                "delta": {"content": char},
                 "index": 0,
+                "delta": {"content": content},
                 "finish_reason": None
             }]
         }
-        yield f"data: {json.dumps(chunk)}\n\n"
-        await asyncio.sleep(0.03)  # 模拟真实AI的响应速度
+        yield f"data: {json.dumps(chunk_data)}\n\n"
+        await asyncio.sleep(0.1)  # 更慢的速度便于观察
     
     # 发送结束标志
     final_chunk = {
+        "id": "chatcmpl-mock-final",
+        "object": "chat.completion.chunk", 
+        "created": 1700000000,
+        "model": model,
         "choices": [{
-            "delta": {},
             "index": 0,
+            "delta": {},
             "finish_reason": "stop"
         }]
     }

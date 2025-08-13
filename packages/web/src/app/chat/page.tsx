@@ -5,13 +5,20 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 export default function ChatPage() {
-  const [selectedModel, setSelectedModel] = useState('gpt-4.1-mini')
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
   
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/chat',
     initialMessages: [],
     body: {
       model: selectedModel,
+      stream: true
+    },
+    onError: (error) => {
+      console.error('Chat error:', error)
+    },
+    onFinish: (message) => {
+      console.log('Chat finished:', message)
     }
   })
 
@@ -84,10 +91,10 @@ export default function ChatPage() {
               maxWidth: '100%'
             }}
           >
-            <option value="gpt-4o-mini">GPT-4o Mini (2024)</option>
-            <option value="gpt-4.1-mini">GPT-4.1 Mini (2025推荐)</option>
+            <option value="gpt-4o-mini">GPT-4o Mini (推荐)</option>
             <option value="gpt-4o">GPT-4o</option>
-            <option value="gpt-4.1">GPT-4.1 (2025最新)</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
             <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
           </select>
         </div>
