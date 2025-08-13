@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 15, 15, 35;
+  --background-end-rgb: 5, 5, 5;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  min-height: 100vh;
+}
+
+@layer components {
+  .helios-gradient {
+    @apply bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900;
+  }
+  
+  .helios-card {
+    @apply bg-white/10 backdrop-blur-sm rounded-lg border border-white/20;
+  }
+  
+  .helios-button {
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 
+           text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .helios-input {
+    @apply bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white 
+           placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 
+           focus:border-transparent transition-all duration-200;
+  }
+}
+
+/* 流式输出动画 */
+.typing-indicator {
+  @apply inline-block w-2 h-5 bg-purple-400 rounded-sm animate-pulse;
+}
+
+/* 聊天消息样式 */
+.message-user {
+  @apply ml-auto bg-gradient-to-r from-purple-600 to-blue-600 text-white;
+}
+
+.message-assistant {
+  @apply mr-auto bg-white/10 border border-white/20 text-gray-100;
+}
+
+.message-content {
+  @apply rounded-lg px-4 py-3 max-w-[80%] break-words;
+}

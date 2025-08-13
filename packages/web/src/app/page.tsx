@@ -17,11 +17,26 @@ export default function Home() {
           
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
             <h3 className="text-lg font-semibold mb-4">MVP "棱镜之心" 正在构建中...</h3>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-gray-400 mb-6">
               <p>🔮 信念系统</p>
               <p>🤖 NPC代理核心</p>
               <p>🪞 回响之室</p>
               <p>🎭 导演引擎</p>
+            </div>
+            
+            <div className="space-y-3">
+              <a 
+                href="/chat"
+                className="block w-full bg-gradient-to-r from-purple-600 to-blue-600 
+                         hover:from-purple-700 hover:to-blue-700 text-white font-medium 
+                         py-3 px-6 rounded-lg transition-all duration-200 text-center"
+              >
+                🚀 开始AI聊天测试
+              </a>
+              
+              <div className="text-xs text-gray-500 text-center">
+                体验与AI的流式对话
+              </div>
             </div>
           </div>
         </div>
