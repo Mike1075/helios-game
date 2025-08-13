@@ -2,58 +2,100 @@ import Link from 'next/link'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold mb-8 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-            Helios
-          </h1>
-          <h2 className="text-2xl mb-6 text-blue-200">
-            赫利俄斯 - 意识的棱镜
-          </h2>
-          <p className="text-xl max-w-2xl mx-auto mb-12 text-gray-300 leading-relaxed">
-            这不是一个传统的游戏，而是一个意识探索与演化的沙盒。
-            <br />
-            你的意识之光将通过独特的信念系统折射，创造属于你的主观现实。
-          </p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #581c87, #1e3a8a, #312e81)',
+      color: 'white',
+      padding: '20px'
+    }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center', paddingTop: '100px' }}>
+        <h1 style={{ fontSize: '4rem', fontWeight: 'bold', marginBottom: '2rem' }}>
+          Helios
+        </h1>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#bfdbfe' }}>
+          赫利俄斯 - 意识的棱镜
+        </h2>
+        <p style={{ fontSize: '1.2rem', marginBottom: '3rem', color: '#d1d5db', lineHeight: 1.6 }}>
+          这不是一个传统的游戏，而是一个意识探索与演化的沙盒。
+          <br />
+          你的意识之光将通过独特的信念系统折射，创造属于你的主观现实。
+        </p>
+        
+        <div style={{ 
+          background: 'rgba(255,255,255,0.1)', 
+          backdropFilter: 'blur(10px)',
+          borderRadius: '10px', 
+          padding: '2rem', 
+          maxWidth: '400px', 
+          margin: '0 auto' 
+        }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>
+            MVP "棱镜之心" 正在构建中...
+          </h3>
+          <div style={{ fontSize: '0.9rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
+            <p>🔮 信念系统</p>
+            <p>🤖 NPC代理核心</p>
+            <p>🪞 回响之室</p>
+            <p>🎭 导演引擎</p>
+          </div>
           
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-4">MVP "棱镜之心" 正在构建中...</h3>
-            <div className="text-sm text-gray-400 mb-6">
-              <p>🔮 信念系统</p>
-              <p>🤖 NPC代理核心</p>
-              <p>🪞 回响之室</p>
-              <p>🎭 导演引擎</p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link 
+              href="/chat"
+              style={{
+                display: 'block',
+                background: 'linear-gradient(90deg, #7c3aed, #2563eb)',
+                color: 'white',
+                fontWeight: '500',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              🚀 开始AI聊天测试 (已修复)
+            </Link>
             
-            <div className="space-y-3">
-              <Link 
-                href="/chat"
-                className="block w-full bg-gradient-to-r from-purple-600 to-blue-600 
-                         hover:from-purple-700 hover:to-blue-700 text-white font-medium 
-                         py-3 px-6 rounded-lg transition-all duration-200 text-center
-                         cursor-pointer"
-              >
-                🚀 开始AI聊天测试 (已修复)
-              </Link>
-              
-              <Link 
-                href="/debug"
-                className="block w-full bg-gradient-to-r from-gray-600 to-gray-700 
-                         hover:from-gray-700 hover:to-gray-800 text-white font-medium 
-                         py-2 px-4 rounded-lg transition-all duration-200 text-center
-                         cursor-pointer text-sm"
-              >
-                🔧 调试面板
-              </Link>
-              
-              <div className="text-xs text-gray-500 text-center">
-                体验与AI的流式对话
-              </div>
+            <Link 
+              href="/debug"
+              style={{
+                display: 'block',
+                background: 'linear-gradient(90deg, #4b5563, #374151)',
+                color: 'white',
+                fontWeight: '500',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+                transition: 'all 0.2s'
+              }}
+            >
+              🔧 调试面板
+            </Link>
+            
+            <Link 
+              href="/test"
+              style={{
+                display: 'block',
+                background: 'linear-gradient(90deg, #059669, #047857)',
+                color: 'white',
+                fontWeight: '500',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+                transition: 'all 0.2s'
+              }}
+            >
+              🧪 基础测试页面
+            </Link>
+            
+            <div style={{ fontSize: '0.75rem', color: '#6b7280', textAlign: 'center', marginTop: '10px' }}>
+              体验与AI的流式对话
             </div>
           </div>
         </div>
       </div>
-    </main>
+    </div>
   )
 }
