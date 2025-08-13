@@ -67,12 +67,22 @@ async def chat_endpoint(request: ChatRequest):
             )
         
         # 生产环境 - 调用Vercel AI Gateway
-        # 使用标准OpenAI兼容的认证和请求头
+        # 根据Vercel AI Gateway文档配置认证头
         headers = {
             "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
             "Content-Type": "application/json",
-            "Accept": "text/event-stream"
+            "Accept": "text/event-stream",
+            "User-Agent": "Helios/1.0"
         }
+        
+        # 如果使用Vercel AI Gateway，可能需要不同的认证方式
+        if "vercel.com" in base_url or "api.vercel" in base_url:
+            print("DEBUG: Using Vercel API authentication format")
+            # Vercel API可能需要不同的头部格式
+            headers.update({
+                "X-Vercel-AI-Provider": "openai",
+                "X-Vercel-AI-Model": request.model
+            })
 
         # 将消息格式转换为标准OpenAI API格式
         openai_messages = [
@@ -92,11 +102,20 @@ async def chat_endpoint(request: ChatRequest):
         print(f"DEBUG: Calling Vercel AI Gateway")
         print(f"DEBUG: Model: {request.model}")
         print(f"DEBUG: Gateway URL: {VERCEL_AI_GATEWAY_URL}")
+        print(f"DEBUG: API Key exists: {bool(VERCEL_AI_GATEWAY_API_KEY)}")
         print(f"DEBUG: Messages: {len(openai_messages)}")
+        
+        # 根据最新Vercel AI Gateway文档，尝试不同的端点
+        if not VERCEL_AI_GATEWAY_URL:
+            print("DEBUG: No VERCEL_AI_GATEWAY_URL, using default")
+            # Vercel AI Gateway的默认端点
+            base_url = "https://api.vercel.com/v1/ai/chat/completions"
+        else:
+            base_url = VERCEL_AI_GATEWAY_URL
         
         # 调用Vercel AI Gateway
         return StreamingResponse(
-            stream_ai_gateway_response(headers, payload),
+            stream_ai_gateway_response(headers, payload, base_url),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache", 
@@ -158,27 +177,31 @@ async def mock_streaming_response(messages: List[Message], model: str = "gpt-4o-
     
     print(f"DEBUG: Mock streaming response completed")
 
-async def stream_ai_gateway_response(headers: dict, payload: dict) -> AsyncGenerator[str, None]:
+async def stream_ai_gateway_response(headers: dict, payload: dict, base_url: str) -> AsyncGenerator[str, None]:
     """
     从Vercel AI Gateway获取流式响应
     """
     try:
         # 智能构建API URL，避免重复路径
-        base_url = VERCEL_AI_GATEWAY_URL.rstrip('/')
+        clean_base_url = base_url.rstrip('/')
         
-        # 检查URL是否已经包含chat/completions路径
-        if base_url.endswith('/chat/completions'):
-            api_url = base_url
-        elif base_url.endswith('/v1'):
-            api_url = f"{base_url}/chat/completions"  
-        elif '/v1/chat/completions' in base_url:
-            api_url = base_url  # URL已经是完整的
+        # 检查URL是否已经包含完整路径
+        if '/chat/completions' in clean_base_url:
+            api_url = clean_base_url  # 已经是完整端点
+        elif clean_base_url.endswith('/v1/ai'):
+            api_url = f"{clean_base_url}/chat/completions"
+        elif clean_base_url.endswith('/v1'):
+            api_url = f"{clean_base_url}/ai/chat/completions"  # Vercel AI Gateway路径
+        elif clean_base_url.endswith('/ai'):
+            api_url = f"{clean_base_url}/chat/completions"
         else:
-            api_url = f"{base_url}/v1/chat/completions"
+            # 默认假设是基础域名，添加完整路径
+            api_url = f"{clean_base_url}/v1/ai/chat/completions"
         
-        print(f"DEBUG: Base URL: {VERCEL_AI_GATEWAY_URL}")
+        print(f"DEBUG: Original base URL: {base_url}")
         print(f"DEBUG: Constructed API URL: {api_url}")
-        print(f"DEBUG: Headers: {dict(h for h in headers.items() if h[0] != 'Authorization')}")
+        print(f"DEBUG: Request headers: {dict(h for h in headers.items() if h[0] != 'Authorization')}")
+        print(f"DEBUG: Payload model: {payload.get('model')}")
         
         response = requests.post(
             api_url,
