@@ -49,6 +49,19 @@ export default function ChatPage() {
     setInput('')
     setIsLoading(true)
 
+    // 尝试将 {"content":"..."} 包裹的响应在展示时解包
+    const unwrapIfJsonWrapper = (text: string): string => {
+      const trimmed = text.trim()
+      if (!(trimmed.startsWith('{') && trimmed.endsWith('}'))) return text
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (parsed && typeof parsed === 'object' && typeof parsed.content === 'string') {
+          return parsed.content
+        }
+      } catch (_) { /* ignore */ }
+      return text
+    }
+
     // 添加空的AI消息用于流式更新
     const aiMessageIndex = newMessages.length
     setMessages([...newMessages, { role: 'assistant', content: '' }])
@@ -79,10 +92,11 @@ export default function ChatPage() {
         const chunk = decoder.decode(value)
         aiContent += chunk
 
-        // 实时更新AI消息
+        // 实时更新AI消息（若是整段 JSON 包裹，最后一次会被解包）
         setMessages(prev => {
           const updated = [...prev]
-          updated[aiMessageIndex] = { role: 'assistant', content: aiContent }
+          const display = unwrapIfJsonWrapper(aiContent)
+          updated[aiMessageIndex] = { role: 'assistant', content: display }
           return updated
         })
       }
