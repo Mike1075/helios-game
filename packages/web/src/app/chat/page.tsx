@@ -28,7 +28,7 @@ export default function ChatPage() {
   // 使用 AI SDK 5 官方推荐的 useChat，实现文本流式（与 toTextStreamResponse 匹配）
   const {
     messages,
-    append,
+    submit,
     isLoading: chatLoading,
     input: chatInput,
     setInput: setChatInput,
@@ -55,8 +55,7 @@ export default function ChatPage() {
     e.preventDefault()
     const value = (chatInput || '').trim()
     if (!value || chatLoading) return
-    await append({ role: 'user', content: value })
-    setChatInput('')
+    await submit()
   }
 
   const selectedModelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModel)
