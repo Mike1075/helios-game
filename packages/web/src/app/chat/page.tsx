@@ -5,24 +5,23 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 const AVAILABLE_MODELS = [
-  { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic' },
-  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI' },
-  { id: 'openai/gpt-5', name: 'GPT-5', provider: 'OpenAI' },
-  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI' },
-  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google' },
-  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google' },
-  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  { id: 'xai/grok-4', name: 'Grok 4', provider: 'xAI' },
-  { id: 'alibaba/qwen-3-235b', name: 'Qwen 3 235B', provider: 'Alibaba' },
-  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', provider: 'DeepSeek' },
-  { id: 'deepseek/deepseek-v3', name: 'DeepSeek V3', provider: 'DeepSeek' },
+  { id: 'openai:gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'openai:gpt-4o', name: 'GPT-4o', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'openai:gpt-4', name: 'GPT-4', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'anthropic:claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', color: '#ff6b35' },
+  { id: 'anthropic:claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', color: '#ff6b35' },
+  { id: 'google:gemini-1.5-pro-002', name: 'Gemini 1.5 Pro', provider: 'Google', color: '#4285f4' },
+  { id: 'google:gemini-1.5-flash-002', name: 'Gemini 1.5 Flash', provider: 'Google', color: '#4285f4' },
+  { id: 'meta-llama:llama-3.2-90b-instruct', name: 'Llama 3.2 90B', provider: 'Meta', color: '#0866ff' },
+  { id: 'mistral:mistral-large-2407', name: 'Mistral Large', provider: 'Mistral', color: '#ff7000' },
+  { id: 'cohere:command-r-plus-08-2024', name: 'Command R+', provider: 'Cohere', color: '#39594c' },
 ]
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedModel, setSelectedModel] = useState('openai/gpt-5-mini')
+  const [selectedModel, setSelectedModel] = useState('openai:gpt-4o-mini')
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -131,8 +130,31 @@ export default function ChatPage() {
           </h1>
           
           {/* Model Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.9rem', color: '#666' }}>模型:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '8px',
+              border: `2px solid ${selectedModelInfo?.color || '#ddd'}`,
+              fontSize: '0.9rem'
+            }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                background: selectedModelInfo?.color || '#ddd'
+              }}></div>
+              <span style={{ fontWeight: '500', color: '#333' }}>
+                {selectedModelInfo?.name} 
+              </span>
+              <span style={{ color: '#666', fontSize: '0.8rem' }}>
+                ({selectedModelInfo?.provider})
+              </span>
+            </div>
+            
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
@@ -142,7 +164,8 @@ export default function ChatPage() {
                 border: '1px solid #ddd',
                 background: 'white',
                 fontSize: '0.9rem',
-                minWidth: '200px'
+                minWidth: '200px',
+                cursor: 'pointer'
               }}
             >
               {AVAILABLE_MODELS.map(model => (
