@@ -19,8 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Vercel AI Gateway 环境变量 (官方配置方式)
-VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1/ai")
+# Vercel AI Gateway 环境变量 (官方验证配置)
+VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1")
 VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY", "EtMyP4WaMfdkxizkutRrJT1j")
 
 print(f"DEBUG: AI Gateway URL = {VERCEL_AI_GATEWAY_URL}")
@@ -119,7 +119,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     model: str = "gpt-4o-mini"
-    stream: bool = True
+    stream: bool = False
 
 @app.get("/")
 async def root():
@@ -132,39 +132,60 @@ async def health_check():
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     """
-    AI聊天端点，使用官方示例方式调用Vercel AI Gateway
+    AI聊天端点，支持流式和非流式调用
     """
     try:
         print(f"DEBUG: Model = {request.model}")
         print(f"DEBUG: Messages count = {len(request.messages)}")
+        print(f"DEBUG: Stream = {request.stream}")
         print(f"DEBUG: AI Gateway URL = {VERCEL_AI_GATEWAY_URL}")
         print(f"DEBUG: API Key exists = {bool(VERCEL_AI_GATEWAY_API_KEY)}")
         
         if not VERCEL_AI_GATEWAY_URL or not VERCEL_AI_GATEWAY_API_KEY:
             # 本地开发环境 - 返回模拟响应
-            return StreamingResponse(
-                mock_streaming_response(request.messages, request.model),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "Access-Control-Allow-Origin": "*",
-                }
-            )
+            if request.stream:
+                return StreamingResponse(
+                    mock_streaming_response(request.messages, request.model),
+                    media_type="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "Access-Control-Allow-Origin": "*",
+                    }
+                )
+            else:
+                # 模拟非流式响应
+                user_message = request.messages[-1].content if request.messages else "无消息"
+                mock_content = f"你好！我是Helios AI助手，收到了你的消息：「{user_message}」\n\n当前使用模型：{request.model}\n这是模拟响应。"
+                return {"content": mock_content}
         
         # 转换消息格式
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
-        # 使用官方示例方式调用AI Gateway (流式)
-        return StreamingResponse(
-            call_llm_streaming(request.model, messages),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive", 
-                "Access-Control-Allow-Origin": "*",
-            }
-        )
+        if request.stream:
+            # 流式响应
+            return StreamingResponse(
+                call_llm_streaming(request.model, messages),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive", 
+                    "Access-Control-Allow-Origin": "*",
+                }
+            )
+        else:
+            # 非流式响应
+            if len(messages) > 0 and messages[0]["role"] != "system":
+                # 添加系统提示
+                messages.insert(0, {"role": "system", "content": "You are a helpful assistant."})
+            
+            result = call_llm(
+                model_name=request.model,
+                system_prompt="You are a helpful assistant.",
+                user_prompt=messages[-1]["content"] if messages else "Hello"
+            )
+            
+            return {"content": result}
 
     except Exception as e:
         print(f"ERROR: {str(e)}")

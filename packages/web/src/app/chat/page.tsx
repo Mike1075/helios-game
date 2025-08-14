@@ -1,293 +1,386 @@
 'use client'
 
-import { useChat } from 'ai/react'
-import { useState } from 'react'
-import Link from 'next/link'
+import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+
+const AVAILABLE_MODELS = [
+  { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic' },
+  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI' },
+  { id: 'openai/gpt-5', name: 'GPT-5', provider: 'OpenAI' },
+  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google' },
+  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
+  { id: 'xai/grok-4', name: 'Grok 4', provider: 'xAI' },
+  { id: 'alibaba/qwen-3-235b', name: 'Qwen 3 235B', provider: 'Alibaba' },
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', provider: 'DeepSeek' },
+  { id: 'deepseek/deepseek-v3', name: 'DeepSeek V3', provider: 'DeepSeek' },
+]
 
 export default function ChatPage() {
-  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
-  
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-    api: '/api/chat',
-    body: {
-      model: selectedModel,
-    },
-    onError: (error) => {
-      console.error('Chat error:', error)
-      console.error('Error details:', error.message)
-    },
-    onFinish: (message) => {
-      console.log('Chat finished:', message)
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-5-mini')
+  const messagesEndRef = useRef(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage = { role: 'user', content: input }
+    const newMessages = [...messages, userMessage]
+    setMessages(newMessages)
+    setInput('')
+    setIsLoading(true)
+
+    // 添加空的AI消息用于流式更新
+    const aiMessageIndex = newMessages.length
+    setMessages([...newMessages, { role: 'assistant', content: '' }])
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          messages: newMessages,
+          model: selectedModel
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Response not ok')
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let aiContent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        aiContent += chunk
+
+        // 实时更新AI消息
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[aiMessageIndex] = { role: 'assistant', content: aiContent }
+          return updated
+        })
+      }
+
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[aiMessageIndex] = { role: 'assistant', content: 'Error: ' + error.message }
+        return updated
+      })
+    } finally {
+      setIsLoading(false)
     }
-  })
+  }
+
+  const selectedModelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModel)
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #581c87, #1e3a8a, #312e81)',
-      color: 'white',
-      padding: '20px'
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      display: 'flex',
+      flexDirection: 'column'
     }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', paddingTop: '20px' }}>
-        
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-            <Link 
-              href="/"
-              style={{
-                marginRight: '20px',
-                color: '#9ca3af',
-                textDecoration: 'none',
-                fontSize: '14px'
-              }}
-              title="返回主页"
-            >
-              ← 返回
-            </Link>
-            <h1 style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: 'bold',
-              background: 'linear-gradient(90deg, #fbbf24, #ec4899, #8b5cf6)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              margin: 0
-            }}>
-              Helios Chat
-            </h1>
-          </div>
-          <p style={{ color: '#d1d5db', fontSize: '1.1rem' }}>与AI对话，体验意识的交流</p>
-        </div>
-
-        {/* Model Selector */}
+      {/* Header */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        padding: '1rem 2rem',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
+      }}>
         <div style={{ 
-          background: 'rgba(255,255,255,0.1)', 
-          backdropFilter: 'blur(10px)',
-          borderRadius: '10px', 
-          padding: '20px', 
-          marginBottom: '20px' 
+          maxWidth: '1200px', 
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem'
         }}>
-          <label style={{ 
-            display: 'block', 
-            fontSize: '14px', 
-            fontWeight: '500', 
-            color: '#d1d5db', 
-            marginBottom: '10px' 
+          <h1 style={{
+            margin: 0,
+            background: 'linear-gradient(90deg, #667eea, #764ba2)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontSize: '1.8rem',
+            fontWeight: 'bold'
           }}>
-            选择模型:
-          </label>
-          <select 
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '8px',
-              padding: '10px 15px',
-              color: 'white',
-              fontSize: '14px',
-              width: '300px',
-              maxWidth: '100%'
-            }}
-          >
-            <option value="gpt-4o-mini">GPT-4o Mini (推荐)</option>
-            <option value="gpt-4o">GPT-4o</option>
-            <option value="gpt-4">GPT-4</option>
-            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-          </select>
-        </div>
-
-        {/* Chat Messages */}
-        <div style={{ 
-          background: 'rgba(255,255,255,0.1)', 
-          backdropFilter: 'blur(10px)',
-          borderRadius: '10px', 
-          height: '400px',
-          overflowY: 'auto',
-          marginBottom: '20px',
-          padding: '20px'
-        }}>
-          {error && (
-            <div style={{ 
-              background: 'rgba(239, 68, 68, 0.1)', 
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '8px',
-              padding: '15px',
-              marginBottom: '15px',
-              color: '#fca5a5'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>❌</span>
-                <div>
-                  <div style={{ fontWeight: '500' }}>连接错误</div>
-                  <div style={{ fontSize: '14px', marginTop: '4px' }}>{error.message}</div>
-                </div>
-              </div>
-            </div>
-          )}
+            🤖 AI Chat
+          </h1>
           
-          {messages.length === 0 && !error && (
-            <div style={{ textAlign: 'center', color: '#9ca3af', paddingTop: '100px' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '15px' }}>🤖</div>
-              <p>开始与AI对话吧！</p>
-              <p style={{ fontSize: '14px', marginTop: '10px' }}>当前模型: {selectedModel}</p>
-            </div>
-          )}
-          
-          {messages.map((message, index) => (
-            <div
-              key={index}
+          {/* Model Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.9rem', color: '#666' }}>模型:</label>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
               style={{
-                display: 'flex',
-                justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
-                marginBottom: '15px'
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid #ddd',
+                background: 'white',
+                fontSize: '0.9rem',
+                minWidth: '200px'
               }}
             >
-              <div
-                style={{
-                  maxWidth: '80%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: message.role === 'user' 
-                    ? 'linear-gradient(90deg, #7c3aed, #2563eb)'
-                    : 'rgba(255,255,255,0.1)',
-                  border: message.role === 'assistant' ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                  color: 'white'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', opacity: 0.75 }}>
-                    {message.role === 'user' ? '👤' : '🤖'}
-                  </span>
-                  <div style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
-                    {message.content}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '15px' }}>
-              <div style={{
-                maxWidth: '80%',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: 'white'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', opacity: 0.75 }}>🤖</span>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <div style={{ 
-                      width: '8px', 
-                      height: '20px', 
-                      background: '#8b5cf6', 
-                      borderRadius: '2px',
-                      animation: 'pulse 1.5s ease-in-out infinite'
-                    }}></div>
-                    <div style={{ 
-                      width: '8px', 
-                      height: '20px', 
-                      background: '#8b5cf6', 
-                      borderRadius: '2px',
-                      animation: 'pulse 1.5s ease-in-out 0.2s infinite'
-                    }}></div>
-                    <div style={{ 
-                      width: '8px', 
-                      height: '20px', 
-                      background: '#8b5cf6', 
-                      borderRadius: '2px',
-                      animation: 'pulse 1.5s ease-in-out 0.4s infinite'
-                    }}></div>
-                  </div>
-                  <span style={{ fontSize: '14px', color: '#9ca3af' }}>正在思考...</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Chat Input */}
-        <form onSubmit={handleSubmit} style={{ 
-          background: 'rgba(255,255,255,0.1)', 
-          backdropFilter: 'blur(10px)',
-          borderRadius: '10px', 
-          padding: '20px' 
-        }}>
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <input
-              value={input}
-              onChange={handleInputChange}
-              placeholder="输入你的消息..."
-              disabled={isLoading}
-              style={{
-                flex: 1,
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                color: 'white',
-                fontSize: '16px',
-                outline: 'none'
-              }}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              style={{
-                background: isLoading || !input.trim() 
-                  ? 'rgba(124, 58, 237, 0.5)' 
-                  : 'linear-gradient(90deg, #7c3aed, #2563eb)',
-                color: 'white',
-                fontWeight: '500',
-                padding: '12px 24px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
-                fontSize: '16px',
-                transition: 'all 0.2s'
-              }}
-            >
-              {isLoading ? '发送中...' : '发送'}
-            </button>
+              {AVAILABLE_MODELS.map(model => (
+                <option key={model.id} value={model.id}>
+                  {model.name} ({model.provider})
+                </option>
+              ))}
+            </select>
           </div>
-          <div style={{ 
-            marginTop: '10px', 
-            fontSize: '12px', 
-            color: '#9ca3af' 
-          }}>
-            支持流式输出 • 当前模型: {selectedModel}
-          </div>
-        </form>
-
-        {/* Debug Info - Development only */}
-        <div style={{ 
-          marginTop: '20px',
-          background: 'rgba(255,255,255,0.1)', 
-          backdropFilter: 'blur(10px)',
-          borderRadius: '10px', 
-          padding: '15px' 
-        }}>
-          <details style={{ fontSize: '12px', color: '#9ca3af' }}>
-            <summary style={{ cursor: 'pointer', marginBottom: '10px' }}>调试信息</summary>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-              <div>消息数量: {messages.length}</div>
-              <div>加载状态: {isLoading ? '是' : '否'}</div>
-              <div>输入内容: {input}</div>
-              <div>选择模型: {selectedModel}</div>
-              <div>API端点: /api/chat</div>
-              <div>环境: {typeof window !== 'undefined' ? '浏览器' : '服务器'}</div>
-              <div>错误状态: {error ? '有错误' : '正常'}</div>
-              <div>最后错误: {error?.message?.slice(0, 30) || '无'}</div>
-            </div>
-          </details>
         </div>
       </div>
 
-      {/* Add simple CSS animation */}
+      {/* Chat Messages */}
+      <div style={{
+        flex: 1,
+        padding: '1rem',
+        display: 'flex',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '1200px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: '16px',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '70vh'
+        }}>
+          {/* Messages Area */}
+          <div style={{
+            flex: 1,
+            padding: '1.5rem',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            {messages.length === 0 && (
+              <div style={{
+                textAlign: 'center',
+                color: '#666',
+                padding: '3rem',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{ fontSize: '4rem' }}>💬</div>
+                <h3 style={{ margin: 0, color: '#333' }}>开始对话</h3>
+                <p style={{ margin: 0 }}>
+                  当前使用: <strong>{selectedModelInfo?.name}</strong> ({selectedModelInfo?.provider})
+                </p>
+              </div>
+            )}
+
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+                  marginBottom: '0.5rem'
+                }}
+              >
+                <div style={{
+                  maxWidth: '80%',
+                  padding: '1rem 1.5rem',
+                  borderRadius: message.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                  background: message.role === 'user' 
+                    ? 'linear-gradient(135deg, #667eea, #764ba2)'
+                    : '#f8f9fa',
+                  color: message.role === 'user' ? 'white' : '#333',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    marginBottom: message.content ? '0.5rem' : 0,
+                    fontSize: '0.8rem',
+                    opacity: 0.8
+                  }}>
+                    <span>{message.role === 'user' ? '👤' : '🤖'}</span>
+                    <span>
+                      {message.role === 'user' ? 'You' : selectedModelInfo?.name}
+                    </span>
+                  </div>
+                  
+                  {message.role === 'assistant' ? (
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      style={{ margin: 0 }}
+                      components={{
+                        code: ({node, inline, className, children, ...props}) => (
+                          <code
+                            style={{
+                              background: inline ? '#e9ecef' : '#f8f9fa',
+                              padding: inline ? '2px 4px' : '8px',
+                              borderRadius: '4px',
+                              fontSize: '0.9em',
+                              fontFamily: 'Monaco, Consolas, monospace',
+                              display: inline ? 'inline' : 'block',
+                              whiteSpace: 'pre-wrap'
+                            }}
+                            {...props}
+                          >
+                            {children}
+                          </code>
+                        ),
+                        pre: ({children}) => (
+                          <pre style={{ 
+                            background: '#f8f9fa', 
+                            padding: '1rem', 
+                            borderRadius: '8px',
+                            overflow: 'auto',
+                            margin: '0.5rem 0'
+                          }}>
+                            {children}
+                          </pre>
+                        )
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  ) : (
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {isLoading && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-start',
+                marginBottom: '0.5rem'
+              }}>
+                <div style={{
+                  padding: '1rem 1.5rem',
+                  borderRadius: '20px 20px 20px 4px',
+                  background: '#f8f9fa',
+                  color: '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#667eea',
+                    animation: 'pulse 1.5s ease-in-out infinite'
+                  }}></div>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#667eea',
+                    animation: 'pulse 1.5s ease-in-out 0.3s infinite'
+                  }}></div>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#667eea',
+                    animation: 'pulse 1.5s ease-in-out 0.6s infinite'
+                  }}></div>
+                  <span style={{ marginLeft: '0.5rem' }}>正在思考...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div style={{
+            padding: '1.5rem',
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+            background: 'rgba(255, 255, 255, 0.5)'
+          }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem' }}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={`与 ${selectedModelInfo?.name} 对话...`}
+                disabled={isLoading}
+                style={{
+                  flex: 1,
+                  padding: '1rem 1.5rem',
+                  borderRadius: '25px',
+                  border: '1px solid #ddd',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  background: 'white',
+                  color: '#333',
+                  transition: 'border-color 0.2s',
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                style={{
+                  padding: '1rem 2rem',
+                  borderRadius: '25px',
+                  border: 'none',
+                  background: isLoading || !input.trim() 
+                    ? '#ccc' 
+                    : 'linear-gradient(135deg, #667eea, #764ba2)',
+                  color: 'white',
+                  fontSize: '1rem',
+                  cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  minWidth: '100px'
+                }}
+                onMouseOver={(e) => {
+                  if (!isLoading && input.trim()) {
+                    e.target.style.transform = 'translateY(-2px)'
+                    e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = 'translateY(0)'
+                  e.target.style.boxShadow = 'none'
+                }}
+              >
+                {isLoading ? '发送中...' : '发送 📤'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* CSS Animations */}
       <style jsx>{`
         @keyframes pulse {
           0%, 100% { opacity: 0.4; }
