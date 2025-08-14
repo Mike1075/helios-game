@@ -28,9 +28,8 @@ export default function ChatPage() {
   // 使用 AI SDK 5 官方推荐的 useChat，实现文本流式（与 toTextStreamResponse 匹配）
   const {
     messages,
-    handleSubmit,
+    append,
     isLoading: chatLoading,
-    handleInputChange,
     input: chatInput,
     setInput: setChatInput,
   } = useChat({
@@ -51,6 +50,14 @@ export default function ChatPage() {
   useEffect(() => {
     setIsLoading(chatLoading)
   }, [chatLoading])
+
+  const handleSubmitLocal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const value = (chatInput || '').trim()
+    if (!value || chatLoading) return
+    await append({ role: 'user', content: value })
+    setChatInput('')
+  }
 
   const selectedModelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModel)
 
@@ -289,11 +296,11 @@ export default function ChatPage() {
             borderTop: '1px solid rgba(0, 0, 0, 0.1)',
             background: 'rgba(255, 255, 255, 0.5)'
           }}>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem' }}>
+            <form onSubmit={handleSubmitLocal} style={{ display: 'flex', gap: '1rem' }}>
               <input
                 type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
                 placeholder={`与 ${selectedModelInfo?.name} 对话...`}
                 disabled={isLoading}
                 style={{
