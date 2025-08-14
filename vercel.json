@@ -2,7 +2,10 @@
   "builds": [
     {
       "src": "packages/web/next.config.js",
-      "use": "@vercel/next"
+      "use": "@vercel/next",
+      "config": {
+        "outputDirectory": ".next"
+      }
     },
     {
       "src": "packages/api/main.py",
