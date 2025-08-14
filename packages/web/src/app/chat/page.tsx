@@ -50,7 +50,7 @@ export default function ChatPage() {
 
     // 添加空的AI消息用于流式更新
     const aiMessageIndex = newMessages.length
-    setMessages([...newMessages, { role: 'assistant', content: '' } as Message])
+    setMessages([...newMessages, { role: 'assistant', content: '' }])
 
     try {
       const response = await fetch('/api/chat', {
@@ -230,7 +230,7 @@ export default function ChatPage() {
               </div>
             )}
 
-            {messages.map((message, index) => (
+            {messages.map((message: Message, index: number) => (
               <div
                 key={index}
                 style={{
