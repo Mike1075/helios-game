@@ -1,5 +1,10 @@
 import { streamText } from 'ai';
 
+// 确保在 Edge Runtime 运行以启用真正的流式响应
+export const runtime = 'edge';
+// 强制动态，避免任何静态缓存导致的缓冲
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const { messages, model = 'openai/gpt-5-mini' } = await req.json();
