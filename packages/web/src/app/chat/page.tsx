@@ -10,23 +10,24 @@ interface Message {
 }
 
 const AVAILABLE_MODELS = [
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic', color: '#ff6b35' },
+  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'openai/gpt-5', name: 'GPT-5', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI', color: '#10a37f' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google', color: '#4285f4' },
+  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', color: '#4285f4' },
   { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', color: '#10a37f' },
-  { id: 'openai/gpt-4', name: 'GPT-4', provider: 'OpenAI', color: '#10a37f' },
-  { id: 'anthropic/claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', color: '#ff6b35' },
-  { id: 'anthropic/claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'Anthropic', color: '#ff6b35' },
-  { id: 'google/gemini-1.5-pro-002', name: 'Gemini 1.5 Pro', provider: 'Google', color: '#4285f4' },
-  { id: 'google/gemini-1.5-flash-002', name: 'Gemini 1.5 Flash', provider: 'Google', color: '#4285f4' },
-  { id: 'meta-llama/llama-3.2-90b-instruct', name: 'Llama 3.2 90B', provider: 'Meta', color: '#0866ff' },
-  { id: 'mistral/mistral-large-2407', name: 'Mistral Large', provider: 'Mistral', color: '#ff7000' },
-  { id: 'cohere/command-r-plus-08-2024', name: 'Command R+', provider: 'Cohere', color: '#39594c' },
+  { id: 'xai/grok-4', name: 'Grok 4', provider: 'xAI', color: '#000000' },
+  { id: 'alibaba/qwen-3-235b', name: 'Qwen 3 235B', provider: 'Alibaba', color: '#ff6600' },
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', provider: 'DeepSeek', color: '#1e40af' },
+  { id: 'deepseek/deepseek-v3', name: 'DeepSeek V3', provider: 'DeepSeek', color: '#1e40af' },
 ]
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini')
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-5-mini')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {

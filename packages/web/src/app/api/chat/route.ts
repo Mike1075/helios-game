@@ -2,7 +2,7 @@ import { streamText } from 'ai';
 
 export async function POST(req: Request) {
   try {
-    const { messages, model = 'openai/gpt-4o-mini' } = await req.json();
+    const { messages, model = 'openai/gpt-5-mini' } = await req.json();
 
     console.log(`Using model: ${model}`);
     
