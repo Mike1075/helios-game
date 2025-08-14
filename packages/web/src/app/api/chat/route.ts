@@ -1,9 +1,13 @@
-// @ts-nocheck
-import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { StreamingTextResponse, OpenAIStream } from 'ai';
+import OpenAI from 'openai';
 
 // IMPORTANT: Set the runtime to edge for better performance
 export const runtime = 'edge';
+
+// Create OpenAI client - will automatically use Vercel AI Gateway in Vercel environment
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || 'dummy-key-for-ai-gateway'
+});
 
 export async function POST(req: Request) {
   try {
@@ -13,19 +17,22 @@ export async function POST(req: Request) {
     console.log('Next.js API Route - Messages count:', messages?.length || 0);
     console.log('Next.js API Route - Model:', model);
 
-    // 使用AI SDK 5直接连接到Vercel AI Gateway
-    // 在Vercel部署环境中，AI SDK会自动使用AI Gateway
-    const result = await streamText({
-      model: openai(model),
-      messages,
-      maxTokens: 2048,
+    // 使用AI SDK 3 + OpenAI直接连接到Vercel AI Gateway
+    // 在Vercel部署环境中，请求会自动路由到AI Gateway
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: messages,
+      max_tokens: 2048,
       temperature: 0.7,
+      stream: true,
     });
 
-    console.log('Next.js API Route - AI SDK streamText created successfully');
+    console.log('Next.js API Route - OpenAI stream created successfully');
 
-    // 返回标准AI SDK流式响应，兼容AI SDK 5
-    return result.toDataStreamResponse();
+    // 使用AI SDK 3的标准流式响应格式
+    const stream = OpenAIStream(response);
+    return new StreamingTextResponse(stream);
+    
   } catch (error) {
     console.error('Next.js API Route Error:', error);
     
