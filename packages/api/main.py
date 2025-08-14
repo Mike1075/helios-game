@@ -20,8 +20,11 @@ app.add_middleware(
 )
 
 # Vercel AI Gateway 环境变量 (官方配置方式)
-VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL")
-VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY")
+VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1/ai")
+VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY", "EtMyP4WaMfdkxizkutRrJT1j")
+
+print(f"DEBUG: AI Gateway URL = {VERCEL_AI_GATEWAY_URL}")
+print(f"DEBUG: API Key = {VERCEL_AI_GATEWAY_API_KEY[:8]}...{VERCEL_AI_GATEWAY_API_KEY[-4:] if VERCEL_AI_GATEWAY_API_KEY else 'None'}")
 
 def call_llm(model_name: str, system_prompt: str, user_prompt: str) -> str:
     """

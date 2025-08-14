@@ -12,36 +12,91 @@ def fetch_models_from_gateway():
     """
     从Vercel AI Gateway获取所有可用模型
     """
-    # 这里您可以设置您的API Key
-    VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL", "https://api.vercel.com/v1/ai")
-    VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY", "your-api-key-here")
+    # 使用提供的API Key - 官方Vercel AI Gateway端点
+    VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL", "https://ai-gateway.vercel.sh/v1/ai")
+    VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY", "EtMyP4WaMfdkxizkutRrJT1j")
     
-    if VERCEL_AI_GATEWAY_API_KEY == "your-api-key-here":
-        print("请设置 VERCEL_AI_GATEWAY_API_KEY 环境变量或在代码中直接设置")
-        return None
+    print(f"使用API Key: {VERCEL_AI_GATEWAY_API_KEY[:8]}...{VERCEL_AI_GATEWAY_API_KEY[-4:]}")
+    print(f"Gateway URL: {VERCEL_AI_GATEWAY_URL}")
     
     headers = {
         "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
         "Content-Type": "application/json"
     }
     
-    try:
-        print(f"正在从 {VERCEL_AI_GATEWAY_URL}/models 获取模型列表...")
-        response = requests.get(f"{VERCEL_AI_GATEWAY_URL}/models", headers=headers)
-        response.raise_for_status()
-        
-        models_data = response.json()
-        models = models_data.get("data", [])
-        
-        print(f"成功获取到 {len(models)} 个模型")
-        return models
-        
-    except requests.RequestException as e:
-        print(f"获取模型列表失败: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"响应状态码: {e.response.status_code}")
-            print(f"响应内容: {e.response.text[:500]}")
-        return None
+    # 尝试不同的端点格式，基于官方文档
+    endpoints_to_try = [
+        f"{VERCEL_AI_GATEWAY_URL}/models",
+        "https://ai-gateway.vercel.sh/v1/ai/models",
+        "https://api.vercel.com/v1/ai/models",
+        f"{VERCEL_AI_GATEWAY_URL}/v1/models"
+    ]
+    
+    for endpoint in endpoints_to_try:
+        try:
+            print(f"正在尝试端点: {endpoint}")
+            response = requests.get(endpoint, headers=headers)
+            
+            if response.status_code == 200:
+                models_data = response.json()
+                models = models_data.get("data", [])
+                print(f"成功获取到 {len(models)} 个模型")
+                return models
+            else:
+                print(f"  状态码: {response.status_code}")
+                print(f"  响应: {response.text[:200]}")
+                
+        except requests.RequestException as e:
+            print(f"  请求失败: {e}")
+            continue
+    
+    print("所有端点都失败了，尝试测试聊天端点...")
+    return test_chat_endpoint(VERCEL_AI_GATEWAY_URL, VERCEL_AI_GATEWAY_API_KEY)
+
+def test_chat_endpoint(gateway_url, api_key):
+    """
+    测试聊天端点，尝试获取可用模型
+    """
+    chat_endpoints = [
+        f"{gateway_url}/chat/completions",
+        "https://ai-gateway.vercel.sh/v1/ai/chat/completions",
+        "https://api.vercel.com/v1/ai/chat/completions",
+        f"{gateway_url}/v1/chat/completions"
+    ]
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # 测试用负载
+    test_payload = {
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": "Hello"}],
+        "max_tokens": 5
+    }
+    
+    for endpoint in chat_endpoints:
+        try:
+            print(f"测试聊天端点: {endpoint}")
+            response = requests.post(endpoint, headers=headers, json=test_payload)
+            print(f"  状态码: {response.status_code}")
+            
+            if response.status_code == 200:
+                print(f"  ✅ 聊天端点可用!")
+                # 如果聊天端点可用，返回一些默认模型
+                return [
+                    {"id": "gpt-4o-mini", "object": "model", "owned_by": "openai"},
+                    {"id": "gpt-4o", "object": "model", "owned_by": "openai"},
+                    {"id": "gpt-4", "object": "model", "owned_by": "openai"},
+                ]
+            else:
+                print(f"  响应: {response.text[:200]}")
+                
+        except Exception as e:
+            print(f"  错误: {e}")
+            
+    return None
 
 def test_model_call(model_name, api_key, gateway_url):
     """
