@@ -67,7 +67,7 @@ export default function ChatPage() {
     setMessages([...newMessages, { role: 'assistant', content: '' }])
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/edge-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
