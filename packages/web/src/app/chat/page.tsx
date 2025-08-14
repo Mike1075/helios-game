@@ -3,7 +3,11 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useChat } from '@ai-sdk/react'
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
 
 const AVAILABLE_MODELS = [
   { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic', color: '#ff6b35' },
@@ -20,23 +24,11 @@ const AVAILABLE_MODELS = [
 ]
 
 export default function ChatPage() {
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState('openai/gpt-5-mini')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // 使用 AI SDK 5 官方推荐的 useChat，实现文本流式（与 toTextStreamResponse 匹配）
-  const {
-    messages,
-    submit,
-    isLoading: chatLoading,
-    input: chatInput,
-    setInput: setChatInput,
-  } = useChat({
-    api: '/api/chat',
-    streamProtocol: 'text',
-    body: { model: selectedModel },
-  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -47,15 +39,64 @@ export default function ChatPage() {
   }, [messages])
 
   // 复用现有输入框状态，与 useChat 保持同步
-  useEffect(() => {
-    setIsLoading(chatLoading)
-  }, [chatLoading])
-
-  const handleSubmitLocal = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const value = (chatInput || '').trim()
-    if (!value || chatLoading) return
-    await submit()
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = { role: 'user', content: input }
+    const newMessages = [...messages, userMessage]
+    setMessages(newMessages)
+    setInput('')
+    setIsLoading(true)
+
+    // 添加空的AI消息用于流式更新
+    const aiMessageIndex = newMessages.length
+    setMessages([...newMessages, { role: 'assistant', content: '' }])
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          messages: newMessages,
+          model: selectedModel
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Response not ok')
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('Failed to get reader')
+      const decoder = new TextDecoder()
+      let aiContent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        aiContent += chunk
+
+        // 实时更新AI消息
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[aiMessageIndex] = { role: 'assistant', content: aiContent }
+          return updated
+        })
+      }
+
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[aiMessageIndex] = { role: 'assistant', content: 'Error: ' + (error instanceof Error ? error.message : 'Unknown error') }
+        return updated
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const selectedModelInfo = AVAILABLE_MODELS.find(m => m.id === selectedModel)
@@ -295,11 +336,11 @@ export default function ChatPage() {
             borderTop: '1px solid rgba(0, 0, 0, 0.1)',
             background: 'rgba(255, 255, 255, 0.5)'
           }}>
-            <form onSubmit={handleSubmitLocal} style={{ display: 'flex', gap: '1rem' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem' }}>
               <input
                 type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
                 placeholder={`与 ${selectedModelInfo?.name} 对话...`}
                 disabled={isLoading}
                 style={{
