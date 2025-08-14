@@ -48,6 +48,20 @@ export default function ChatPage() {
     setInput('')
     setIsLoading(true)
 
+    // 尝试将 {"content":"..."} 包裹的响应解包
+    const unwrapIfJsonWrapper = (text: string): string => {
+      const trimmed = text.trim()
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (parsed && typeof parsed === 'object' && typeof parsed.content === 'string') {
+          return parsed.content
+        }
+      } catch (_) {
+        // 忽略解析错误，按原文返回
+      }
+      return text
+    }
+
     // 添加空的AI消息用于流式更新
     const aiMessageIndex = newMessages.length
     setMessages([...newMessages, { role: 'assistant', content: '' }])
@@ -85,6 +99,14 @@ export default function ChatPage() {
           return updated
         })
       }
+
+      // 结束后做一次清洗，去除可能的 JSON 包裹
+      const cleaned = unwrapIfJsonWrapper(aiContent)
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[aiMessageIndex] = { role: 'assistant', content: cleaned }
+        return updated
+      })
 
     } catch (error) {
       console.error('Error:', error)
@@ -137,42 +159,21 @@ export default function ChatPage() {
           </h1>
           
           {/* Model Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: '8px',
-              border: `2px solid ${selectedModelInfo?.color || '#ddd'}`,
-              fontSize: '0.9rem'
-            }}>
-              <div style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: selectedModelInfo?.color || '#ddd'
-              }}></div>
-              <span style={{ fontWeight: '500', color: '#333' }}>
-                {selectedModelInfo?.name} 
-              </span>
-              <span style={{ color: '#666', fontSize: '0.8rem' }}>
-                ({selectedModelInfo?.provider})
-              </span>
-            </div>
-            
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                border: '1px solid #ddd',
-                background: 'white',
-                fontSize: '0.9rem',
-                minWidth: '200px',
-                cursor: 'pointer'
+                padding: '0.6rem 1rem',
+                borderRadius: '10px',
+                border: `2px solid ${selectedModelInfo?.color || '#667eea'}`,
+                background: '#ffffff',
+                color: '#333',
+                fontWeight: 600,
+                fontSize: '0.95rem',
+                minWidth: '260px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
               }}
             >
               {AVAILABLE_MODELS.map(model => (
