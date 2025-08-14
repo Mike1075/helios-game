@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 import os
 import requests
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any, AsyncGenerator, Optional
 import asyncio
 from pydantic import BaseModel
 
@@ -19,9 +19,94 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Vercel环境变量 (由Mike在Vercel云端配置)
+# Vercel AI Gateway 环境变量 (官方配置方式)
 VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL")
 VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY")
+
+def call_llm(model_name: str, system_prompt: str, user_prompt: str) -> str:
+    """
+    按照官方示例调用Vercel AI Gateway
+    """
+    headers = {
+        "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "max_tokens": 2048
+    }
+
+    response = requests.post(f"{VERCEL_AI_GATEWAY_URL}/chat/completions", headers=headers, json=payload)
+    response.raise_for_status()  # Will raise an exception for HTTP error codes
+
+    return response.json()["choices"][0]["message"]["content"]
+
+def call_llm_streaming(model_name: str, messages: List[Dict]) -> AsyncGenerator[str, None]:
+    """
+    流式调用Vercel AI Gateway
+    """
+    headers = {
+        "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": model_name,
+        "messages": messages,
+        "max_tokens": 2048,
+        "stream": True
+    }
+
+    try:
+        response = requests.post(
+            f"{VERCEL_AI_GATEWAY_URL}/chat/completions", 
+            headers=headers, 
+            json=payload, 
+            stream=True
+        )
+        response.raise_for_status()
+
+        for line in response.iter_lines(decode_unicode=True):
+            if line and line.startswith('data: '):
+                data = line[6:]
+                if data.strip() == '[DONE]':
+                    break
+                try:
+                    parsed = json.loads(data)
+                    content = parsed.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                    if content:
+                        yield f"data: {json.dumps({'content': content})}\n\n"
+                except json.JSONDecodeError:
+                    continue
+        yield "data: [DONE]\n\n"
+    except Exception as e:
+        error_msg = f"AI Gateway调用失败: {str(e)}"
+        yield f"data: {json.dumps({'error': error_msg})}\n\n"
+        yield "data: [DONE]\n\n"
+
+def get_available_models() -> List[Dict]:
+    """
+    动态模型发现 - 获取所有可用模型
+    """
+    try:
+        headers = {
+            "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(f"{VERCEL_AI_GATEWAY_URL}/models", headers=headers)
+        response.raise_for_status()
+        
+        models_data = response.json()
+        return models_data.get("data", [])
+    except Exception as e:
+        print(f"获取模型列表失败: {e}")
+        return []
 
 class Message(BaseModel):
     role: str
@@ -44,17 +129,15 @@ async def health_check():
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     """
-    AI聊天端点，直接调用Vercel AI Gateway，支持流式输出
+    AI聊天端点，使用官方示例方式调用Vercel AI Gateway
     """
     try:
-        # 检查环境变量并添加调试信息
-        print(f"DEBUG: VERCEL_AI_GATEWAY_URL = {VERCEL_AI_GATEWAY_URL}")
-        print(f"DEBUG: VERCEL_AI_GATEWAY_API_KEY exists = {bool(VERCEL_AI_GATEWAY_API_KEY)}")
-        print(f"DEBUG: Request model = {request.model}")
+        print(f"DEBUG: Model = {request.model}")
         print(f"DEBUG: Messages count = {len(request.messages)}")
+        print(f"DEBUG: AI Gateway URL = {VERCEL_AI_GATEWAY_URL}")
+        print(f"DEBUG: API Key exists = {bool(VERCEL_AI_GATEWAY_API_KEY)}")
         
         if not VERCEL_AI_GATEWAY_URL or not VERCEL_AI_GATEWAY_API_KEY:
-            print("DEBUG: Using mock response (local development)")
             # 本地开发环境 - 返回模拟响应
             return StreamingResponse(
                 mock_streaming_response(request.messages, request.model),
@@ -66,65 +149,22 @@ async def chat_endpoint(request: ChatRequest):
                 }
             )
         
-        # 生产环境 - 调用Vercel AI Gateway
-        # 根据Vercel AI Gateway文档配置认证头
-        headers = {
-            "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream",
-            "User-Agent": "Helios/1.0"
-        }
+        # 转换消息格式
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
-        # 如果使用Vercel AI Gateway，可能需要不同的认证方式
-        if "vercel.com" in base_url or "api.vercel" in base_url:
-            print("DEBUG: Using Vercel API authentication format")
-            # Vercel API可能需要不同的头部格式
-            headers.update({
-                "X-Vercel-AI-Provider": "openai",
-                "X-Vercel-AI-Model": request.model
-            })
-
-        # 将消息格式转换为标准OpenAI API格式
-        openai_messages = [
-            {"role": msg.role, "content": msg.content} 
-            for msg in request.messages
-        ]
-
-        # 标准OpenAI API负载格式
-        payload = {
-            "model": request.model,
-            "messages": openai_messages,
-            "stream": True,
-            "max_tokens": 2048,
-            "temperature": 0.7
-        }
-
-        print(f"DEBUG: Calling Vercel AI Gateway")
-        print(f"DEBUG: Model: {request.model}")
-        print(f"DEBUG: Gateway URL: {VERCEL_AI_GATEWAY_URL}")
-        print(f"DEBUG: API Key exists: {bool(VERCEL_AI_GATEWAY_API_KEY)}")
-        print(f"DEBUG: Messages: {len(openai_messages)}")
-        
-        # 根据最新Vercel AI Gateway文档，尝试不同的端点
-        if not VERCEL_AI_GATEWAY_URL:
-            print("DEBUG: No VERCEL_AI_GATEWAY_URL, using default")
-            # Vercel AI Gateway的默认端点
-            base_url = "https://api.vercel.com/v1/ai/chat/completions"
-        else:
-            base_url = VERCEL_AI_GATEWAY_URL
-        
-        # 调用Vercel AI Gateway
+        # 使用官方示例方式调用AI Gateway (流式)
         return StreamingResponse(
-            stream_ai_gateway_response(headers, payload, base_url),
+            call_llm_streaming(request.model, messages),
             media_type="text/event-stream",
             headers={
-                "Cache-Control": "no-cache", 
-                "Connection": "keep-alive",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive", 
                 "Access-Control-Allow-Origin": "*",
             }
         )
 
     except Exception as e:
+        print(f"ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 async def mock_streaming_response(messages: List[Message], model: str = "gpt-4o-mini") -> AsyncGenerator[str, None]:
@@ -262,27 +302,61 @@ async def stream_ai_gateway_response(headers: dict, payload: dict, base_url: str
         yield "data: [DONE]\n\n"
 
 @app.get("/api/models")
-async def get_available_models():
+async def list_available_models():
     """
-    获取可用模型列表
+    获取所有可用模型列表 - 动态从AI Gateway获取
     """
-    # 读取本地模型配置文件
     try:
-        import json
-        models_file = "../../docs/available-models.json"
-        with open(models_file, 'r', encoding='utf-8') as f:
-            models = json.load(f)
-        return models
-    except FileNotFoundError:
-        return {
-            "openai": {
-                "gpt-4o-mini": {
-                    "provider": "openai",
-                    "model": "gpt-4o-mini",
-                    "description": "Fast and cost-effective OpenAI model",
-                    "streaming": True
-                }
+        if not VERCEL_AI_GATEWAY_URL or not VERCEL_AI_GATEWAY_API_KEY:
+            # 本地开发环境返回默认模型
+            return {
+                "data": [
+                    {"id": "gpt-4o-mini", "object": "model", "created": 1700000000, "owned_by": "openai"},
+                    {"id": "gpt-4o", "object": "model", "created": 1700000000, "owned_by": "openai"},
+                    {"id": "gpt-4", "object": "model", "created": 1700000000, "owned_by": "openai"},
+                    {"id": "anthropic/claude-3-5-sonnet", "object": "model", "created": 1700000000, "owned_by": "anthropic"}
+                ],
+                "object": "list"
             }
+        
+        # 从AI Gateway动态获取模型列表
+        models = get_available_models()
+        print(f"DEBUG: 获取到 {len(models)} 个模型")
+        
+        return {
+            "data": models,
+            "object": "list",
+            "total": len(models)
+        }
+    except Exception as e:
+        print(f"ERROR: 获取模型列表失败: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get models: {str(e)}")
+
+@app.post("/api/test-model")
+async def test_model_call(model_name: str = "anthropic/claude-3-5-sonnet"):
+    """
+    测试单个模型调用 - 用于验证模型名称
+    """
+    try:
+        if not VERCEL_AI_GATEWAY_URL or not VERCEL_AI_GATEWAY_API_KEY:
+            return {"error": "AI Gateway配置未找到", "model": model_name}
+        
+        result = call_llm(
+            model_name=model_name,
+            system_prompt="You are a helpful assistant.",
+            user_prompt="Say hello in one sentence."
+        )
+        
+        return {
+            "model": model_name,
+            "response": result,
+            "status": "success"
+        }
+    except Exception as e:
+        return {
+            "model": model_name,
+            "error": str(e),
+            "status": "failed"
         }
 
 if __name__ == "__main__":
