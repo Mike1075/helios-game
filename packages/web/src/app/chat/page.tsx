@@ -41,7 +41,7 @@ export default function ChatPage() {
     e.preventDefault()
     if (!input.trim() || isLoading) return
 
-    const userMessage = { role: 'user', content: input }
+    const userMessage: Message = { role: 'user', content: input }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
     setInput('')
@@ -49,7 +49,7 @@ export default function ChatPage() {
 
     // 添加空的AI消息用于流式更新
     const aiMessageIndex = newMessages.length
-    setMessages([...newMessages, { role: 'assistant', content: '' }])
+    setMessages([...newMessages, { role: 'assistant', content: '' } as Message])
 
     try {
       const response = await fetch('/api/chat', {
@@ -66,6 +66,7 @@ export default function ChatPage() {
       }
 
       const reader = response.body?.getReader()
+      if (!reader) throw new Error('Failed to get reader')
       const decoder = new TextDecoder()
       let aiContent = ''
 
@@ -88,7 +89,7 @@ export default function ChatPage() {
       console.error('Error:', error)
       setMessages(prev => {
         const updated = [...prev]
-        updated[aiMessageIndex] = { role: 'assistant', content: 'Error: ' + error.message }
+        updated[aiMessageIndex] = { role: 'assistant', content: 'Error: ' + (error instanceof Error ? error.message : 'Unknown error') }
         return updated
       })
     } finally {
@@ -262,11 +263,11 @@ export default function ChatPage() {
                   </div>
                   
                   {message.role === 'assistant' ? (
+                    <div style={{ margin: 0 }}>
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
-                      style={{ margin: 0 }}
                       components={{
-                        code: ({node, inline, className, children, ...props}) => (
+                        code: ({inline, className, children, ...props}: any) => (
                           <code
                             style={{
                               background: inline ? '#e9ecef' : '#f8f9fa',
@@ -297,6 +298,7 @@ export default function ChatPage() {
                     >
                       {message.content}
                     </ReactMarkdown>
+                    </div>
                   ) : (
                     <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
                   )}
@@ -392,13 +394,13 @@ export default function ChatPage() {
                 }}
                 onMouseOver={(e) => {
                   if (!isLoading && input.trim()) {
-                    e.target.style.transform = 'translateY(-2px)'
-                    e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
+                    (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                    (e.target as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)'
                   }
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.transform = 'translateY(0)'
-                  e.target.style.boxShadow = 'none'
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                  (e.target as HTMLButtonElement).style.boxShadow = 'none'
                 }}
               >
                 {isLoading ? '发送中...' : '发送 📤'}
