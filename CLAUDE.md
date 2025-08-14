@@ -68,6 +68,24 @@ npm run dev:api
 - **Trigger Logic**: Detects cognitive dissonance (positive actions → negative feedback)
 - **Action**: Inserts records into `events` table to trigger Chamber of Echoes opportunities
 
+## 🚨 CRITICAL DEVELOPMENT RULE - MUST FOLLOW 🚨
+
+**IRON RULE: OFFICIAL DOCUMENTATION SUPREMACY**
+- ALL development MUST strictly follow official documentation provided by Mike
+- Official docs are located in `docs/` folder (AI SDK 5, API references, etc.)
+- NEVER make assumptions, guesses, or "improvements" without explicit documentation backing
+- When in doubt, ASK for clarification rather than guessing
+- Every API call, model format, parameter must match official docs EXACTLY
+- NO exceptions, NO shortcuts, NO "I think it should be..."
+
+**Example violations that are FORBIDDEN:**
+- ❌ Changing `provider/model` to `provider:model` without documentation
+- ❌ Adding parameters not in official examples  
+- ❌ Modifying API call patterns based on assumptions
+- ❌ Using outdated or incorrect formats from memory
+
+**This rule supersedes all other considerations. Code quality, performance, personal preference - NONE of these justify deviating from official documentation.**
+
 ## Mandatory Development Contracts
 
 ### Environment Variables (Managed by Mike via Vercel)
