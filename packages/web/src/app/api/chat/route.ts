@@ -1,4 +1,5 @@
 import { streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 
 export async function POST(req: Request) {
   try {
@@ -19,10 +20,15 @@ export async function POST(req: Request) {
     console.log(`Using model: ${model}`);
     console.log(`API key configured: ${apiKey ? 'Yes' : 'No'}`);
     
-    const result = streamText({
-      model: model,
-      messages,
+    // 创建OpenAI客户端配置AI Gateway
+    const openai = createOpenAI({
       apiKey: apiKey,
+      baseURL: process.env.OPENAI_BASE_URL || 'https://gateway.ai.cloudflare.com/v1/a5e6a2c3b8d4f1e9/openai',
+    });
+    
+    const result = streamText({
+      model: openai(model.replace('openai/', '')),
+      messages,
     });
 
     return result.toTextStreamResponse();
