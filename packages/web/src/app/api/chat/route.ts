@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
     console.log('Next.js API Route - AI SDK streamText created successfully');
 
-    // 返回标准AI SDK流式响应，完全兼容useChat
+    // 返回标准AI SDK流式响应，兼容AI SDK 5
     return result.toDataStreamResponse();
   } catch (error) {
     console.error('Next.js API Route Error:', error);
