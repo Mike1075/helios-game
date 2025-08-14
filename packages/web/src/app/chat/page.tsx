@@ -4,6 +4,11 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 const AVAILABLE_MODELS = [
   { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI', color: '#10a37f' },
   { id: 'openai/gpt-4o', name: 'GPT-4o', provider: 'OpenAI', color: '#10a37f' },
@@ -18,7 +23,7 @@ const AVAILABLE_MODELS = [
 ]
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini')
