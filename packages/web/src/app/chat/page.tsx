@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
 
 const AVAILABLE_MODELS = [
   { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic', color: '#ff6b35' },
