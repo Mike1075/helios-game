@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     console.log(`Using model: ${model}`);
     
     // AI SDK 5 支持直接使用模型ID字符串，默认使用 Vercel AI Gateway
-    const result = streamText({
+    const result = await streamText({
       model: model,
       messages,
     });
