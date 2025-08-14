@@ -1,26 +1,11 @@
 {
   "name": "helios-monorepo",
   "private": true,
-  "workspaces": ["packages/*"],
-  "scripts": {
-    "dev:web": "npm run dev --workspace=web",
-    "build": "vercel build",
-    "start": "vercel start"
-  },
-  "devDependencies": {
-    "vercel": "^34.0.0"
-  }
-}
-
-{
-  "name": "helios-monorepo",
-  "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace=web",
-    "dev:api": "uvicorn packages.api.main:app --reload",
     "build": "vercel build",
     "start": "vercel start"
   },

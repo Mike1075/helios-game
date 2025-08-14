@@ -7,26 +7,3 @@
     { "src": "/(.*)", "dest": "packages/web/$1" }
   ]
 }
-
-{
-  "builds": [
-    {
-      "src": "packages/web/next.config.js",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "packages/api/main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "packages/api/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "packages/web"
-    }
-  ]
-}
