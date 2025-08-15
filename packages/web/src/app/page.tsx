@@ -1,31 +1,68 @@
-export default function Home() {
+'use client';
+import { useEffect, useState } from 'react';
+type Msg = { role:'user'|'ai'; text:string };
+const SID_KEY = 'helios_session_id';
+
+function getSessionId() {
+  let v = localStorage.getItem(SID_KEY);
+  if (!v) { v = 'sess_' + Math.random().toString(36).slice(2); localStorage.setItem(SID_KEY, v); }
+  return v;
+}
+
+export default function ChatPage() {
+  const [sid] = useState(getSessionId);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [echo, setEcho] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/logs?session_id=${encodeURIComponent(sid)}`, { cache: 'no-store' });
+        const data = await res.json();
+        setMsgs((data || []).filter((r:any)=>r.speaker==='user'||r.speaker==='ai')
+          .map((r:any)=>({ role:r.speaker, text:r.text })));
+      } catch {}
+    })();
+  }, [sid]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || busy) return;
+    setInput(''); setMsgs(m=>[...m,{role:'user',text}]); setBusy(true);
+    try {
+      const res = await fetch('/api/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ session_id: sid, message: text })
+      });
+      const ai = await res.text(); // SSE 简化整条收
+      setMsgs(m=>[...m,{role:'ai',text:ai}]);
+    } catch {
+      setMsgs(m=>[...m,{role:'ai',text:'[提示] 预览变量未注入或后端异常'}]);
+    } finally { setBusy(false); }
+  }
+
+  async function openEcho() {
+    setEcho('（下一步：接 Supabase Edge Function /echo）');
+  }
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold mb-8 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-            Helios
-          </h1>
-          <h2 className="text-2xl mb-6 text-blue-200">
-            赫利俄斯 - 意识的棱镜
-          </h2>
-          <p className="text-xl max-w-2xl mx-auto mb-12 text-gray-300 leading-relaxed">
-            这不是一个传统的游戏，而是一个意识探索与演化的沙盒。
-            <br />
-            你的意识之光将通过独特的信念系统折射，创造属于你的主观现实。
-          </p>
-          
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-4">MVP "棱镜之心" 正在构建中...</h3>
-            <div className="text-sm text-gray-400">
-              <p>🔮 信念系统</p>
-              <p>🤖 NPC代理核心</p>
-              <p>🪞 回响之室</p>
-              <p>🎭 导演引擎</p>
-            </div>
-          </div>
-        </div>
+    <main style={{maxWidth:720,margin:'40px auto',padding:16}}>
+      <h1>Helios · Chat MVP</h1>
+      <div style={{fontSize:12,color:'#666'}}>session: <code>{sid}</code></div>
+      <div style={{border:'1px solid #ddd',borderRadius:8,padding:12,minHeight:280,marginTop:12}}>
+        {msgs.map((m,i)=>(<div key={i} style={{margin:'8px 0'}}><b>{m.role==='user'?'你':'AI'}：</b>{m.text}</div>))}
+        {busy && <div>AI 正在思考…</div>}
       </div>
+      <div style={{display:'flex',gap:8,marginTop:12}}>
+        <input value={input} onChange={e=>setInput(e.target.value)}
+               onKeyDown={e=>e.key==='Enter'&&send()}
+               placeholder="输入后回车" style={{flex:1,padding:8,border:'1px solid #ddd',borderRadius:6}}/>
+        <button onClick={send} disabled={busy}>发送</button>
+        <button onClick={openEcho}>回响之室</button>
+      </div>
+      {echo && <div style={{marginTop:12,border:'1px dashed #bbb',padding:10}}>{echo}</div>}
     </main>
-  )
+  );
 }
