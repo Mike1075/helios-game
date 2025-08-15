@@ -71,12 +71,12 @@ npm run dev:api
 ## Mandatory Development Contracts
 
 ### Environment Variables (Managed by Mike via Vercel)
-**Backend Variables** (Python `os.environ.get()`):
-- `VERCEL_AI_GATEWAY_URL`: AI Gateway endpoint
-- `VERCEL_AI_GATEWAY_API_KEY`: Gateway authentication
+**重要**: 严格遵循 `.claude/Vercel AI 开发规范与标准.md` 中的环境变量命名规范
+
+**Backend Variables** (Node.js `process.env.`):
+- `AI_GATEWAY_API_KEY`: AI Gateway 认证密钥 (符合 Vercel AI 规范第2.2节)
 - `SUPABASE_URL`: Database URL
 - `SUPABASE_SERVICE_KEY`: Database service key
-- `ZEP_API_KEY`: Memory service key
 
 **Frontend Variables** (Next.js `process.env.`):
 - `NEXT_PUBLIC_SUPABASE_URL`: Public database URL
@@ -85,34 +85,23 @@ npm run dev:api
 **Note**: Never hardcode secrets. Variables are only available in Vercel preview/production environments, not locally.
 
 ### LLM Call Standard
-All AI model calls **MUST** go through Vercel AI Gateway:
+**重要**: 严格遵循 Vercel AI SDK 5 开发规范 (`.claude/Vercel AI 开发规范与标准.md` 第3节)
 
-```python
-import os
-import requests
+All AI model calls **MUST** use Vercel AI SDK 5:
 
-VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL")
-VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY")
+```typescript
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import 'dotenv/config';
 
-def call_llm(model_name: str, system_prompt: str, user_prompt: str):
-    headers = {
-        "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "max_tokens": 2048
-    }
-    
-    response = requests.post(f"{VERCEL_AI_GATEWAY_URL}/chat/completions", headers=headers, json=payload)
-    response.raise_for_status()
-    
-    return response.json()["choices"][0]["message"]["content"]
+// 使用标准模型名称格式: creator/model-name (规范第4.1节)
+const result = await streamText({
+  model: openai('openai/gpt-4o'), // 符合 Vercel AI 规范的模型命名
+  prompt: user_message,
+});
+
+// AI_GATEWAY_API_KEY 环境变量自动被 AI SDK 使用 (规范第2.2节)
+return result.toAIStreamResponse();
 ```
 
 ## Git Workflow
