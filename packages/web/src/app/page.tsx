@@ -44,7 +44,33 @@ export default function ChatPage() {
   }
 
   async function openEcho() {
-    setEcho('（下一步：接 Supabase Edge Function /echo）');
+    if (busy) return;
+    
+    setEcho('正在进入回响之室...');
+    setBusy(true);
+    
+    try {
+      const res = await fetch('/api/echo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          session_id: sid, 
+          message: msgs.length > 0 ? msgs[msgs.length - 1]?.text : '初次探索' 
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.ok) {
+        setEcho(`🪞 回响之室\n\n${data.attribution}\n\n信念系统: ${data.belief_system?.worldview} | ${data.belief_system?.selfview} | ${data.belief_system?.values}`);
+      } else {
+        setEcho('回响之室暂时无法访问，请稍后再试。');
+      }
+    } catch (error) {
+      setEcho('连接回响之室时出现问题，但这种尝试本身就有意义。');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
