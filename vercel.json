@@ -1,22 +1,7 @@
 {
-  "builds": [
-    {
-      "src": "packages/web/next.config.js",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "packages/api/main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "packages/api/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "packages/web"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd packages/web && npm run build",
+  "devCommand": "cd packages/web && npm run dev",
+  "installCommand": "cd packages/web && npm install",
+  "outputDirectory": "packages/web/.next"
 }
