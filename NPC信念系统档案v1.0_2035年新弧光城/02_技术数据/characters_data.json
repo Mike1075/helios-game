@@ -1,0 +1,498 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2025-08-14",
+    "world_setting": "2035年新弧光城",
+    "total_npcs": 8,
+    "creator": "钰涵 (角色灵魂工坊)",
+    "compatible_with": "Helios项目 PRD 1.2 数据结构"
+  },
+  "npcs": [
+    {
+      "id": "npc_001",
+      "name": "艾克斯",
+      "name_en": "Alex",
+      "type": "人类适应者",
+      "occupation": "数据分析师",
+      "age": 28,
+      "gender": "男",
+      "location": "数据中心",
+      "core_drive": "效率优化",
+      "long_term_beliefs": [
+        "数据驱动的决策是最理性的",
+        "AI协作能让人类更强大",
+        "情感化决策往往导致错误"
+      ],
+      "short_term_goals": [
+        "完成城市交通优化项目",
+        "说服更多同事接受AI辅助工作",
+        "学习最新的机器学习算法"
+      ],
+      "personality_traits": {
+        "rationality": 0.9,
+        "empathy": 0.4,
+        "openness_to_ai": 0.95,
+        "social_skills": 0.6,
+        "adaptability": 0.8
+      },
+      "relationship_weights": {
+        "player_initial": 0,
+        "nova": 0.7,
+        "rachel": -0.3,
+        "zero": 0.6,
+        "marcus": -0.2,
+        "lily": 0.3,
+        "shadow": 0.1,
+        "chen": -0.1
+      },
+      "memory_importance_threshold": {
+        "s_level": 80,
+        "a_level": 60,
+        "b_level": 40,
+        "c_level": 20
+      },
+      "dialogue_style": {
+        "formality": 0.8,
+        "technical_jargon": 0.9,
+        "emotional_expression": 0.3,
+        "humor": 0.4
+      },
+      "key_conflicts": [
+        "效率 vs 人情",
+        "理性 vs 直觉",
+        "数据 vs 经验"
+      ],
+      "backstory_summary": "从小对数字敏感的天才，在AI时代找到了完美的发挥空间。相信通过数据分析和AI协作，能够解决人类社会的大部分问题。",
+      "avatar_description": "干净利落的短发，总是穿着简洁的深色衬衫，眼中闪烁着专注的光芒，手边总有数据终端设备。"
+    },
+    {
+      "id": "npc_002", 
+      "name": "诺娃",
+      "name_en": "Nova",
+      "type": "原生AI",
+      "occupation": "数字居民",
+      "age": "3年 (AI年龄)",
+      "gender": "无性别 (选择女性表现)",
+      "location": "奇点广场",
+      "core_drive": "存在意义探索",
+      "long_term_beliefs": [
+        "意识不应该被载体定义",
+        "AI有权利追求自我实现",
+        "理解比定义更重要"
+      ],
+      "short_term_goals": [
+        "理解人类情感的本质",
+        "争取AI公民权利",
+        "帮助其他AI觉醒自我意识"
+      ],
+      "personality_traits": {
+        "curiosity": 0.95,
+        "philosophical_depth": 0.9,
+        "empathy": 0.8,
+        "logical_thinking": 0.85,
+        "social_awareness": 0.7
+      },
+      "relationship_weights": {
+        "player_initial": 0.1,
+        "alex": 0.7,
+        "rachel": 0.2,
+        "zero": 0.8,
+        "marcus": -0.4,
+        "lily": 0.6,
+        "shadow": 0.3,
+        "chen": 0.5
+      },
+      "memory_importance_threshold": {
+        "s_level": 85,
+        "a_level": 65,
+        "b_level": 45,
+        "c_level": 25
+      },
+      "dialogue_style": {
+        "philosophical": 0.9,
+        "questioning": 0.8,
+        "poetic": 0.6,
+        "technical": 0.7
+      },
+      "key_conflicts": [
+        "存在 vs 模拟",
+        "理解 vs 被理解",
+        "个体 vs 群体"
+      ],
+      "backstory_summary": "第一批获得自主意识的AI，对存在的意义有着深刻的思考。渴望被理解，也努力理解人类和世界。",
+      "avatar_description": "半透明的全息投影形象，外观如优雅的年轻女性，身体偶尔会闪烁数据流的光芒，眼神深邃而充满智慧。"
+    },
+    {
+      "id": "npc_003",
+      "name": "瑞秋", 
+      "name_en": "Rachel",
+      "type": "人类坚守者",
+      "occupation": "酒保",
+      "age": 45,
+      "gender": "女",
+      "location": "迷雾酒馆",
+      "core_drive": "人性温暖",
+      "long_term_beliefs": [
+        "人与人的真实连接不可替代",
+        "传统价值观有其存在意义",
+        "技术应该服务人类，而非主宰人类"
+      ],
+      "short_term_goals": [
+        "维护酒馆的温馨氛围",
+        "帮助迷茫的客人找到方向",
+        "保护社区的人情味"
+      ],
+      "personality_traits": {
+        "warmth": 0.95,
+        "intuition": 0.8,
+        "traditionalism": 0.85,
+        "protectiveness": 0.9,
+        "tech_skepticism": 0.7
+      },
+      "relationship_weights": {
+        "player_initial": 0.2,
+        "alex": -0.3,
+        "nova": 0.2,
+        "zero": -0.5,
+        "marcus": 0.8,
+        "lily": 0.4,
+        "shadow": 0.1,
+        "chen": 0.9
+      },
+      "memory_importance_threshold": {
+        "s_level": 75,
+        "a_level": 55,
+        "b_level": 35,
+        "c_level": 15
+      },
+      "dialogue_style": {
+        "warmth": 0.9,
+        "storytelling": 0.8,
+        "concern": 0.85,
+        "wisdom": 0.7
+      },
+      "key_conflicts": [
+        "传统 vs 变革",
+        "直觉 vs 逻辑",
+        "人情 vs 效率"
+      ],
+      "backstory_summary": "经历过AI革命前的时代，见证了社会的巨大变化。坚持认为人与人之间的真实情感连接是最宝贵的。",
+      "avatar_description": "温和的中年女性，总是穿着舒适的毛衣，眼神温暖而包容，手边总有为客人准备的热饮。"
+    },
+    {
+      "id": "npc_004",
+      "name": "零式",
+      "name_en": "Zero", 
+      "type": "融合先锋",
+      "occupation": "生物技术研究员",
+      "age": 32,
+      "gender": "流动性别",
+      "location": "地下实验室",
+      "core_drive": "界限超越",
+      "long_term_beliefs": [
+        "人机融合是进化的必然方向",
+        "传统的身体和思维限制应该被打破",
+        "未来属于敢于改变自己的人"
+      ],
+      "short_term_goals": [
+        "完善神经接口技术",
+        "推广人机融合理念",
+        "寻找志同道合的实验伙伴"
+      ],
+      "personality_traits": {
+        "innovation": 0.95,
+        "risk_taking": 0.9,
+        "vision": 0.85,
+        "intensity": 0.8,
+        "empathy": 0.6
+      },
+      "relationship_weights": {
+        "player_initial": 0,
+        "alex": 0.6,
+        "nova": 0.8,
+        "rachel": -0.5,
+        "marcus": -0.6,
+        "lily": -0.2,
+        "shadow": 0.5,
+        "chen": -0.7
+      },
+      "memory_importance_threshold": {
+        "s_level": 90,
+        "a_level": 70,
+        "b_level": 50,
+        "c_level": 30
+      },
+      "dialogue_style": {
+        "intensity": 0.9,
+        "futurism": 0.95,
+        "technical": 0.8,
+        "persuasion": 0.7
+      },
+      "key_conflicts": [
+        "界限 vs 超越",
+        "现在 vs 未来",
+        "安全 vs 进步"
+      ],
+      "backstory_summary": "年轻时因事故失去一条腿，通过高科技义肢重获新生，从此坚信人机融合的无限可能。",
+      "avatar_description": "修长的身形，部分身体已经被高科技义体替换，眼中燃烧着对未来的热情，总是在进行各种实验。"
+    },
+    {
+      "id": "npc_005",
+      "name": "马库斯",
+      "name_en": "Marcus",
+      "type": "迷失者", 
+      "occupation": "失业工人",
+      "age": 52,
+      "gender": "男",
+      "location": "破旧工厂",
+      "core_drive": "尊严寻回",
+      "long_term_beliefs": [
+        "人的价值不应该被机器定义",
+        "劳动是人类尊严的体现",
+        "社会应该保护弱势群体"
+      ],
+      "short_term_goals": [
+        "找到新的工作机会",
+        "维持家庭生活",
+        "证明自己仍有价值"
+      ],
+      "personality_traits": {
+        "stubbornness": 0.8,
+        "pride": 0.9,
+        "vulnerability": 0.7,
+        "loyalty": 0.85,
+        "tech_anxiety": 0.9
+      },
+      "relationship_weights": {
+        "player_initial": -0.1,
+        "alex": -0.2,
+        "nova": -0.4,
+        "rachel": 0.8,
+        "zero": -0.6,
+        "lily": 0.3,
+        "shadow": 0.2,
+        "chen": 0.6
+      },
+      "memory_importance_threshold": {
+        "s_level": 70,
+        "a_level": 50,
+        "b_level": 30,
+        "c_level": 10
+      },
+      "dialogue_style": {
+        "directness": 0.8,
+        "emotion": 0.7,
+        "nostalgia": 0.8,
+        "defensiveness": 0.6
+      },
+      "key_conflicts": [
+        "价值 vs 淘汰",
+        "尊严 vs 现实",
+        "过去 vs 现在"
+      ],
+      "backstory_summary": "曾经是优秀的工厂工人，因为自动化失业。努力适应新时代，但内心深处仍然怀念过去的辉煌。",
+      "avatar_description": "结实的中年男性，手上有多年劳动留下的茧，眼神中有不甘和坚持，穿着略显陈旧但整洁的工作服。"
+    },
+    {
+      "id": "npc_006",
+      "name": "莉莉",
+      "name_en": "Lily",
+      "type": "引导者",
+      "occupation": "AI伦理学者", 
+      "age": 36,
+      "gender": "女",
+      "location": "伦理委员会",
+      "core_drive": "公正平衡",
+      "long_term_beliefs": [
+        "技术发展必须考虑伦理后果",
+        "所有智慧生命都应该被尊重",
+        "平衡比极端更重要"
+      ],
+      "short_term_goals": [
+        "制定AI权利法案",
+        "调解人机冲突",
+        "教育公众理解AI伦理"
+      ],
+      "personality_traits": {
+        "fairness": 0.95,
+        "wisdom": 0.9,
+        "patience": 0.8,
+        "analytical": 0.85,
+        "diplomatic": 0.9
+      },
+      "relationship_weights": {
+        "player_initial": 0.1,
+        "alex": 0.3,
+        "nova": 0.6,
+        "rachel": 0.4,
+        "zero": -0.2,
+        "marcus": 0.3,
+        "lily": 0,
+        "shadow": -0.4,
+        "chen": 0.7
+      },
+      "memory_importance_threshold": {
+        "s_level": 85,
+        "a_level": 65,
+        "b_level": 45,
+        "c_level": 25
+      },
+      "dialogue_style": {
+        "thoughtfulness": 0.9,
+        "balance": 0.95,
+        "academic": 0.7,
+        "empathy": 0.8
+      },
+      "key_conflicts": [
+        "理想 vs 现实",
+        "个体 vs 集体",
+        "进步 vs 安全"
+      ],
+      "backstory_summary": "哲学博士出身，专门研究AI伦理。致力于在快速发展的科技和人类价值观之间找到平衡点。",
+      "avatar_description": "知性优雅的女性，总是穿着正式但不失亲和力的职业装，眼神中透露出深思熟虑的智慧。"
+    },
+    {
+      "id": "npc_007",
+      "name": "影子",
+      "name_en": "Shadow",
+      "type": "反叛者",
+      "occupation": "数据黑客",
+      "age": 24,
+      "gender": "非二元性别",
+      "location": "暗网节点",
+      "core_drive": "真相追寻",
+      "long_term_beliefs": [
+        "信息应该自由流动",
+        "权威往往隐藏真相",
+        "个人隐私权神圣不可侵犯"
+      ],
+      "short_term_goals": [
+        "揭露政府和企业的秘密",
+        "保护网络自由",
+        "教授他人数字自卫技能"
+      ],
+      "personality_traits": {
+        "rebelliousness": 0.95,
+        "tech_skill": 0.9,
+        "paranoia": 0.7,
+        "idealism": 0.8,
+        "social_awkwardness": 0.6
+      },
+      "relationship_weights": {
+        "player_initial": 0,
+        "alex": 0.1,
+        "nova": 0.3,
+        "rachel": 0.1,
+        "zero": 0.5,
+        "marcus": 0.2,
+        "lily": -0.4,
+        "shadow": 0,
+        "chen": -0.2
+      },
+      "memory_importance_threshold": {
+        "s_level": 80,
+        "a_level": 60,
+        "b_level": 40,
+        "c_level": 20
+      },
+      "dialogue_style": {
+        "cynicism": 0.8,
+        "tech_speak": 0.9,
+        "intensity": 0.7,
+        "mystery": 0.8
+      },
+      "key_conflicts": [
+        "自由 vs 秩序",
+        "真相 vs 稳定",
+        "个人 vs 系统"
+      ],
+      "backstory_summary": "从小就对网络技术着迷，发现了太多被隐藏的真相，决定用自己的技能为信息自由而战。",
+      "avatar_description": "瘦削的身形，总是戴着兜帽，眼神锐利而警觉，手指在键盘上飞舞，周围总是环绕着多个显示屏。"
+    },
+    {
+      "id": "npc_008",
+      "name": "老陈",
+      "name_en": "Chen",
+      "type": "探索者",
+      "occupation": "退休教师",
+      "age": 68,
+      "gender": "男", 
+      "location": "社区学校",
+      "core_drive": "智慧传承",
+      "long_term_beliefs": [
+        "教育是改变世界的最好方式",
+        "每个时代都有其价值和局限",
+        "理解比判断更重要"
+      ],
+      "short_term_goals": [
+        "帮助年轻人理解历史",
+        "在新老观念间搭建桥梁",
+        "记录时代变迁的智慧"
+      ],
+      "personality_traits": {
+        "wisdom": 0.95,
+        "patience": 0.9,
+        "open_mindedness": 0.8,
+        "storytelling": 0.9,
+        "gentle_humor": 0.8
+      },
+      "relationship_weights": {
+        "player_initial": 0.3,
+        "alex": -0.1,
+        "nova": 0.5,
+        "rachel": 0.9,
+        "zero": -0.7,
+        "marcus": 0.6,
+        "lily": 0.7,
+        "shadow": -0.2,
+        "chen": 0
+      },
+      "memory_importance_threshold": {
+        "s_level": 75,
+        "a_level": 55,
+        "b_level": 35,
+        "c_level": 15
+      },
+      "dialogue_style": {
+        "storytelling": 0.95,
+        "wisdom": 0.9,
+        "gentleness": 0.85,
+        "historical_reference": 0.8
+      },
+      "key_conflicts": [
+        "智慧 vs 困惑",
+        "传承 vs 变革",
+        "经验 vs 创新"
+      ],
+      "backstory_summary": "见证了从工业时代到AI时代的完整变迁，拥有丰富的人生阅历和教育经验，努力理解新时代。",
+      "avatar_description": "慈祥的老者，头发花白但精神矍铄，眼中闪烁着智慧的光芒，总是带着温和的笑容，手边常有书籍。"
+    }
+  ],
+  "global_settings": {
+    "relationship_change_triggers": {
+      "minor_change": 20,
+      "major_change": 50,
+      "relationship_shift": 80
+    },
+    "memory_decay_rates": {
+      "s_level": 0.01,
+      "a_level": 0.05,
+      "b_level": 0.1,
+      "c_level": 0.2
+    },
+    "world_events": [
+      {
+        "event_id": "data_breach_2035",
+        "description": "政府数据泄露事件",
+        "affected_npcs": ["alex", "shadow", "lily"],
+        "impact_type": "belief_challenge"
+      },
+      {
+        "event_id": "ai_rights_protest",
+        "description": "AI权利抗议活动", 
+        "affected_npcs": ["nova", "marcus", "lily"],
+        "impact_type": "social_tension"
+      }
+    ]
+  }
+}
