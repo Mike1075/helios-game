@@ -7,8 +7,11 @@ export default function EthanPage() {
             Ethan
           </h1>
           <h2 className="text-3xl mb-6 text-blue-200">
-            Branch Preview Page
+            欢迎光临
           </h2>
+          <h3 className="text-2xl mb-6 text-purple-300">
+            Branch Preview Page
+          </h3>
           <p className="text-xl max-w-2xl mx-auto mb-12 text-gray-300 leading-relaxed">
             This is Ethan's development branch preview
           </p>
