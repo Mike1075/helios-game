@@ -7,10 +7,13 @@ import json
 from typing import Optional
 from openai import OpenAI
 
-# 初始化 OpenAI 客户端，它会自动从 Vercel 的环境变量中读取密钥
-# 我们将使用您提供的 AI_GATEWAY_API_KEY，SDK 会自动寻找名为 OPENAI_API_KEY 的变量
-# Vercel 会自动将 AI_GATEWAY_API_KEY 映射过去
-client = OpenAI()
+# 明确地从环境变量中读取用户提供的密钥
+# Vercel 会将您设置的 AI_GATEWAY_API_KEY 注入到这里
+api_key = os.getenv("AI_GATEWAY_API_KEY")
+
+# 使用您的密钥初始化 OpenAI 客户端
+client = OpenAI(api_key=api_key)
+
 
 app = FastAPI(title="Helios Agent Core", version="0.1.0")
 
@@ -28,12 +31,6 @@ class ChatRequest(BaseModel):
     player_id: str
     npc_id: str
     message: str
-
-class ChatResponse(BaseModel):
-    npc_id: str
-    npc_name: str
-    message: str
-    timestamp: str
 
 # 临时NPC数据（后续将移到数据库）
 NPCS = {
