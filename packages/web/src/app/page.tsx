@@ -117,10 +117,10 @@ export default function Home() {
                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.background = 'linear-gradient(to right, #2563eb, #7c3aed)'
+                  (e.target as HTMLElement).style.background = 'linear-gradient(to right, #2563eb, #7c3aed)'
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)'
+                  (e.target as HTMLElement).style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)'
                 }}
               >
                 进入意识世界
