@@ -623,5 +623,8 @@ ${history || '暂时很安静...'}
   }
 }
 
-// 导出单例
-export const worldEngine = WorldEngine.getInstance();
+// 导出单例工厂函数（延迟加载）
+export const getWorldEngine = () => WorldEngine.getInstance();
+
+// 导出单例（为了兼容性）
+export const worldEngine = getWorldEngine();
