@@ -24,6 +24,15 @@ export default function Home() {
               <p>🎭 导演引擎</p>
             </div>
           </div>
+          
+          <div className="mt-8">
+            <a 
+              href="/ethan" 
+              className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+            >
+              Visit Ethan's Branch Preview
+            </a>
+          </div>
         </div>
       </div>
     </main>
