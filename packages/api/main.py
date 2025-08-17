@@ -7,12 +7,10 @@ import json
 from typing import Optional
 from openai import OpenAI
 
-# 明确地从环境变量中读取用户提供的密钥
-# Vercel 会将您设置的 AI_GATEWAY_API_KEY 注入到这里
-api_key = os.getenv("AI_GATEWAY_API_KEY")
-
-# 使用您的密钥初始化 OpenAI 客户端
-client = OpenAI(api_key=api_key)
+# 恢复到最标准、最简洁的初始化方式。
+# 这依赖于 Vercel 的 AI Gateway 集成功能在部署时自动设置
+# 标准的 `OPENAI_API_KEY` 和 `OPENAI_BASE_URL` 环境变量。
+client = OpenAI()
 
 
 app = FastAPI(title="Helios Agent Core", version="0.1.0")
