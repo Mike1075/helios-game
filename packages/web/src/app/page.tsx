@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-// Correct import path for the new AI SDK version
-import { useChat } from '@ai-sdk/react';
+import { useState } from 'react';
 
-// 定义数据结构类型
+// This file has been temporarily reverted to a non-interactive state
+// to ensure the Vercel deployment can build and run successfully.
+// The AI chat functionality will be rebuilt from this stable foundation.
+
 interface NPC {
   id: string;
   name: string;
@@ -47,22 +48,7 @@ const NPCS: NPC[] = [
 
 export default function TavernChat() {
   const [selectedNPC, setSelectedNPC] = useState<NPC | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Keep login state
-
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/chat',
-    body: {
-      npc: selectedNPC,
-    },
-    // The new SDK handles streaming responses differently,
-    // so we don't need onFinish in the same way.
-  });
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Login page remains the same
   if (!isLoggedIn) {
@@ -192,34 +178,13 @@ export default function TavernChat() {
                 <p style={{margin: '5px 0 0', color: '#d1d5db'}}>“{selectedNPC.catchphrase}”</p>
             </div>
             
-            <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', paddingRight: '10px' }}>
-              {messages.length > 0 ? (
-                messages.map(m => (
-                  <div key={m.id} style={{ marginBottom: '15px', display: 'flex', flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
-                    <div style={{
-                      maxWidth: '70%',
-                      padding: '10px 15px',
-                      borderRadius: '12px',
-                      background: m.role === 'user' ? 'linear-gradient(to right, #2563eb, #7c3aed)' : 'rgba(55, 65, 81, 0.8)',
-                    }}>
-                      <strong>{m.role === 'user' ? 'You' : (selectedNPC ? selectedNPC.name : 'NPC')}: </strong>
-                      {m.content}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{textAlign: 'center', color: '#9ca3af', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                  <p>意识连接已建立。开始对话...</p>
-                </div>
-              )}
-              <div ref={chatEndRef} />
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#9ca3af' }}>
+              <p>聊天功能正在重建中，很快就会恢复...</p>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px' }}>
               <input
-                value={input}
-                onChange={handleInputChange}
-                placeholder="输入你的想法..."
+                placeholder="意识连接已断开..."
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -229,27 +194,25 @@ export default function TavernChat() {
                   color: 'white',
                   fontSize: '1rem'
                 }}
-                disabled={isLoading}
+                disabled={true}
               />
               <button
                 type="submit"
                 style={{
                   padding: '12px 20px',
-                  background: 'linear-gradient(to right, #2563eb, #7c3aed)',
+                  background: 'rgba(55, 65, 81, 0.5)',
                   border: 'none',
                   borderRadius: '8px',
-                  color: 'white',
+                  color: '#9ca3af',
                   fontSize: '1rem',
                   fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  opacity: isLoading ? 0.5 : 1,
+                  cursor: 'not-allowed',
                 }}
-                disabled={isLoading}
+                disabled={true}
               >
-                {isLoading ? '思考中...' : '发送'}
+                发送
               </button>
-            </form>
+            </div>
           </>
         ) : (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#9ca3af' }}>
