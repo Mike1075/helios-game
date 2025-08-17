@@ -135,7 +135,11 @@ export default function Home() {
                     }`}
                   >
                     <div className="flex items-center space-x-3 mb-2">
-                      <div className={`w-10 h-10 bg-gradient-to-br from-${npc.color}-400 to-${npc.color}-600 rounded-full flex items-center justify-center`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        npc.color === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                        npc.color === 'amber' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                        'bg-gradient-to-br from-green-400 to-green-600'
+                      }`}>
                         <span className="text-white font-bold text-sm">{npc.name[0]}</span>
                       </div>
                       <div>
@@ -155,7 +159,11 @@ export default function Home() {
               <div className="p-6 border-b border-white/10">
                 {selectedNPC ? (
                   <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 bg-gradient-to-br from-${selectedNPC.color}-400 to-${selectedNPC.color}-600 rounded-full flex items-center justify-center`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      selectedNPC.color === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                      selectedNPC.color === 'amber' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                      'bg-gradient-to-br from-green-400 to-green-600'
+                    }`}>
                       <span className="text-white font-bold text-sm">{selectedNPC.name[0]}</span>
                     </div>
                     <div>
@@ -175,7 +183,11 @@ export default function Home() {
                 {selectedNPC ? (
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
-                      <div className={`w-8 h-8 bg-gradient-to-br from-${selectedNPC.color}-400 to-${selectedNPC.color}-600 rounded-full flex items-center justify-center flex-shrink-0`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        selectedNPC.color === 'blue' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                        selectedNPC.color === 'amber' ? 'bg-gradient-to-br from-amber-400 to-amber-600' :
+                        'bg-gradient-to-br from-green-400 to-green-600'
+                      }`}>
                         <span className="text-white text-xs font-bold">{selectedNPC.name[0]}</span>
                       </div>
                       <div className="bg-white/10 rounded-lg rounded-tl-none p-4 max-w-xs">
