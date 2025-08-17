@@ -17,7 +17,7 @@ export async function GET() {
         details: connectionError,
         config: {
           url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-          serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing'
+          serviceKey: process.env.SUPABASE_SERVICE_KEY ? 'configured' : 'missing'
         }
       }, { status: 500 })
     }
@@ -50,7 +50,7 @@ export async function GET() {
       },
       config: {
         supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-        service_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing',
+        service_key: process.env.SUPABASE_SERVICE_KEY ? 'configured' : 'missing',
         anon_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing'
       }
     })
@@ -63,7 +63,7 @@ export async function GET() {
       details: error,
       config: {
         supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-        service_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'configured' : 'missing',
+        service_key: process.env.SUPABASE_SERVICE_KEY ? 'configured' : 'missing',
         anon_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'configured' : 'missing'
       }
     }, { status: 500 })

@@ -15,12 +15,12 @@ export async function POST(req: Request) {
       )
     }
     
-    // AI SDK 5需要AI_GATEWAY_API_KEY环境变量
-    const apiKey = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY
+    // 使用团队标准的AI Gateway环境变量
+    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY
     
     if (!apiKey) {
       return Response.json(
-        { error: 'AI Gateway API key not configured' },
+        { error: 'VERCEL_AI_GATEWAY_API_KEY not configured' },
         { status: 500 }
       )
     }

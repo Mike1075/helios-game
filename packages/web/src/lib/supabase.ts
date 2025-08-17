@@ -3,7 +3,7 @@ import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'placeholder-service-key'
 
 // 前端客户端 (使用anon key)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

@@ -151,12 +151,17 @@ export default function DatabaseTestPage() {
           color: '#856404'
         }}>
           <h4>⚠️ 环境变量检查</h4>
-          <p>确保在Vercel中配置了以下环境变量：</p>
+          <p>确保在Vercel中配置了以下团队标准环境变量：</p>
           <ul>
             <li><code>NEXT_PUBLIC_SUPABASE_URL</code> - Supabase项目URL</li>
             <li><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> - Supabase匿名密钥</li>
-            <li><code>SUPABASE_SERVICE_ROLE_KEY</code> - Supabase服务角色密钥</li>
+            <li><code>SUPABASE_SERVICE_KEY</code> - Supabase服务角色密钥</li>
+            <li><code>VERCEL_AI_GATEWAY_API_KEY</code> - AI Gateway API密钥</li>
+            <li><code>ZEP_API_KEY</code> - Zep记忆服务密钥</li>
           </ul>
+          <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '1rem' }}>
+            环境变量命名遵循团队开发文档 (CLAUDE.md) 标准
+          </p>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
