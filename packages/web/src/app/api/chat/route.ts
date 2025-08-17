@@ -1,5 +1,5 @@
 import { streamText } from 'ai'
-import { supabase } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
     
     // 确保AI SDK能找到API key
     process.env.AI_GATEWAY_API_KEY = apiKey
+    
+    const supabase = createServerClient()
     
     // 保存用户消息到Supabase
     const userMessage = messages[messages.length - 1]

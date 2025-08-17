@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -12,12 +12,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const supabase = createServerClient()
+
+    // 使用admin API创建用户，无需邮件验证
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        emailRedirectTo: undefined, // 不需要邮件验证
-      }
+      email_confirm: true // 自动确认邮箱
     })
 
     if (error) {
@@ -42,13 +43,15 @@ export async function POST(request: NextRequest) {
 
       if (userError) {
         console.error('User creation error:', userError)
-        // 继续，因为用户已创建
+        // 继续，因为认证用户已创建
       }
+
+      // 用户已创建并确认，不需要生成额外的链接
     }
 
     return Response.json({
       user: data.user,
-      session: data.session,
+      message: 'User created successfully. Please sign in.',
     })
   } catch (error) {
     console.error('Sign up error:', error)

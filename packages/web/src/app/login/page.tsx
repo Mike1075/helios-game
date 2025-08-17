@@ -40,6 +40,11 @@ export default function LoginPage() {
         })
         
         router.push('/chat')
+      } else if (isSignUp && data.user) {
+        // 注册成功，切换到登录模式
+        setIsSignUp(false)
+        setError('账户创建成功！请使用您的邮箱和密码登录。')
+        setPassword('')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -185,11 +190,25 @@ export default function LoginPage() {
               color: '#667eea',
               cursor: 'pointer',
               fontSize: '0.9rem',
-              textDecoration: 'underline'
+              textDecoration: 'underline',
+              marginBottom: '1rem'
             }}
           >
             {isSignUp ? '已有账户？立即登录' : '没有账户？立即注册'}
           </button>
+          
+          <div>
+            <a 
+              href="/db-test" 
+              style={{
+                color: '#6c757d',
+                fontSize: '0.8rem',
+                textDecoration: 'underline'
+              }}
+            >
+              🔍 数据库连接测试
+            </a>
+          </div>
         </div>
       </div>
     </div>
