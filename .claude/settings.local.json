@@ -6,7 +6,10 @@
       "Bash(git push:*)",
       "Bash(git --version)",
       "Bash(mkdir:*)",
-      "Bash(git remote set-url:*)"
+      "Bash(git remote set-url:*)",
+      "Bash(npm run dev:web:*)",
+      "Bash(npm run dev:*)",
+      "Bash(rm E:project_leoHeliosprojectdevelopmenthelios-gamevercel.json)"
     ],
     "deny": []
   }
