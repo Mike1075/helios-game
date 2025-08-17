@@ -3,8 +3,8 @@ import OpenAI from 'openai';
 
 // 初始化 DeepSeek 客户端（使用 OpenAI SDK，兼容 DeepSeek API）
 const deepseek = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY || 'sk-144b6696dc094d8faf7804076159f126', // 请将此处替换为您的完整API Key
-  baseURL: 'https://api.deepseek.com/v1',
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
 });
 
 export async function POST(request: NextRequest) {
@@ -39,13 +39,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 检查 API Key（暂时跳过检查，使用硬编码）
-    // if (!process.env.DEEPSEEK_API_KEY) {
-    //   return NextResponse.json(
-    //     { error: '服务器配置错误: 缺少 DEEPSEEK_API_KEY' },
-    //     { status: 500 }
-    //   );
-    // }
+              // 检查 API Key
+          if (!process.env.DEEPSEEK_API_KEY) {
+            return NextResponse.json(
+              { error: '服务器配置错误: 缺少 DEEPSEEK_API_KEY' },
+              { status: 500 }
+            );
+          }
 
     // 调用真实的 DeepSeek API
     const completion = await deepseek.chat.completions.create({
