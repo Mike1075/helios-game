@@ -22,7 +22,7 @@ export default function Home() {
               <p>🌿 分支: feature/yuhan/personal-preview</p>
               <p>📅 创建时间: 2025年8月17日</p>
               <p>🚀 状态: 预览环境运行中</p>
-              <p>🔄 最后更新: {new Date().toLocaleString('zh-CN')}</p>
+              <p>🔄 最后更新: 2025年8月17日 19:34</p>
             </div>
           </div>
 
