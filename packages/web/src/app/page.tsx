@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [selectedNPC, setSelectedNPC] = useState(null)
+  const [selectedNPC, setSelectedNPC] = useState<any>(null)
 
   // 登录界面
   if (!isLoggedIn) {
