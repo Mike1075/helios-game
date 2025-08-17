@@ -32,6 +32,9 @@ export default function Home() {
               按照项目协作开发说明书创建的个人分支预览页面，
               Vercel自动部署功能正常运行！
             </p>
+            <p className="text-xs text-green-200 mt-2">
+              🧪 测试：验证同一分支的新提交是否自动添加到现有PR
+            </p>
           </div>
 
           <div className="mt-8 bg-blue-500/10 border border-blue-500/20 rounded-lg p-6 max-w-2xl mx-auto">
