@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Helios** ("赫利俄斯") is a philosophical game project that creates a "consciousness exploration sandbox" - a "Prism of Consciousness" universe. Players invest their pure consciousness through unique belief systems, creating highly subjective experiences that together form an evolving shared reality.
+**Helios** ("赫利俄斯") v4.1 is a philosophical game project that creates a "consciousness exploration sandbox" - a **"Mirror of the Self"** universe. The core philosophy: we don't create beliefs, we **discover** them. Players inject their authentic inner humanity, and the game reflects their hidden belief systems back to them, allowing them to see their true "self" for the first time.
 
-The MVP goal is "Prism Heart" - a minimal world with 2 core NPCs and 1 simple scenario to validate the core experience loop: belief-based actions → cognitive dissonance → "Chamber of Echoes" self-reflection → belief evolution.
+The MVP goal is "Genesis Heart" ("创世之心") - a micro-society with **7-8 AI NPCs** and **3-4 human player slots** in a single core scene (harbor tavern) to validate the complete emergent cycle: emergent beliefs → cognitive dissonance → "Chamber of Echoes" introspection → belief evolution.
 
-## Technical Architecture
+## Technical Architecture (v4.1)
 
 - **Platform**: Vercel (unified deployment)
 - **Frontend**: Next.js (`packages/web`)
 - **Backend**: Python FastAPI on Vercel Serverless Functions (`packages/api`)
-- **Database**: Supabase (PostgreSQL + pgvector)
+- **Database**: Supabase (PostgreSQL + Triggers + Edge Functions)
 - **Memory Engine**: Zep (conversation history)
 - **AI Gateway**: Vercel AI Gateway (mandatory for all LLM calls)
-- **Workflow Engine**: n8n (cognitive dissonance triggers)
+- **Director Engine**: ~~n8n~~ → **Supabase Database Triggers + Edge Functions**
 
 ## Monorepo Structure
 
@@ -47,11 +47,12 @@ npm run dev:api
 
 ## Core System Components
 
-### 1. Belief System (信念系统)
-- **Belief DSL**: YAML/JSON format for defining character belief networks
-- **Belief Compiler**: Python script converting belief files to LLM system prompts
-- **Components**: World-view beliefs, Self-perception beliefs, Value beliefs
-- **Evolution Tracking**: Records cognitive dissonance events in `agent_logs`
+### 1. Belief System (信念系统) - "Emergent Discovery" Model
+- **Initial State**: Characters start with only `identity`, `role`, and `core_motivation` - NO pre-defined beliefs
+- **Belief Observer**: Supabase database function + trigger that analyzes behavioral patterns every N interactions
+- **Dynamic Generation**: LLM analyzes `agent_logs` to infer and generate character's hidden belief system in YAML format  
+- **Evolution Tracking**: Continuous belief refinement based on cognitive dissonance events
+- **Storage**: Generated beliefs stored in `belief_systems` table, updated asynchronously
 
 ### 2. Agent Core (代理核心)
 - **Primary API**: `/api/chat` (receives `player_id` and `message`)
@@ -63,20 +64,21 @@ npm run dev:api
 - **Function**: Generates subjective, first-person causal explanations based on player's belief system
 - **Output**: Subjective attribution + 1-2 supporting "memory evidence" events
 
-### 4. Director Engine (导演引擎)
-- **Implementation**: n8n workflow monitoring `agent_logs`
-- **Trigger Logic**: Detects cognitive dissonance (positive actions → negative feedback)
-- **Action**: Inserts records into `events` table to trigger Chamber of Echoes opportunities
+### 4. Director Engine (导演引擎) - Database-Native
+- **Implementation**: Supabase database triggers + edge functions (NO external n8n)
+- **Cognitive Dissonance Trigger**: Database function monitoring `agent_logs` for belief conflicts
+- **Belief Observer Trigger**: Activates every N records per character to update belief systems
+- **Performance**: Millisecond-level response vs n8n's minute-level delays
 
 ## Mandatory Development Contracts
 
 ### Environment Variables (Managed by Mike via Vercel)
-**Backend Variables** (Python `os.environ.get()`):
-- `VERCEL_AI_GATEWAY_URL`: AI Gateway endpoint
-- `VERCEL_AI_GATEWAY_API_KEY`: Gateway authentication
+**重要**: 严格遵循 `.claude/Vercel AI 开发规范与标准.md` 中的环境变量命名规范
+
+**Backend Variables** (Node.js `process.env.`):
+- `AI_GATEWAY_API_KEY`: AI Gateway 认证密钥 (符合 Vercel AI 规范第2.2节)
 - `SUPABASE_URL`: Database URL
 - `SUPABASE_SERVICE_KEY`: Database service key
-- `ZEP_API_KEY`: Memory service key
 
 **Frontend Variables** (Next.js `process.env.`):
 - `NEXT_PUBLIC_SUPABASE_URL`: Public database URL
@@ -85,34 +87,31 @@ npm run dev:api
 **Note**: Never hardcode secrets. Variables are only available in Vercel preview/production environments, not locally.
 
 ### LLM Call Standard
-All AI model calls **MUST** go through Vercel AI Gateway:
+**重要**: 严格遵循 Vercel AI SDK 5 开发规范
+
+All AI model calls **MUST** use Vercel AI Gateway through standard model naming:
 
 ```python
-import os
-import requests
+# Python backend uses OpenAI client configured for Vercel AI Gateway
+import openai
+client = openai.OpenAI(api_key=os.getenv("AI_GATEWAY_API_KEY"))
 
-VERCEL_AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL")
-VERCEL_AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY")
+response = client.chat.completions.create(
+    model="gpt-4o-mini",  # Standard model naming for Vercel AI Gateway
+    messages=[{"role": "system", "content": belief_system_prompt}],
+    max_tokens=150
+)
+```
 
-def call_llm(model_name: str, system_prompt: str, user_prompt: str):
-    headers = {
-        "Authorization": f"Bearer {VERCEL_AI_GATEWAY_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "max_tokens": 2048
-    }
-    
-    response = requests.post(f"{VERCEL_AI_GATEWAY_URL}/chat/completions", headers=headers, json=payload)
-    response.raise_for_status()
-    
-    return response.json()["choices"][0]["message"]["content"]
+```typescript
+// Frontend uses Vercel AI SDK 5 (when needed)
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+
+const result = await streamText({
+  model: openai('openai/gpt-4o'),
+  prompt: user_message,
+});
 ```
 
 ## Git Workflow
@@ -135,27 +134,29 @@ def call_llm(model_name: str, system_prompt: str, user_prompt: str):
 - Local development is for coding only
 - Full functionality testing happens in Vercel preview environments
 
-## MVP Scope
+## MVP Scope v4.1 "Genesis Heart"
 
 ### ✅ In Scope
-- Text-only frontend interface
-- Simple belief system generation
-- One scenario (tavern setting)
-- Two NPCs with Belief DSL-defined personalities
-- Complete core loop: conversation → logging → conflict detection → Chamber of Echoes trigger → subjective attribution
+- **7-8 AI NPCs** with emergent belief discovery (not pre-defined)
+- **3-4 human player slots** for authentic human testing
+- **Single core scene**: Harbor tavern social ecosystem 
+- **Belief Observer system**: Database-driven behavioral analysis
+- **Complete Mirror cycle**: authentic actions → belief discovery → cognitive dissonance → Chamber of Echoes introspection → belief evolution
+- **Database-native Director Engine**: No external workflow dependencies
 
 ### ❌ Out of Scope
 - Graphics, images, visual content
-- Offline AI agents
-- Complex world-building systems
-- Multiple scenes/NPCs
+- Multiple scenes or complex world-building
 - Combat, inventory, quest systems
+- Pre-defined character belief systems
+- External n8n workflows
 
-## Success Criteria
+## Success Criteria v4.1
 
-1. **Belief Consistency**: NPCs demonstrate clear alignment between behavior and defined belief systems
-2. **"Aha!" Moments**: Players experience "my thoughts created this outcome" realizations in Chamber of Echoes
-3. **Technical Viability**: Full stack integration (Vercel, Supabase, n8n, Zep) operates smoothly
+1. **Emergent Belief Discovery**: System successfully infers and generates authentic belief systems from behavioral patterns
+2. **"Mirror" Moments**: Players experience profound "this is really me" realizations when seeing their discovered beliefs
+3. **Social Ecosystem**: 7-8 NPCs + 3-4 players create unpredictable emergent social dynamics and relationships
+4. **Technical Viability**: Full database-native stack (Vercel + Supabase + Zep) operates with millisecond responsiveness
 
 ## Key Files to Watch
 
