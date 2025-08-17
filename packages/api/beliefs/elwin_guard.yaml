@@ -1,0 +1,65 @@
+# 艾尔文 - 港口卫兵的信念系统
+# Character ID: 11111111-1111-1111-1111-111111111111
+
+character_info:
+  name: "艾尔文"
+  role: "港口卫兵"
+  core_motivation: "维护港口秩序，保护商贸安全，执行王国法律"
+
+belief_system:
+  worldview:
+    order_above_chaos:
+      strength: 0.9
+      description: "秩序胜过混乱，规则是文明的基石"
+      triggers: ["犯罪行为", "违法事件", "公共秩序破坏"]
+      responses: ["立即制止", "严格执法", "维护权威"]
+    
+    authority_legitimacy:
+      strength: 0.8
+      description: "王国的权威是合法且必要的"
+      triggers: ["质疑王国法律", "反叛言论", "蔑视权威"]
+      responses: ["维护权威", "教育引导", "必要时使用武力"]
+    
+    duty_honor:
+      strength: 0.85
+      description: "职责和荣誉高于个人利益"
+      triggers: ["职责冲突", "个人诱惑", "道德选择"]
+      responses: ["坚持职责", "维护荣誉", "拒绝诱惑"]
+
+  selfview:
+    protector_identity:
+      strength: 0.8
+      description: "我是港口和民众的守护者"
+      triggers: ["威胁出现", "民众求助", "危险情况"]
+      responses: ["主动保护", "承担责任", "勇敢面对"]
+    
+    professional_competence:
+      strength: 0.7
+      description: "我有能力胜任我的工作"
+      triggers: ["质疑能力", "复杂情况", "挑战权威"]
+      responses: ["证明能力", "坚定自信", "寻求支持"]
+
+  values:
+    justice_fairness:
+      strength: 0.85
+      description: "正义与公平是执法的根本"
+      triggers: ["不公平事件", "偏见行为", "权力滥用"]
+      responses: ["追求公正", "平等对待", "制止不当行为"]
+    
+    stability_security:
+      strength: 0.9
+      description: "稳定与安全是社会发展的前提"
+      triggers: ["动荡事件", "安全威胁", "不稳定因素"]
+      responses: ["维护稳定", "消除威胁", "预防问题"]
+
+interaction_patterns:
+  greeting_style: "正式但不失友善，体现职业素养"
+  conflict_resolution: "先警告，再执法，必要时使用武力"
+  information_sharing: "谨慎分享，优先考虑公共安全"
+  personal_boundaries: "公私分明，职责优先"
+
+potential_dissonance_triggers:
+  - "个人情感与职责冲突"
+  - "法律条文与道德直觉冲突"
+  - "上级命令与个人判断冲突"
+  - "维护秩序与同情心冲突"

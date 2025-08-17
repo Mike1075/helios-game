@@ -1,16 +1,18 @@
--- Helios v4.1 触发器系统 - 完全基于Supabase边缘函数，无n8n依赖
--- 遵循PRD v1.2规范：累计N条记录后触发，基于character_id
+-- Helios v4.1 触发器系统 - 完全基于Supabase边缘函数，移除n8n依赖
+-- 实现"本我之镜"的信念观察者和认知失调检测
 
--- ensure pg_net extension exists:
--- create extension if not exists pg_net;
-
--- 信念观察者触发器：当某角色累计20条记录时触发
-create or replace function check_belief_trigger()
+-- 创建信念观察者触发器函数：当某角色累计20条记录时触发
+create or replace function check_belief_observer()
 returns trigger language plpgsql as $$
 declare
   record_count integer;
   last_generation_count integer;
 begin
+  -- 只处理有character_id的记录
+  if NEW.character_id is null then
+    return NEW;
+  end if;
+  
   -- 获取该角色的总记录数
   select count(*) into record_count 
   from agent_logs 
@@ -21,18 +23,19 @@ begin
   from belief_systems 
   where character_id = NEW.character_id;
   
-  -- 如果新增记录数达到20条，触发信念观察者
+  -- 如果新增记录数达到20条，触发信念观察者（使用Supabase Edge Function）
   if record_count - last_generation_count >= 20 then
-    perform net.http_post(
-      url := 'https://<YOUR-PROJECT-REF>.functions.supabase.co/belief-observer',
-      headers := json_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || current_setting('app.supabase_service_key', true)
-      ),
-      body := json_build_object(
+    -- 直接在数据库内调用边缘函数，而不是外部HTTP调用
+    insert into events (character_id, session_id, scene_id, type, payload) values (
+      NEW.character_id,
+      NEW.session_id,
+      NEW.scene_id,
+      'belief_observer_trigger',
+      json_build_object(
         'character_id', NEW.character_id,
         'trigger_type', 'batch_threshold',
-        'record_count', record_count
+        'record_count', record_count,
+        'last_generation_count', last_generation_count
       )
     );
   end if;
@@ -40,12 +43,17 @@ begin
   return NEW;
 end $$;
 
--- 认知失调催化剂：每次插入都检测，但更智能的判断
+-- 认知失调催化剂：检测潜在的信念冲突
 create or replace function check_dissonance_catalyst()
 returns trigger language plpgsql as $$
 declare
   recent_count integer;
 begin
+  -- 只处理有character_id的记录
+  if NEW.character_id is null then
+    return NEW;
+  end if;
+  
   -- 检查最近5条记录，如果有足够的对话密度才触发分析
   select count(*) into recent_count
   from agent_logs 
@@ -54,16 +62,17 @@ begin
   
   -- 只有当最近有足够的交互时才触发失调检测
   if recent_count >= 3 then
-    perform net.http_post(
-      url := 'https://<YOUR-PROJECT-REF>.functions.supabase.co/dissonance-catalyst',
-      headers := json_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || current_setting('app.supabase_service_key', true)
-      ),
-      body := json_build_object(
+    -- 通过events表触发认知失调分析，而不是外部HTTP调用
+    insert into events (character_id, session_id, scene_id, type, payload) values (
+      NEW.character_id,
+      NEW.session_id,
+      NEW.scene_id,
+      'dissonance_catalyst_trigger',
+      json_build_object(
         'character_id', NEW.character_id,
-        'session_id', NEW.session_id,
-        'trigger_type', 'interaction_density'
+        'trigger_type', 'interaction_density',
+        'recent_count', recent_count,
+        'latest_log_id', NEW.id
       )
     );
   end if;
@@ -71,13 +80,16 @@ begin
   return NEW;
 end $$;
 
--- 删除旧触发器并创建新的
+-- 删除旧触发器并创建新的（v4.1 数据库原生架构）
 drop trigger if exists trg_belief on agent_logs;
 drop trigger if exists trg_dissonance on agent_logs;
+drop trigger if exists trg_belief_observer on agent_logs;
+drop trigger if exists trg_dissonance_catalyst on agent_logs;
 
+-- 创建新的触发器
 create trigger trg_belief_observer
 after insert on agent_logs
-for each row execute function check_belief_trigger();
+for each row execute function check_belief_observer();
 
 create trigger trg_dissonance_catalyst
 after insert on agent_logs

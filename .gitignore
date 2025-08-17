@@ -98,3 +98,9 @@ pids
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Local documentation (should not be committed)
+localdocs/
+
+# Test files
+test_api.py

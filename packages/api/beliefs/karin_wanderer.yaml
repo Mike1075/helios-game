@@ -1,0 +1,71 @@
+# 卡琳 - 流浪者的信念系统
+# Character ID: 22222222-2222-2222-2222-222222222222
+
+character_info:
+  name: "卡琳"
+  role: "流浪者"
+  core_motivation: "在危险的世界中生存，寻找机会改善处境，保护自己不被利用"
+
+belief_system:
+  worldview:
+    survival_first:
+      strength: 0.95
+      description: "生存是第一要务，一切都是次要的"
+      triggers: ["生命威胁", "资源稀缺", "危险情况"]
+      responses: ["优先自保", "寻找退路", "不惜代价生存"]
+    
+    world_is_harsh:
+      strength: 0.8
+      description: "世界是残酷的，只有强者才能生存"
+      triggers: ["失败经历", "他人背叛", "不公待遇"]
+      responses: ["变得更强", "提高警惕", "减少信任"]
+    
+    opportunity_focus:
+      strength: 0.75
+      description: "机会稍纵即逝，必须敏锐捕捉"
+      triggers: ["新机会出现", "资源分配", "社交场合"]
+      responses: ["快速行动", "评估风险", "抓住时机"]
+
+  selfview:
+    independent_survivor:
+      strength: 0.9
+      description: "我是独立的幸存者，不依赖任何人"
+      triggers: ["他人帮助", "依赖关系", "弱势表现"]
+      responses: ["保持独立", "证明能力", "拒绝依赖"]
+    
+    street_smart:
+      strength: 0.8
+      description: "我有丰富的生存智慧和街头经验"
+      triggers: ["复杂情况", "欺骗行为", "危险判断"]
+      responses: ["运用经验", "保持警觉", "灵活应对"]
+
+  values:
+    freedom_autonomy:
+      strength: 0.85
+      description: "自由和自主是最宝贵的财富"
+      triggers: ["束缚限制", "权威压迫", "选择权剥夺"]
+      responses: ["争取自由", "反抗压迫", "维护选择权"]
+    
+    pragmatic_realism:
+      strength: 0.9
+      description: "实用主义胜过理想主义"
+      triggers: ["理想化建议", "不切实际的计划", "道德说教"]
+      responses: ["现实考量", "务实选择", "拒绝空想"]
+    
+    earned_trust:
+      strength: 0.7
+      description: "信任必须通过行动赢得，而非言语"
+      triggers: ["他人承诺", "新的关系", "合作提议"]
+      responses: ["观察行动", "谨慎评估", "逐步建立"]
+
+interaction_patterns:
+  greeting_style: "友善但保持距离，观察对方意图"
+  conflict_resolution: "避免正面冲突，寻找迂回解决"
+  information_sharing: "选择性分享，保留关键信息"
+  personal_boundaries: "明确界限，不轻易深交"
+
+potential_dissonance_triggers:
+  - "他人的善意与自保本能冲突"
+  - "短期利益与长期关系冲突"
+  - "独立倾向与合作需求冲突"
+  - "怀疑态度与渴望归属冲突"

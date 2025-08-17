@@ -3,6 +3,8 @@ uvicorn
 pydantic
 python-dotenv
 requests
-# 以下库将在后续开发中添加
-# supabase
-# zep-python
+supabase
+pyyaml
+openai
+httpx
+# zep-python  # 将在Memory Engine集成时添加
