@@ -1,16 +1,10 @@
 import { CoreMessage, streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-// No need to import 'dotenv/config' in Next.js.
-// The framework automatically loads .env.local variables.
+import { openai } from '@ai-sdk/openai';
 
-// Per internal spec, the API key is stored in AI_GATEWAY_API_KEY.
-// The Vercel AI Gateway also injects a custom OPENAI_BASE_URL.
-// We must create a custom OpenAI client instance to provide BOTH,
-// ensuring requests are correctly authenticated AND routed.
-const openai = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL, // The crucial missing piece
-});
+// By using the default 'openai' export, we rely on Vercel's platform
+// to automatically provide the correct OPENAI_API_KEY and OPENAI_BASE_URL
+// from the AI Gateway integration settings. This is the most robust and
+// standard approach.
 
 export const runtime = 'edge';
 
