@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 
-// This file has been temporarily reverted to a non-interactive state
-// to ensure the Vercel deployment can build and run successfully.
-// The AI chat functionality will be rebuilt from this stable foundation.
+// UI Rebuild based on the "Creator" role.
+// The AI chat functionality will be reintegrated in the next step,
+// strictly following the official specification.
 
 interface NPC {
   id: string;
@@ -121,40 +121,42 @@ export default function TavernChat() {
     );
   }
 
+  // Main UI - Rebuilt with a clean, premium feel
   return (
     <div style={{
       display: 'flex',
       height: '100vh',
-      background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-      color: 'white',
-      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+      background: '#0b0f19',
+      color: '#e5e7eb',
+      fontFamily: '"Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }}>
       {/* Left Panel: NPC List */}
       <div style={{
-        width: '300px',
-        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '20px',
+        width: '320px',
+        borderRight: '1px solid #1f2937',
+        padding: '24px',
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(31, 41, 55, 0.5)',
+        background: '#111827',
       }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', fontWeight: '600' }}>意识连接对象</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '24px', fontWeight: '600', color: 'white' }}>意识连接对象</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {NPCS.map((npc) => (
             <div
               key={npc.id}
               onClick={() => setSelectedNPC(npc)}
               style={{
-                padding: '15px',
+                padding: '16px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                background: selectedNPC?.id === npc.id ? 'linear-gradient(to right, #2563eb, #7c3aed)' : 'rgba(55, 65, 81, 0.5)',
-                border: `1px solid ${selectedNPC?.id === npc.id ? 'rgba(99, 102, 241, 0.7)' : 'rgba(255, 255, 255, 0.1)'}`,
-                transition: 'all 0.3s ease',
+                background: selectedNPC?.id === npc.id ? '#3b82f6' : 'rgba(55, 65, 81, 0.5)',
+                border: `1px solid ${selectedNPC?.id === npc.id ? '#3b82f6' : 'transparent'}`,
+                transition: 'all 0.2s ease-in-out',
+                transform: selectedNPC?.id === npc.id ? 'translateX(5px)' : 'none',
               }}
             >
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{npc.name}</h3>
-              <p style={{ margin: '5px 0 0', fontSize: '0.9rem', color: '#d1d5db' }}>{npc.role}</p>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'white' }}>{npc.name}</h3>
+              <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#9ca3af' }}>{npc.role}</p>
             </div>
           ))}
         </div>
@@ -165,42 +167,47 @@ export default function TavernChat() {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        padding: '20px'
+        padding: '24px'
       }}>
         {selectedNPC ? (
           <>
             <div style={{
-                marginBottom: '20px',
-                paddingBottom: '20px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                marginBottom: '24px',
+                paddingBottom: '24px',
+                borderBottom: '1px solid #1f2937',
             }}>
-                <h2 style={{margin: 0, fontSize: '1.8rem', fontWeight: 'bold'}}>{selectedNPC.name}</h2>
-                <p style={{margin: '5px 0 0', color: '#d1d5db'}}>“{selectedNPC.catchphrase}”</p>
+                <h2 style={{margin: 0, fontSize: '1.5rem', fontWeight: 'bold', color: 'white'}}>{selectedNPC.name}</h2>
+                <p style={{margin: '8px 0 0', color: '#9ca3af', fontStyle: 'italic'}}>“{selectedNPC.catchphrase}”</p>
             </div>
             
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#9ca3af' }}>
-              <p>聊天功能正在重建中，很快就会恢复...</p>
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#9ca3af', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#1f2937', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <p style={{ fontSize: '1rem' }}>聊天功能正在重建中</p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>AI 核心即将上线...</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '24px' }}>
               <input
                 placeholder="意识连接已断开..."
                 style={{
                   flex: 1,
-                  padding: '12px',
-                  background: 'rgba(55, 65, 81, 0.5)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  padding: '12px 16px',
+                  background: '#1f2937',
+                  border: '1px solid #374151',
                   borderRadius: '8px',
                   color: 'white',
-                  fontSize: '1rem'
+                  fontSize: '1rem',
+                  outline: 'none',
                 }}
                 disabled={true}
               />
               <button
                 type="submit"
                 style={{
-                  padding: '12px 20px',
-                  background: 'rgba(55, 65, 81, 0.5)',
+                  padding: '12px 24px',
+                  background: '#374151',
                   border: 'none',
                   borderRadius: '8px',
                   color: '#9ca3af',
@@ -215,8 +222,10 @@ export default function TavernChat() {
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#9ca3af' }}>
-            <h2>请从左侧选择一个对象进行意识连接</h2>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#6b7280', flexDirection: 'column', gap: '16px' }}>
+             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Z"></path><path d="M4.929 4.929 19.07 19.07"></path><path d="m12 18-3.5-3.5"></path><path d="m15.5 12-2-2"></path><path d="M12 6.002V6"></path><path d="M6 12h-.002"></path></svg>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '500' }}>未选择连接对象</h2>
+            <p style={{ color: '#4b5563' }}>请从左侧列表选择一个意识体以建立连接</p>
           </div>
         )}
       </div>
