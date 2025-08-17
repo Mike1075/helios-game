@@ -5,11 +5,12 @@ from pydantic import BaseModel
 import os
 import json
 from typing import Optional
-from vercel_ai.fireworks import Fireworks
+from openai import OpenAI
 
-# 使用 Vercel AI SDK (Fireworks provider, 兼容 OpenAI)
-# 注意: 确保已经在 Vercel 项目中设置了 FIREWORKS_API_KEY 环境变量
-fireworks_client = Fireworks()
+# 初始化 OpenAI 客户端，它会自动从 Vercel 的环境变量中读取密钥
+# 我们将使用您提供的 AI_GATEWAY_API_KEY，SDK 会自动寻找名为 OPENAI_API_KEY 的变量
+# Vercel 会自动将 AI_GATEWAY_API_KEY 映射过去
+client = OpenAI()
 
 app = FastAPI(title="Helios Agent Core", version="0.1.0")
 
@@ -92,9 +93,9 @@ async def chat_with_npc(request: ChatRequest):
 你的回答应该简短、自然，符合你的角色设定。不要暴露你是AI。
 """
 
-    # 3. 调用 Vercel AI SDK (使用 gpt-4o 模型)
+    # 3. 调用 OpenAI SDK (通过 Vercel AI Gateway)
     try:
-        chat_completion = fireworks_client.chat.completions.create(
+        chat_completion = client.chat.completions.create(
             model="openai/gpt-4o", # 指定使用 GPT-4o 模型
             messages=[
                 {"role": "system", "content": system_prompt},

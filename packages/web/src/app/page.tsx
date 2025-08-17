@@ -59,17 +59,44 @@ export default function Home() {
     setUserInput('');
     setIsLoading(true);
 
-    // 模拟 API 调用和延迟
-    setTimeout(() => {
-      const npcResponse: Message = {
+    try {
+      const apiUrl = '/api/chat';
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          player_id: 'user123', // 临时玩家ID
+          npc_id: selectedNPC.id,
+          message: userInput,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      const npcMessage: Message = {
         sender: 'npc',
-        // 根据选择的 NPC 返回不同的模拟回复
-        text: `我是 ${selectedNPC.name}。这是一个模拟回复，证明前端交互是正常的。我们很快就会连接真正的 AI 大脑。`,
+        text: data.message,
+        npcName: data.npc_name
+      };
+      setMessages(prev => [...prev, npcMessage]);
+
+    } catch (error) {
+      console.error("API Error:", error);
+      const errorMessage: Message = {
+        sender: 'npc',
+        text: '意识连接出现波动，我暂时无法回应...',
         npcName: selectedNPC.name
       };
-      setMessages(prev => [...prev, npcResponse]);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // 登录界面
