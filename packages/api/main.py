@@ -7,6 +7,7 @@ import random
 from database import get_db
 from belief_compiler import belief_compiler
 from ai_service import ai_service
+from image_service import image_service
 
 app = FastAPI(title="Helios Agent Core", version="0.1.0")
 
@@ -162,6 +163,82 @@ async def echo_endpoint(request: EchoRequest):
         return {
             "ok": False,
             "message": "回响之室暂时无法访问，请稍后再试。"
+        }
+
+@app.get("/api/scene-image")
+async def get_scene_image(scene: str = "harbor_tavern", character_id: str = None):
+    """获取场景图像"""
+    try:
+        # 获取角色信息（如果提供）
+        character = None
+        if character_id:
+            db = get_db()
+            character = await db.get_character_by_id(character_id)
+        
+        # 生成场景描述
+        scene_descriptions = {
+            "harbor_tavern": "古老的港口酒馆内部，木质桌椅，温暖的壁炉，各种旅人聚集",
+            "harbor_port": "繁忙的港口码头，帆船停靠，商人和水手来往",
+            "harbor_street": "石板铺成的港口街道，两旁是商店和旅馆"
+        }
+        
+        scene_description = scene_descriptions.get(scene, scene_descriptions["harbor_tavern"])
+        character_name = character['name'] if character else None
+        
+        # 生成图像
+        image_url = await image_service.generate_scene_image(scene_description, character_name)
+        
+        if not image_url:
+            # 使用备用图像
+            image_url = image_service.get_fallback_image("tavern")
+        
+        return {
+            "success": True,
+            "image_url": image_url,
+            "scene": scene,
+            "character": character['name'] if character else None
+        }
+        
+    except Exception as e:
+        print(f"Scene image endpoint error: {e}")
+        return {
+            "success": False,
+            "image_url": image_service.get_fallback_image("tavern"),
+            "error": str(e)
+        }
+
+@app.get("/api/character-portrait/{character_id}")
+async def get_character_portrait(character_id: str):
+    """获取角色肖像"""
+    try:
+        db = get_db()
+        character = await db.get_character_by_id(character_id)
+        
+        if not character:
+            return {
+                "success": False,
+                "image_url": image_service.get_fallback_image("character"),
+                "error": "Character not found"
+            }
+        
+        # 生成角色肖像
+        image_url = await image_service.generate_character_portrait(character)
+        
+        if not image_url:
+            image_url = image_service.get_fallback_image("character")
+        
+        return {
+            "success": True,
+            "image_url": image_url,
+            "character": character['name']
+        }
+        
+    except Exception as e:
+        print(f"Character portrait endpoint error: {e}")
+        return {
+            "success": False,
+            "image_url": image_service.get_fallback_image("character"),
+            "error": str(e)
         }
 
 if __name__ == "__main__":

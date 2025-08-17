@@ -15,6 +15,9 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [echo, setEcho] = useState('');
+  const [sceneImage, setSceneImage] = useState('');
+  const [characterPortrait, setCharacterPortrait] = useState('');
+  const [loadingImage, setLoadingImage] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -38,9 +41,48 @@ export default function ChatPage() {
       });
       const ai = await res.text(); // SSE 简化整条收
       setMsgs(m=>[...m,{role:'ai',text:ai}]);
+      
+      // 生成场景图像
+      await generateSceneImage();
     } catch {
       setMsgs(m=>[...m,{role:'ai',text:'[提示] 预览变量未注入或后端异常'}]);
     } finally { setBusy(false); }
+  }
+
+  async function generateSceneImage() {
+    if (loadingImage) return;
+    
+    setLoadingImage(true);
+    try {
+      const res = await fetch('/api/scene-image?scene=harbor_tavern');
+      const data = await res.json();
+      
+      if (data.success && data.image_url) {
+        setSceneImage(data.image_url);
+      }
+    } catch (error) {
+      console.log('Scene image generation failed:', error);
+    } finally {
+      setLoadingImage(false);
+    }
+  }
+
+  async function generateCharacterPortrait(characterId: string) {
+    if (loadingImage) return;
+    
+    setLoadingImage(true);
+    try {
+      const res = await fetch(`/api/character-portrait/${characterId}`);
+      const data = await res.json();
+      
+      if (data.success && data.image_url) {
+        setCharacterPortrait(data.image_url);
+      }
+    } catch (error) {
+      console.log('Character portrait generation failed:', error);
+    } finally {
+      setLoadingImage(false);
+    }
   }
 
   async function openEcho() {
@@ -77,6 +119,20 @@ export default function ChatPage() {
     <main style={{maxWidth:720,margin:'40px auto',padding:16}}>
       <h1>Helios · Chat MVP</h1>
       <div style={{fontSize:12,color:'#666'}}>session: <code>{sid}</code></div>
+      
+      {/* 场景图像显示 */}
+      {sceneImage && (
+        <div style={{marginTop:12,textAlign:'center'}}>
+          <img src={sceneImage} alt="Scene" style={{maxWidth:'100%',maxHeight:200,borderRadius:8}} />
+          <div style={{fontSize:10,color:'#888',marginTop:4}}>港口酒馆场景</div>
+        </div>
+      )}
+      
+      {loadingImage && (
+        <div style={{marginTop:12,textAlign:'center',fontSize:12,color:'#666'}}>
+          🎨 正在生成场景图像...
+        </div>
+      )}
       <div style={{border:'1px solid #ddd',borderRadius:8,padding:12,minHeight:280,marginTop:12}}>
         {msgs.map((m,i)=>(<div key={i} style={{margin:'8px 0'}}><b>{m.role==='user'?'你':'AI'}：</b>{m.text}</div>))}
         {busy && <div>AI 正在思考…</div>}
@@ -87,6 +143,7 @@ export default function ChatPage() {
                placeholder="输入后回车" style={{flex:1,padding:8,border:'1px solid #ddd',borderRadius:6}}/>
         <button onClick={send} disabled={busy}>发送</button>
         <button onClick={openEcho}>回响之室</button>
+        <button onClick={generateSceneImage} disabled={loadingImage}>🎨 场景</button>
       </div>
       {echo && <div style={{marginTop:12,border:'1px dashed #bbb',padding:10}}>{echo}</div>}
     </main>
