@@ -1,3 +1,10 @@
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+.env*
+.DS_Store
+
 # Dependencies
 node_modules/
 */node_modules/
