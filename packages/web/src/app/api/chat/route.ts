@@ -4,10 +4,12 @@ import { createOpenAI } from '@ai-sdk/openai';
 // The framework automatically loads .env.local variables.
 
 // Per internal spec, the API key is stored in AI_GATEWAY_API_KEY.
-// We must create a custom OpenAI client instance to read from it,
-// as the default export looks for OPENAI_API_KEY.
+// The Vercel AI Gateway also injects a custom OPENAI_BASE_URL.
+// We must create a custom OpenAI client instance to provide BOTH,
+// ensuring requests are correctly authenticated AND routed.
 const openai = createOpenAI({
   apiKey: process.env.AI_GATEWAY_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL, // The crucial missing piece
 });
 
 export const runtime = 'edge';
