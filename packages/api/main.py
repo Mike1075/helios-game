@@ -5,6 +5,11 @@ from pydantic import BaseModel
 import os
 import json
 from typing import Optional
+from vercel_ai.fireworks import Fireworks
+
+# 使用 Vercel AI SDK (Fireworks provider, 兼容 OpenAI)
+# 注意: 确保已经在 Vercel 项目中设置了 FIREWORKS_API_KEY 环境变量
+fireworks_client = Fireworks()
 
 app = FastAPI(title="Helios Agent Core", version="0.1.0")
 
@@ -65,62 +70,55 @@ async def root():
 async def health_check():
     return {"status": "healthy", "service": "helios-agent-core"}
 
-@app.get("/api/npcs")
-async def get_npcs():
-    """获取所有NPC信息"""
-    return {"npcs": list(NPCS.values())}
-
 @app.post("/api/chat")
 async def chat_with_npc(request: ChatRequest):
-    """与NPC聊天的核心API"""
+    """与NPC聊天的核心API - 由真实AI驱动"""
     
-    # 检查NPC是否存在
+    # 1. 检查NPC是否存在
     if request.npc_id not in NPCS:
         raise HTTPException(status_code=404, detail="NPC not found")
     
     npc = NPCS[request.npc_id]
     
-    # 临时响应逻辑（后续将集成AI）
-    responses = {
-        "aix": [
-            "有趣的观点。让我分析一下这个数据...",
-            "根据我的计算，这种情况发生的概率是...",
-            "数据显示，你的判断可能需要重新考虑。"
-        ],
-        "lia": [
-            "我理解你的感受，这里很多客人都有类似的经历。",
-            "要不要来杯热茶？有时候暖暖身子能让思路更清晰。",
-            "每个人都在寻找属于自己的答案，不是吗？"
-        ],
-        "karl": [
-            "年轻人，这让我想起了在海上的那些日子...",
-            "经验告诉我，有时候最简单的方法就是最好的。",
-            "在我看来，你需要的是行动，而不是更多的思考。"
-        ]
-    }
-    
-    # 简单的响应选择（后续将基于AI和信念系统）
-    import random
-    response_text = random.choice(responses[request.npc_id])
-    
-    # 返回响应
-    from datetime import datetime
-    return ChatResponse(
-        npc_id=npc["id"],
-        npc_name=npc["name"], 
-        message=response_text,
-        timestamp=datetime.now().isoformat()
-    )
+    # 2. 构建符合角色人设的 System Prompt
+    system_prompt = f"""
+你是一个角色扮演AI。
+你的名字是 {npc['name']}, 你是一个 {npc['role']}。
+你的核心动机是：{npc['core_motivation']}。
+你的性格是：{npc['personality']}。
+你说过这样一句话："{npc['catchphrase']}"。
 
-@app.post("/api/echo")
-async def chamber_of_echoes(player_id: str, event_description: str):
-    """回响之室API - 生成主观归因"""
-    # 临时实现，后续将集成AI
+现在，一个玩家正在和你对话。请你严格以 {npc['name']} 的身份和口吻进行回应。
+你的回答应该简短、自然，符合你的角色设定。不要暴露你是AI。
+"""
+
+    # 3. 调用 Vercel AI SDK (使用 gpt-4o 模型)
+    try:
+        chat_completion = fireworks_client.chat.completions.create(
+            model="openai/gpt-4o", # 指定使用 GPT-4o 模型
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request.message}
+            ],
+            max_tokens=100, # 限制回复长度
+            temperature=0.7, # 增加一点创造性
+        )
+        ai_response_text = chat_completion.choices[0].message.content
+
+    except Exception as e:
+        print(f"AI 调用失败: {e}")
+        raise HTTPException(status_code=500, detail="AI consciousness is currently unstable.")
+
+    # 4. 返回AI生成的响应
+    from datetime import datetime
     return {
-        "player_id": player_id,
-        "reflection": "在意识的深处，你开始理解这一切的联系...",
-        "insight": "也许，这正是你内心深处一直在寻找的答案。"
+        "npc_id": npc["id"],
+        "npc_name": npc["name"],
+        "message": ai_response_text,
+        "timestamp": datetime.now().isoformat()
     }
+
+# 移除不再需要的 /api/echo 和 /api/npcs 临时实现
 
 if __name__ == "__main__":
     import uvicorn
