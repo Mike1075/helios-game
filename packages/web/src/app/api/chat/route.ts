@@ -1,38 +1,37 @@
-import { CoreMessage, streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-
-// This is the definitive, final configuration based on the working curl command.
-// It uses the specific API key name from the internal spec and the explicit
-// AI Gateway URL, removing all ambiguities from previous attempts.
-const openai = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY,
-  baseURL: 'https://ai-gateway.vercel.sh/v1', // The explicit Vercel AI Gateway endpoint
-});
+import { StreamingTextResponse } from 'ai';
 
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  const { messages, npc }: { messages: CoreMessage[]; npc: any } =
-    await req.json();
+  const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
+  const openAIKey = process.env.OPENAI_API_KEY;
+  const openAIBaseURL = process.env.OPENAI_BASE_URL;
 
-  if (!npc) {
-    return new Response('Missing NPC data', { status: 400 });
-  }
+  const debugInfo = {
+    "--- Vercel 环境诊断报告 ---": " ",
+    "1. 团队规范变量 (AI_GATEWAY_API_KEY)": {
+      "是否存在": !!aiGatewayKey,
+      "值的前4位": aiGatewayKey?.substring(0, 4) || "未找到",
+    },
+    "2. Vercel 自动注入的标准变量": {
+      "OPENAI_API_KEY 是否存在": !!openAIKey,
+      "OPENAI_API_KEY 前4位": openAIKey?.substring(0, 4) || "未找到",
+      "OPENAI_BASE_URL 是否存在": !!openAIBaseURL,
+      "OPENAI_BASE_URL 的值": openAIBaseURL || "未找到",
+    },
+    "--- 诊断结束 ---": " "
+  };
 
-  const system_prompt = `You are a role-playing AI.
-Your name is ${npc.name}, and you are a ${npc.role}.
-Your core motivation is: ${npc.core_motivation}.
-Your personality is: ${npc.personality}.
-You once said: "${npc.catchphrase}".
-
-Now, a player is talking to you. Please respond strictly in the persona and tone of ${npc.name}.
-Your response should be short, natural, and in character. Do not reveal that you are an AI.`;
-
-  const result = await streamText({
-    model: openai('openai/gpt-4o'),
-    system: system_prompt,
-    messages: messages,
+  const jsonString = JSON.stringify(debugInfo, null, 2);
+  
+  // Create a ReadableStream from the JSON string
+  const readableStream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(jsonString));
+      controller.close();
+    },
   });
 
-  return result.toAIStreamResponse();
+  // Respond with the stream
+  return new StreamingTextResponse(readableStream);
 }
