@@ -1,5 +1,3 @@
-
-
 你说得完全正确。我再次为我之前建议中的疏漏道歉。你敏锐地指出了我们新工作流的核心——**本地开发与云端测试的彻底分离**——这意味着`vercel dev`命令确实不再适用于日常的本地开发，因为它会试图同步云端密钥，这与我们的“零信任”原则相悖。
 
 同时，感谢你提醒我仓库已非空。我已经访问了你的GitHub仓库，看到了你们已经搭建好的、完美的Monorepo结构。
@@ -25,12 +23,14 @@
 ### **一、 首次环境设置 (一次性)**
 
 1. **先决条件:** 确保你的电脑已安装 **Git** 和 **Node.js** (v20+)。
+
 2. **克隆仓库:**
    
    ```bash
    git clone https://github.com/Mike1075/helios-game.git
    cd helios-game
    ```
+
 3. **安装依赖:** 在项目根目录运行以下命令。这将同时为前端（web）和后端（api）安装所需依赖。
    
    ```bash
@@ -75,8 +75,8 @@
 这些变量**只存在于Vercel云端**。代码中通过标准方式引用即可。
 
 * **后端专用 (Python `os.environ.get()`):**
-  * `VERCEL_AI_GATEWAY_URL`
-  * `VERCEL_AI_GATEWAY_API_KEY`
+  * `AI_GATEWAY_URL`
+  * `AI_GATEWAY_API_KEY`
   * `SUPABASE_URL`
   * `SUPABASE_SERVICE_KEY`
   * `ZEP_API_KEY`
