@@ -3,10 +3,11 @@
  * 替代模拟API，提供真正的AI智能
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import axios from "axios";
 
-// 初始化Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+// Gemini API配置
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 // 角色系统提示词模板
 const CHARACTER_PROMPTS = {
@@ -53,6 +54,122 @@ const CHARACTER_PROMPTS = {
 };
 
 /**
+ * 生成万能AI角色响应
+ */
+export async function generateUniversalAIResponse(
+  roleId: string,
+  userMessage: string,
+  chatHistory: string,
+  playerName: string,
+  inputType: 'dialogue' | 'action' | 'autonomous_action' = 'dialogue'
+) {
+  const role = UNIVERSAL_AI_ROLES[roleId as keyof typeof UNIVERSAL_AI_ROLES];
+  if (!role) {
+    throw new Error(`未知的万能AI角色: ${roleId}`);
+  }
+
+  try {
+    const contextPrompt = `
+你是${role.name}，${role.description}。
+
+性格特点：${role.personality}
+
+当前场景：月影酒馆 - 昏暗的灯光下，木质桌椅散发着岁月的痕迹
+
+最近对话历史：
+${chatHistory || '刚刚开始对话...'}
+
+---
+
+${inputType === 'autonomous_action' ? 
+  `基于你的角色和职责，你会在此刻做什么？请生成一个自然的行为或对话。` :
+  `${playerName}${inputType === 'action' ? '做了这个行动' : '说'}："${userMessage}"`
+}
+
+请以JSON格式回复，包含以下字段：
+{
+  "dialogue": "你要说的话（如果有）",
+  "action": "你要做的动作描述",
+  "internal_thought": "内心想法（完全私有，不会显示给玩家）"
+}
+
+要求：
+1. 严格按照你的角色设定回应
+2. 对话要符合你的职业特点
+3. 动作描述要生动具体
+4. 保持角色的独特个性
+`;
+
+    const response = await axios.post(
+      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      {
+        contents: [{
+          parts: [{
+            text: contextPrompt
+          }]
+        }]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'HeliosGame/1.0'
+        },
+        timeout: 30000
+      }
+    );
+
+    const text = response.data.candidates[0].content.parts[0].text;
+
+    // 尝试解析JSON响应
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          success: true,
+          character: {
+            id: roleId,
+            name: role.name,
+            role: role.description
+          },
+          action_package: {
+            dialogue: parsed.dialogue,
+            action: parsed.action,
+            internal_thought: parsed.internal_thought, // 仅用于服务器端处理，不会显示给玩家
+            confidence: 0.8,
+            action_type: inputType
+          },
+          routing_type: 'UNIVERSAL_AI'
+        };
+      }
+    } catch (parseError) {
+      console.warn('万能AI JSON解析失败，使用文本响应:', parseError);
+    }
+
+    // 如果JSON解析失败，返回文本作为对话
+    return {
+      success: true,
+      character: {
+        id: roleId,
+        name: role.name,
+        role: role.description
+      },
+      action_package: {
+        dialogue: text.trim(),
+        action: `${role.name}认真地回应`,
+        confidence: 0.6,
+        action_type: inputType
+      },
+      routing_type: 'UNIVERSAL_AI'
+    };
+
+  } catch (error) {
+    console.error('万能AI错误:', error);
+    throw new Error(`万能AI生成失败: ${error}`);
+  }
+}
+
+/**
  * 调用Gemini AI生成角色响应
  */
 export async function generateCharacterResponse(
@@ -64,8 +181,6 @@ export async function generateCharacterResponse(
   inputType: 'dialogue' | 'action' | 'autonomous_action' = 'dialogue'
 ) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     // 构建完整的提示词
     const systemPrompt = CHARACTER_PROMPTS[characterId];
     
@@ -96,7 +211,7 @@ ${inputType === 'autonomous_action' ?
 {
   "dialogue": "你要说的话（如果有）",
   "action": "你要做的动作描述",
-  "internal_thought": "内心想法（不会被其他人看到）",
+  "internal_thought": "内心想法（完全私有，不会显示给玩家）",
   "emotion_change": {
     "energy": 数值变化,
     "boredom": 数值变化
@@ -111,9 +226,26 @@ ${inputType === 'autonomous_action' ?
 5. 情绪变化要合理（±5到±15之间）
 `;
 
-    const result = await model.generateContent(contextPrompt);
-    const response = await result.response;
-    const text = response.text();
+    // 使用axios调用Gemini API
+    const response = await axios.post(
+      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      {
+        contents: [{
+          parts: [{
+            text: contextPrompt
+          }]
+        }]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'HeliosGame/1.0'
+        },
+        timeout: 30000 // 30秒超时
+      }
+    );
+
+    const text = response.data.candidates[0].content.parts[0].text;
 
     // 尝试解析JSON响应
     try {
@@ -130,7 +262,7 @@ ${inputType === 'autonomous_action' ?
           action_package: {
             dialogue: parsed.dialogue,
             action: parsed.action,
-            internal_thought: parsed.internal_thought,
+            internal_thought: parsed.internal_thought, // 仅用于服务器端处理，不会显示给玩家
             emotion_change: parsed.emotion_change,
             confidence: 0.8,
             action_type: inputType
@@ -165,13 +297,47 @@ ${inputType === 'autonomous_action' ?
   }
 }
 
+// 万能系统AI角色模板
+const UNIVERSAL_AI_ROLES = {
+  tavern_keeper: {
+    name: '老板',
+    description: '酒馆老板，经验丰富，见多识广，关注商业和秩序',
+    triggers: ['老板', '买', '卖', '价格', '房间', '住宿', '账单'],
+    personality: '实用主义，精明但公正，对客人友好但保持商业距离'
+  },
+  bartender: {
+    name: '酒保',
+    description: '专业的酒保，熟悉各种酒类，善于倾听客人心声',
+    triggers: ['酒保', '酒', '喝', '倒酒', '醉', '酒精', '饮料'],
+    personality: '专业友善，是很好的倾听者，偶尔分享人生智慧'
+  },
+  cook: {
+    name: '厨师',
+    description: '酒馆厨师，专注料理，脾气暴躁但手艺精湛',
+    triggers: ['厨师', '饭', '菜', '食物', '饿', '烤', '炖'],
+    personality: '直率坦诚，对料理充满热情，不喜欢被打扰但乐于分享美食'
+  },
+  local_resident: {
+    name: '当地居民',
+    description: '酒馆常客，了解当地情况和流言',
+    triggers: ['当地', '这里', '居民', '街坊', '邻居', '消息', '传言'],
+    personality: '健谈好奇，喜欢八卦和分享小道消息'
+  },
+  guard: {
+    name: '守卫',
+    description: '负责维护秩序的守卫，严肃认真',
+    triggers: ['守卫', '警察', '治安', '秩序', '违法', '安全'],
+    personality: '严肃负责，按规则办事，对可疑行为保持警觉'
+  }
+};
+
 /**
  * 智能选择响应角色
  */
-export function selectRespondingCharacter(userMessage: string): 'linxi' | 'chenhao' | null {
+export function selectRespondingCharacter(userMessage: string): 'linxi' | 'chenhao' | string | null {
   const message = userMessage.toLowerCase();
   
-  // 直接指名
+  // 1. 直接指名核心AI角色
   if (message.includes('@林溪') || message.includes('@linxi')) {
     return 'linxi';
   }
@@ -179,7 +345,16 @@ export function selectRespondingCharacter(userMessage: string): 'linxi' | 'chenh
     return 'chenhao';
   }
   
-  // 内容相关性判断
+  // 2. 检查万能AI角色触发词
+  for (const [roleId, role] of Object.entries(UNIVERSAL_AI_ROLES)) {
+    const triggerScore = role.triggers.filter(trigger => message.includes(trigger)).length;
+    if (triggerScore > 0) {
+      console.log(`🎭 触发万能AI角色: ${role.name} (匹配 ${triggerScore} 个关键词)`);
+      return roleId; // 返回角色ID，如 'tavern_keeper'
+    }
+  }
+  
+  // 3. 核心AI角色内容相关性判断
   const linxiKeywords = ['调查', '观察', '分析', '发现', '线索', '可疑', '什么情况', '怎么回事'];
   const chenhaoKeywords = ['年轻人', '朋友', '害怕', '紧张', '担心', '没事', '正常'];
   
@@ -192,6 +367,11 @@ export function selectRespondingCharacter(userMessage: string): 'linxi' | 'chenh
     return 'chenhao';
   }
   
-  // 随机选择，但林溪概率稍高（因为更主动）
+  // 4. 默认：40%概率万能AI (酒保)，60%概率核心AI
+  if (Math.random() < 0.4) {
+    return 'bartender'; // 默认万能AI角色
+  }
+  
+  // 5. 随机选择核心AI，林溪概率稍高（因为更主动）
   return Math.random() > 0.4 ? 'linxi' : 'chenhao';
 }

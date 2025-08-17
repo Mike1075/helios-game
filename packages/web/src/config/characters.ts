@@ -142,7 +142,8 @@ export function createInitialInternalState(template: CharacterTemplate): Interna
     
     // 时间戳
     last_updated: now,
-    last_activity: now
+    last_activity: now,
+    last_autonomous_action: now - 300000 // 设置为5分钟前，允许初始行动
   };
 }
 

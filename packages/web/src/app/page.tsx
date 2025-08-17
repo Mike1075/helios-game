@@ -4,8 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { worldEngine } from '../systems/WorldEngine';
 import { beliefObserver } from '../systems/BeliefObserver';
 import { Character, GameEvent, InternalState, BeliefSystem } from '../types/core';
-import { initializePlayerSession, savePlayerMessage, saveAIResponse, getChatHistory } from '../lib/zep';
-import { saveGameEvent } from '../lib/supabase';
+// 移除前端直接调用，改为通过API路由调用
 
 export default function Home() {
   // 游戏状态
@@ -23,6 +22,7 @@ export default function Home() {
   // 输入状态
   const [inputMessage, setInputMessage] = useState('');
   const [inputMode, setInputMode] = useState<'dialogue' | 'action'>('dialogue');
+  const [sendingMessage, setSendingMessage] = useState(false);
   
   // 界面状态
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function Home() {
       console.log('🌍 初始化《本我之境》世界...');
       
       worldEngine.initializeWorld();
-      worldEngine.startHeartbeat(45000); // 45秒心跳
+      worldEngine.startHeartbeat(120000); // 2分钟心跳，配合3分钟AI行动冷却
       
       // 订阅世界事件
       const unsubscribe = worldEngine.subscribe((event: GameEvent) => {
@@ -75,9 +75,19 @@ export default function Home() {
     
     setLoading(true);
     try {
-      // 初始化Zep会话
-      console.log('🔄 初始化Zep记忆会话...');
-      const newSessionId = await initializePlayerSession(playerName);
+      // 通过API路由初始化游戏会话
+      console.log('🔄 初始化游戏会话...');
+      const initResponse = await fetch('/api/init-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerName })
+      });
+      
+      if (!initResponse.ok) {
+        throw new Error('游戏初始化失败');
+      }
+      
+      const { sessionId: newSessionId } = await initResponse.json();
       setSessionId(newSessionId);
       
       // 添加玩家到世界
@@ -96,16 +106,6 @@ export default function Home() {
       
       worldEngine.publishEvent(enterEvent);
       
-      // 保存到数据库
-      await saveGameEvent({
-        character_id: enterEvent.character_id,
-        event_type: enterEvent.type,
-        content: enterEvent.content,
-        timestamp: enterEvent.timestamp,
-        scene_id: enterEvent.scene_id,
-        player_name: playerName
-      });
-      
       console.log('✅ 游戏初始化完成');
       
     } catch (error) {
@@ -117,14 +117,12 @@ export default function Home() {
 
   // 发送消息
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !sessionId) return;
+    if (!inputMessage.trim() || !sessionId || sendingMessage) return;
     
+    setSendingMessage(true);
     const messageContent = inputMode === 'action' ? `(${inputMessage})` : inputMessage;
     
     try {
-      // 保存玩家消息到Zep记忆
-      await savePlayerMessage(sessionId, playerName, inputMessage, inputMode);
-      
       // 发布玩家事件
       const playerEvent = {
         id: `player_${inputMode}_${Date.now()}`,
@@ -136,30 +134,16 @@ export default function Home() {
       };
       
       worldEngine.publishEvent(playerEvent);
-      
-      // 保存玩家事件到数据库
-      await saveGameEvent({
-        character_id: playerEvent.character_id,
-        event_type: playerEvent.type,
-        content: playerEvent.content,
-        timestamp: playerEvent.timestamp,
-        scene_id: playerEvent.scene_id,
-        player_name: playerName
-      });
-      
       setInputMessage('');
       
-      // 获取对话历史
-      const chatHistory = await getChatHistory(sessionId, 10);
-      
-      // 触发AI响应
+      // 通过API路由处理完整的消息流程（包含Zep保存和AI响应）
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userMessage: inputMessage,
           playerName: playerName,
-          chatHistory: chatHistory,
+          sessionId: sessionId,
           inputType: inputMode
         })
       });
@@ -169,7 +153,7 @@ export default function Home() {
         if (result.success && result.action_package) {
           const characterId = result.character?.id || 'ai';
           
-          // 发布AI响应事件
+          // 发布AI响应事件（排除内心想法，只显示对话和行动）
           if (result.action_package.dialogue) {
             const dialogueEvent = {
               id: `ai_response_${Date.now()}`,
@@ -181,28 +165,6 @@ export default function Home() {
             };
             
             worldEngine.publishEvent(dialogueEvent);
-            
-            // 保存AI响应到Zep和数据库
-            await saveAIResponse(
-              sessionId, 
-              characterId, 
-              result.action_package.dialogue, 
-              result.action_package.action
-            );
-            
-            await saveGameEvent({
-              character_id: dialogueEvent.character_id,
-              event_type: dialogueEvent.type,
-              content: dialogueEvent.content,
-              timestamp: dialogueEvent.timestamp,
-              scene_id: dialogueEvent.scene_id,
-              player_name: playerName,
-              internal_state: result.action_package.emotion_change,
-              metadata: { 
-                confidence: result.action_package.confidence,
-                routing_type: result.routing_type
-              }
-            });
           }
           
           if (result.action_package.action) {
@@ -216,16 +178,9 @@ export default function Home() {
             };
             
             worldEngine.publishEvent(actionEvent);
-            
-            await saveGameEvent({
-              character_id: actionEvent.character_id,
-              event_type: actionEvent.type,
-              content: actionEvent.content,
-              timestamp: actionEvent.timestamp,
-              scene_id: actionEvent.scene_id,
-              player_name: playerName
-            });
           }
+          
+          // 注意：internal_thought 被故意排除，不会发布到事件流中
           
           console.log('✅ AI响应处理完成:', {
             character: result.character?.name,
@@ -235,7 +190,28 @@ export default function Home() {
       }
     } catch (error) {
       console.error('❌ 消息处理失败:', error);
+      // 添加用户友好的错误提示
+      const errorEvent = {
+        id: `error_${Date.now()}`,
+        type: 'system' as const,
+        character_id: 'system',
+        content: '抱歉，消息发送失败，请稍后重试。',
+        timestamp: Date.now(),
+        scene_id: 'moonlight_tavern'
+      };
+      worldEngine.publishEvent(errorEvent);
+    } finally {
+      setSendingMessage(false);
     }
+  };
+
+  // 万能AI角色映射
+  const universalAIRoles: Record<string, { name: string; avatar: string }> = {
+    'tavern_keeper': { name: '老板', avatar: '👨‍💼' },
+    'bartender': { name: '酒保', avatar: '🍺' },
+    'cook': { name: '厨师', avatar: '👨‍🍳' },
+    'local_resident': { name: '当地居民', avatar: '🧔' },
+    'guard': { name: '守卫', avatar: '🛡️' }
   };
 
   // 获取角色头像
@@ -244,12 +220,22 @@ export default function Home() {
     if (characterId === 'linxi') return '👩‍🦱';
     if (characterId === 'chenhao') return '👨‍💻';
     if (characterId === 'system') return '🏛️';
+    
+    // 万能AI角色
+    const universalRole = universalAIRoles[characterId];
+    if (universalRole) return universalRole.avatar;
+    
     return '🎭';
   };
 
   // 获取角色名称
   const getCharacterName = (characterId: string) => {
     if (characterId === 'player') return playerName;
+    
+    // 万能AI角色
+    const universalRole = universalAIRoles[characterId];
+    if (universalRole) return universalRole.name;
+    
     const character = characters.find(c => c.id === characterId);
     return character?.name || characterId;
   };
@@ -538,13 +524,14 @@ export default function Home() {
             <div className="bg-gray-800/70 rounded-lg p-4">
               <h3 className="text-lg font-bold text-orange-400 mb-3">🌌 系统说明</h3>
               <div className="text-sm text-gray-300 space-y-2">
-                <p><strong>🆕 言行合一：</strong>AI不仅会说话，还会有行动和内心想法</p>
-                <p><strong>核心AI：</strong>林溪、陈浩拥有独立人格，支持智能响应</p>
-                <p><strong>万能AI：</strong>动态扮演所有其他角色，智能角色推断</p>
-                <p><strong>零硬编码：</strong>所有回复都是实时AI生成</p>
+                <p><strong>🎭 真实体验：</strong>你只能看到其他人的对话和行动，无法看到内心想法</p>
+                <p><strong>🧠 核心AI：</strong>林溪、陈浩拥有独立人格和复杂内在状态</p>
+                <p><strong>🎭 万能AI：</strong>智能扮演老板、酒保、厨师、居民、守卫等角色</p>
+                <p><strong>🧠 智能路由：</strong>根据内容自动选择最合适的角色回应</p>
+                <p><strong>⚡ 零硬编码：</strong>所有回复都是实时AI生成，真正的智能对话</p>
                 <p><strong>🔮 信念发现:</strong> 系统观察你的行为，自动生成信念档案</p>
-                <p><strong>💓 活跃世界:</strong> AI每45秒进行一次"心跳"，可能自主行动</p>
-                <p><strong>🎲 概率响应：</strong>AI会根据相关性智能决定是否参与对话</p>
+                <p><strong>💓 活跃世界:</strong> AI每2分钟进行一次"心跳"，可能自主行动</p>
+                <p><strong>⏰ 智能冷却：</strong>AI自主行动有3分钟冷却，避免频繁打扰</p>
               </div>
             </div>
           </div>
@@ -560,8 +547,11 @@ export default function Home() {
             
             {/* 事件流 */}
             <div className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1">
-              {events.map(event => (
-                <div key={event.id} className={`p-3 rounded-lg border ${getEventStyle(event)} animate-fade-in`}>
+              {events.map((event, index) => (
+                <div 
+                  key={event.id} 
+                  className={`p-3 rounded-lg border ${getEventStyle(event)} transition-all duration-300 ease-in-out hover:scale-[1.01]`}
+                >
                   <div className="flex items-start space-x-2">
                     <span className="text-xl flex-shrink-0">{getCharacterAvatar(event.character_id)}</span>
                     <div className="flex-1 min-w-0">
@@ -570,7 +560,11 @@ export default function Home() {
                           {getCharacterName(event.character_id)}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {new Date(event.timestamp).toLocaleTimeString()}
+                          {new Date(event.timestamp).toLocaleTimeString('zh-CN', { 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
                         </span>
                         <span className="text-xs px-1.5 py-0.5 bg-gray-700 rounded text-gray-300">
                           {event.type === 'dialogue' ? '💬' : 
@@ -596,6 +590,7 @@ export default function Home() {
               {/* 快捷指令和模式切换 */}
               <div className="flex flex-wrap justify-between items-center gap-2">
                 <div className="flex flex-wrap space-x-1 md:space-x-2">
+                  {/* 核心AI角色 */}
                   <button
                     onClick={() => setInputMessage(prev => prev + '@林溪 ')}
                     className="px-2 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded text-xs transition-colors"
@@ -608,6 +603,23 @@ export default function Home() {
                   >
                     @陈浩
                   </button>
+                  
+                  {/* 万能AI测试按钮 */}
+                  <button
+                    onClick={() => setInputMessage('老板，来杯酒')}
+                    className="px-2 py-1 bg-orange-600/50 hover:bg-orange-600 text-white rounded text-xs transition-colors"
+                    title="测试万能AI - 酒馆老板"
+                  >
+                    🍺老板
+                  </button>
+                  <button
+                    onClick={() => setInputMessage('厨师，有什么好吃的？')}
+                    className="px-2 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded text-xs transition-colors"
+                    title="测试万能AI - 厨师"
+                  >
+                    👨‍🍳厨师
+                  </button>
+                  
                   <button
                     onClick={() => setInputMessage('')}
                     className="px-2 py-1 bg-gray-600/50 hover:bg-gray-600 text-white rounded text-xs transition-colors"
@@ -652,18 +664,25 @@ export default function Home() {
                       : "描述你的行动..."
                   }
                   className="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && !sendingMessage && sendMessage()}
                 />
                 <button
                   onClick={sendMessage}
-                  disabled={!inputMessage.trim()}
+                  disabled={!inputMessage.trim() || sendingMessage}
                   className={`px-4 py-3 rounded-lg transition-colors font-medium text-white text-sm ${
                     inputMode === 'dialogue'
                       ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600'
                       : 'bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600'
                   }`}
                 >
-                  {inputMode === 'dialogue' ? '💬' : '🎭'}
+                  {sendingMessage ? (
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-xs">发送中</span>
+                    </div>
+                  ) : (
+                    inputMode === 'dialogue' ? '💬' : '🎭'
+                  )}
                 </button>
               </div>
             </div>

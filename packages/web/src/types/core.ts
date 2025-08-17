@@ -84,6 +84,7 @@ export interface InternalState {
   // 时间戳
   last_updated: number;
   last_activity: number; // 最后活动时间，用于状态衰减
+  last_autonomous_action: number; // 最后自主行动时间，用于防止频繁行动
 }
 
 // ===========================================

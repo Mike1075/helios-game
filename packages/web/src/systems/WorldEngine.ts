@@ -164,7 +164,7 @@ export class WorldEngine {
     }
 
     this.isRunning = true;
-    console.log(`💓 启动世界心跳，间隔: ${intervalMs}ms (45秒)`);
+    console.log(`💓 启动世界心跳，间隔: ${intervalMs}ms (${Math.round(intervalMs/1000)}秒)`);
     
     this.heartbeatTimer = setInterval(() => {
       this.worldTick();
@@ -288,6 +288,17 @@ export class WorldEngine {
    * 判断AI是否应该行动
    */
   private shouldAIAct(character: Character, state: InternalState, now: number): boolean {
+    // 冷却时间检查：防止频繁自主行动 (最少3分钟间隔)
+    const COOLDOWN_MINUTES = 3;
+    const timeSinceLastAction = now - state.last_autonomous_action;
+    const cooldownMs = COOLDOWN_MINUTES * 60 * 1000;
+    
+    if (timeSinceLastAction < cooldownMs) {
+      const remainingMinutes = Math.ceil((cooldownMs - timeSinceLastAction) / (60 * 1000));
+      console.log(`⏰ ${character.name} 还需等待 ${remainingMinutes} 分钟才能再次自主行动`);
+      return false;
+    }
+    
     // 无聊值驱动（主要驱动力）
     if (state.boredom > 75) {
       console.log(`😴 ${character.name} 极度无聊，必须行动`);
@@ -502,6 +513,13 @@ ${history || '暂时很安静...'}
         timestamp: now,
         scene_id: this.worldState.scene.id
       });
+    }
+    
+    // 更新最后自主行动时间（防止频繁行动）
+    const currentState = this.worldState.internal_states.get(character.id);
+    if (currentState) {
+      const updatedState = { ...currentState, last_autonomous_action: now };
+      this.worldState.internal_states.set(character.id, updatedState);
     }
     
     console.log(`✨ ${character.name} 执行自主行为完成`);
