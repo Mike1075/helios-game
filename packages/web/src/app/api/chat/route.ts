@@ -1,10 +1,13 @@
 import { CoreMessage, streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 
-// By using the default 'openai' export, we rely on Vercel's platform
-// to automatically provide the correct OPENAI_API_KEY and OPENAI_BASE_URL
-// from the AI Gateway integration settings. This is the most robust and
-// standard approach.
+// This is the definitive, final configuration based on the working curl command.
+// It uses the specific API key name from the internal spec and the explicit
+// AI Gateway URL, removing all ambiguities from previous attempts.
+const openai = createOpenAI({
+  apiKey: process.env.AI_GATEWAY_API_KEY,
+  baseURL: 'https://ai-gateway.vercel.sh/v1', // The explicit Vercel AI Gateway endpoint
+});
 
 export const runtime = 'edge';
 
