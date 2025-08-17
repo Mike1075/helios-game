@@ -1,8 +1,12 @@
 {
+  "version": 2,
   "builds": [
     {
-      "src": "packages/web/next.config.js",
-      "use": "@vercel/next"
+      "src": "packages/web/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
     },
     {
       "src": "packages/api/main.py",
@@ -16,7 +20,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "packages/web"
+      "dest": "packages/web/$1"
     }
   ]
 }
