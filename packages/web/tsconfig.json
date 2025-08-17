@@ -11,6 +11,9 @@
     "jsx": "preserve",
     "skipLibCheck": true,
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "incremental": true,
     "allowJs": true,
     "noEmit": true,

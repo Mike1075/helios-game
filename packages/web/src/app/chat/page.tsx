@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { createClientComponentClient } from '@/lib/supabase'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
@@ -25,11 +27,52 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [model, setModel] = useState(MODELS[0].id)
+  const [currentUser, setCurrentUser] = useState<{ id: string; email?: string } | null>(null)
+  const [sessionId, setSessionId] = useState<string>('')
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const endRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+
+  useEffect(() => {
+    // 检查用户认证状态
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/login')
+          return
+        }
+        setCurrentUser(user)
+        // 生成新的会话ID
+        setSessionId(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+        
+        // 加载用户的聊天历史（可选）
+        // loadChatHistory(user.id)
+      } catch (error) {
+        console.error('Auth check error:', error)
+        router.push('/login')
+      } finally {
+        setIsAuthLoading(false)
+      }
+    }
+    
+    checkUser()
+  }, [router, supabase])
 
   useEffect(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), [messages])
   
   const selectedModel = MODELS.find(m => m.id === model)
+
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/sign-out', { method: 'POST' })
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,7 +90,12 @@ export default function ChatPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: base, model })
+        body: JSON.stringify({ 
+          messages: base, 
+          model,
+          userId: currentUser?.id,
+          sessionId
+        })
       })
       if (!res.body) throw new Error('No stream')
       const reader = res.body.getReader()
@@ -62,6 +110,24 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ color: 'white', fontSize: '1.2rem' }}>Loading...</div>
+      </div>
+    )
+  }
+
+  if (!currentUser) {
+    return null // 重定向到登录页面
   }
 
   return (
@@ -145,6 +211,36 @@ export default function ChatPage() {
                 </option>
               ))}
             </select>
+          </div>
+          
+          {/* User Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              padding: '0.5rem 1rem',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              👤 {currentUser?.email}
+            </div>
+            <button
+              onClick={handleSignOut}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#f44336',
+                color: 'white',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+              onMouseOver={(e) => (e.target as HTMLButtonElement).style.background = '#d32f2f'}
+              onMouseOut={(e) => (e.target as HTMLButtonElement).style.background = '#f44336'}
+            >
+              登出
+            </button>
           </div>
         </div>
       </div>
