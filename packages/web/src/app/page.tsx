@@ -1,63 +1,131 @@
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold mb-8 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-            钰涵的分支预览页面
+    <main className="min-h-screen bg-gradient-to-br from-amber-900 via-orange-900 to-red-900 text-white">
+      <div className="container mx-auto px-4 py-8">
+        {/* 游戏标题 */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-600 bg-clip-text text-transparent">
+            赫利俄斯 - 意识的棱镜
           </h1>
-          <h2 className="text-2xl mb-6 text-blue-200">
-            Helios - 赫利俄斯项目
-          </h2>
-          <p className="text-xl max-w-2xl mx-auto mb-12 text-gray-300 leading-relaxed">
-            这是钰涵的个人开发分支预览页面
-            <br />
-            分支名称: feature/yuhan/personal-preview
+          <p className="text-lg text-amber-200">
+            新弧光城 · 港口酒馆
           </p>
+        </div>
+        
+        {/* 游戏主界面 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-4">🎯 个人分支信息</h3>
-            <div className="text-sm text-gray-300 space-y-2">
-              <p>👤 开发者: 钰涵</p>
-              <p>🌿 分支: feature/yuhan/personal-preview</p>
-              <p>📅 创建时间: 2025年8月17日</p>
-              <p>🚀 状态: 预览环境运行中</p>
-              <p>🔄 最后更新: 2025年8月17日 19:34</p>
-            </div>
-          </div>
-
-          <div className="mt-8 bg-green-500/10 border border-green-500/20 rounded-lg p-6 max-w-md mx-auto">
-            <h4 className="text-green-400 font-semibold mb-2">✅ 协作流程验证成功</h4>
-            <p className="text-sm text-green-300">
-              按照项目协作开发说明书创建的个人分支预览页面，
-              Vercel自动部署功能正常运行！
-            </p>
-            <p className="text-xs text-green-200 mt-2">
-              🧪 测试：验证同一分支的新提交是否自动添加到现有PR
-            </p>
-          </div>
-
-          <div className="mt-8 bg-blue-500/10 border border-blue-500/20 rounded-lg p-6 max-w-2xl mx-auto">
-            <h4 className="text-blue-400 font-semibold mb-4">🎮 钰涵的Helios MVP构想</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div className="bg-purple-500/10 p-4 rounded">
-                <h5 className="text-purple-300 font-semibold mb-2">🧠 信念系统</h5>
-                <p className="text-gray-300">探索玩家内在信念的动态发现机制</p>
-              </div>
-              <div className="bg-pink-500/10 p-4 rounded">
-                <h5 className="text-pink-300 font-semibold mb-2">🤖 AI角色</h5>
-                <p className="text-gray-300">具有三层意识结构的智能NPC</p>
-              </div>
-              <div className="bg-cyan-500/10 p-4 rounded">
-                <h5 className="text-cyan-300 font-semibold mb-2">🪞 回响之室</h5>
-                <p className="text-gray-300">认知失调时的内省与顿悟空间</p>
-              </div>
-              <div className="bg-yellow-500/10 p-4 rounded">
-                <h5 className="text-yellow-300 font-semibold mb-2">🎭 叙事网络</h5>
-                <p className="text-gray-300">基于行为的动态故事生成</p>
+          {/* 左侧：场景描述 */}
+          <div className="lg:col-span-1">
+            <div className="bg-amber-900/30 backdrop-blur-sm rounded-lg p-6 border border-amber-600/30">
+              <h3 className="text-xl font-bold mb-4 text-amber-300">🏛️ 港口酒馆</h3>
+              <p className="text-amber-100 leading-relaxed mb-4">
+                夕阳西下，新弧光城的港口酒馆里弥漫着海盐的味道。几位常客围坐在吧台前，
+                各自怀着不同的心思。这里是信念交汇的地方，也是故事开始的地方。
+              </p>
+              <div className="text-sm text-amber-200">
+                <p>🌅 时间：黄昏时分</p>
+                <p>🌊 地点：港口酒馆</p>
+                <p>👥 在场：3位NPC，等待玩家加入</p>
               </div>
             </div>
           </div>
+
+          {/* 中间：NPC角色列表 */}
+          <div className="lg:col-span-1">
+            <div className="bg-orange-900/30 backdrop-blur-sm rounded-lg p-6 border border-orange-600/30">
+              <h3 className="text-xl font-bold mb-4 text-orange-300">🤖 在场角色</h3>
+              <div className="space-y-4">
+                
+                {/* NPC 1: 艾克斯 */}
+                <div className="bg-orange-800/40 rounded-lg p-4 cursor-pointer hover:bg-orange-800/60 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 bg-green-400 rounded-full mr-2"></div>
+                    <h4 className="font-semibold text-orange-200">艾克斯</h4>
+                  </div>
+                  <p className="text-sm text-orange-300">数据分析师</p>
+                  <p className="text-xs text-orange-400 mt-1">
+                    "数据不会说谎，但人会。"
+                  </p>
+                </div>
+
+                {/* NPC 2: 莉亚 */}
+                <div className="bg-orange-800/40 rounded-lg p-4 cursor-pointer hover:bg-orange-800/60 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 bg-green-400 rounded-full mr-2"></div>
+                    <h4 className="font-semibold text-orange-200">莉亚</h4>
+                  </div>
+                  <p className="text-sm text-orange-300">酒馆老板娘</p>
+                  <p className="text-xs text-orange-400 mt-1">
+                    "每个人心里都有故事。"
+                  </p>
+                </div>
+
+                {/* NPC 3: 卡尔 */}
+                <div className="bg-orange-800/40 rounded-lg p-4 cursor-pointer hover:bg-orange-800/60 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 bg-green-400 rounded-full mr-2"></div>
+                    <h4 className="font-semibold text-orange-200">卡尔</h4>
+                  </div>
+                  <p className="text-sm text-orange-300">退役船长</p>
+                  <p className="text-xs text-orange-400 mt-1">
+                    "海上的规则和陆地不同。"
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 右侧：聊天界面 */}
+          <div className="lg:col-span-1">
+            <div className="bg-red-900/30 backdrop-blur-sm rounded-lg p-6 border border-red-600/30 h-[500px] flex flex-col">
+              <h3 className="text-xl font-bold mb-4 text-red-300">💬 对话</h3>
+              
+              {/* 聊天记录区域 */}
+              <div className="flex-1 bg-black/20 rounded-lg p-4 mb-4 overflow-y-auto">
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-400 text-center">
+                    选择一个角色开始对话...
+                  </div>
+                </div>
+              </div>
+
+              {/* 输入区域 */}
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="输入您的话语..."
+                  className="flex-1 bg-black/30 border border-red-600/30 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-red-500"
+                  disabled
+                />
+                <button 
+                  className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                  disabled
+                >
+                  发送
+                </button>
+              </div>
+              
+              <p className="text-xs text-red-400 mt-2 text-center">
+                🚧 聊天功能开发中...
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 底部：系统状态 */}
+        <div className="mt-8 max-w-4xl mx-auto">
+          <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 border border-gray-600/30">
+            <div className="flex justify-between items-center text-sm">
+              <div className="text-gray-400">
+                🎮 Helios MVP v0.1 - 港口酒馆场景
+              </div>
+              <div className="text-gray-400">
+                🔄 开发分支: feature/yuhan/personal-preview
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
     </main>
