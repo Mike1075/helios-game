@@ -5,9 +5,10 @@ import { OpenAIStream, StreamingTextResponse } from 'ai';
 // See https://vercel.com/docs/concepts/functions/edge-functions
 export const runtime = 'edge';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// Vercel AI SDK and Vercel's platform will automatically handle
+// the API key and base URL. A parameter-less constructor is the
+// most robust way to initialize the client here.
+const openai = new OpenAI();
 
 export async function POST(req: Request) {
   // Extract the `messages` from the body of the request
@@ -38,7 +39,7 @@ Your response should be short, natural, and in character. Do not reveal that you
 
   // Request the OpenAI API for the response based on the prompt
   const response = await openai.chat.completions.create({
-    model: 'openai/gpt-4o',
+    model: 'gpt-4o', // Use the standard model name for OpenAI API
     stream: true,
     messages: finalMessages,
   });
