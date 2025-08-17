@@ -9,55 +9,134 @@ export default function Home() {
   // 登录界面
   if (!isLoggedIn) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black flex items-center justify-center">
-        <div className="w-full max-w-md mx-auto p-8">
+      <main style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom right, #0f172a, #1e293b, #000000)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '28rem',
+          margin: '0 auto',
+          padding: '2rem'
+        }}>
           {/* 登录卡片 */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
             {/* Logo区域 */}
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-white">H</span>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{
+                width: '4rem',
+                height: '4rem',
+                background: 'linear-gradient(to bottom right, #3b82f6, #8b5cf6)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem auto'
+              }}>
+                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>H</span>
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">HELIOS</h1>
-              <p className="text-gray-400 text-sm">意识的棱镜</p>
+              <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>HELIOS</h1>
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>意识的棱镜</p>
             </div>
 
             {/* 登录表单 */}
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#d1d5db',
+                  marginBottom: '0.5rem'
+                }}>
                   用户名
                 </label>
                 <input
                   type="text"
                   placeholder="输入您的用户名"
-                  className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:bg-white/10 transition-all"
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    color: 'white',
+                    fontSize: '1rem'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  color: '#d1d5db',
+                  marginBottom: '0.5rem'
+                }}>
                   密码
                 </label>
                 <input
                   type="password"
                   placeholder="输入您的密码"
-                  className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400 focus:bg-white/10 transition-all"
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    color: 'white',
+                    fontSize: '1rem'
+                  }}
                 />
               </div>
 
               <button
                 onClick={() => setIsLoggedIn(true)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
+                  color: 'white',
+                  fontWeight: '600',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = 'linear-gradient(to right, #2563eb, #7c3aed)'
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)'
+                }}
               >
                 进入意识世界
               </button>
 
               {/* 注册链接 */}
-              <div className="text-center">
-                <p className="text-gray-400 text-sm">
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
                   还没有账户？{' '}
-                  <button className="text-blue-400 hover:text-blue-300 transition-colors">
+                  <button style={{
+                    color: '#60a5fa',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}>
                     创建新的意识档案
                   </button>
                 </p>
@@ -65,8 +144,13 @@ export default function Home() {
             </div>
 
             {/* 版本信息 */}
-            <div className="mt-8 pt-6 border-t border-white/10 text-center">
-              <p className="text-gray-500 text-xs">
+            <div style={{
+              marginTop: '2rem',
+              paddingTop: '1.5rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              textAlign: 'center'
+            }}>
+              <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                 Helios MVP v0.1 · 创世之心
               </p>
             </div>
