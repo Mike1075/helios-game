@@ -150,3 +150,5 @@ helios-game/
 **让我们一起，用代码和AI，为这个世界注入第一缕意识之光。**
 
 *Mike - Helios项目负责人*
+
+# Test redeploy
