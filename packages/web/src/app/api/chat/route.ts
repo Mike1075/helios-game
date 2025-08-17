@@ -1,7 +1,14 @@
 import { CoreMessage, streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 // No need to import 'dotenv/config' in Next.js.
 // The framework automatically loads .env.local variables.
+
+// Per internal spec, the API key is stored in AI_GATEWAY_API_KEY.
+// We must create a custom OpenAI client instance to read from it,
+// as the default export looks for OPENAI_API_KEY.
+const openai = createOpenAI({
+  apiKey: process.env.AI_GATEWAY_API_KEY,
+});
 
 export const runtime = 'edge';
 
