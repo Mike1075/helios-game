@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useChat } from 'ai/react';
+// Correct import path for the new AI SDK version
+import { useChat } from '@ai-sdk/react';
 
 // 定义数据结构类型
 interface NPC {
@@ -53,9 +54,8 @@ export default function TavernChat() {
     body: {
       npc: selectedNPC,
     },
-    onFinish() {
-      console.log('Finished!');
-    },
+    // The new SDK handles streaming responses differently,
+    // so we don't need onFinish in the same way.
   });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -202,7 +202,7 @@ export default function TavernChat() {
                       borderRadius: '12px',
                       background: m.role === 'user' ? 'linear-gradient(to right, #2563eb, #7c3aed)' : 'rgba(55, 65, 81, 0.8)',
                     }}>
-                      <strong>{m.role === 'user' ? 'You' : selectedNPC.name}: </strong>
+                      <strong>{m.role === 'user' ? 'You' : (selectedNPC ? selectedNPC.name : 'NPC')}: </strong>
                       {m.content}
                     </div>
                   </div>

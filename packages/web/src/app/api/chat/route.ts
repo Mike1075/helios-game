@@ -1,52 +1,32 @@
-import { OpenAI } from 'openai';
-import { OpenAIStream, StreamingTextResponse } from 'ai';
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import 'dotenv/config';
 
-// Optional, but recommended: run on the edge runtime.
-// See https://vercel.com/docs/concepts/functions/edge-functions
 export const runtime = 'edge';
 
-// Vercel AI SDK and Vercel's platform will automatically handle
-// the API key and base URL. A parameter-less constructor is the
-// most robust way to initialize the client here.
-const openai = new OpenAI();
-
 export async function POST(req: Request) {
-  // Extract the `messages` from the body of the request
   const { messages, npc } = await req.json();
 
   if (!npc) {
     return new Response('Missing NPC data', { status: 400 });
   }
 
-  const system_prompt = `
-You are a role-playing AI.
+  const system_prompt = `You are a role-playing AI.
 Your name is ${npc.name}, and you are a ${npc.role}.
 Your core motivation is: ${npc.core_motivation}.
 Your personality is: ${npc.personality}.
 You once said: "${npc.catchphrase}".
 
 Now, a player is talking to you. Please respond strictly in the persona and tone of ${npc.name}.
-Your response should be short, natural, and in character. Do not reveal that you are an AI.
-  `;
+Your response should be short, natural, and in character. Do not reveal that you are an AI.`;
 
-  const finalMessages = [
-    {
-      role: 'system',
-      content: system_prompt,
-    },
-    ...messages,
-  ];
-
-  // Request the OpenAI API for the response based on the prompt
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o', // Use the standard model name for OpenAI API
-    stream: true,
-    messages: finalMessages,
+  const { textStream } = await streamText({
+    model: openai('openai/gpt-4o'),
+    system: system_prompt,
+    messages: messages,
   });
 
-  // Convert the response into a friendly text-stream
-  const stream = OpenAIStream(response);
-
-  // Respond with the stream
-  return new StreamingTextResponse(stream);
+  return new Response(textStream, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
