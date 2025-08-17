@@ -1,343 +1,262 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react';
+import { useChat } from 'ai/react';
 
 // 定义数据结构类型
 interface NPC {
   id: string;
   name: string;
   role: string;
-  quote: string;
-  color: string;
+  core_motivation: string;
+  personality: string;
+  catchphrase: string;
+  color: 'blue' | 'amber' | 'green';
 }
 
-interface Message {
-  sender: 'user' | 'npc';
-  text: string;
-  npcName?: string;
-}
+const NPCS: NPC[] = [
+    {
+        id: '1',
+        name: '伊拉',
+        role: '酒馆老板',
+        core_motivation: '为在“本我之镜”中迷失的灵魂提供一个温暖的避风港，收集并保管他们的故事',
+        personality: '温暖、包容，略带神秘，对每个人的故事都充满兴趣',
+        catchphrase: '“每杯酒里，都藏着一个世界。”',
+        color: 'blue',
+    },
+    {
+        id: '2',
+        name: '卡俄斯',
+        role: '赏金猎人',
+        core_motivation: '追寻在虚拟世界中失踪的妹妹，为此不惜一切代价',
+        personality: '外冷内热，言语不多但行动果断，只信任有实力的人',
+        catchphrase: '“情报，或者死。”',
+        color: 'amber',
+    },
+    {
+        id: '3',
+        name: '莉莉丝',
+        role: '“真理黑客”',
+        core_motivation: '探寻“本我之镜”的底层代码，试图找到其被称为“世界之心”的真相',
+        personality: '冷静、理性，对技术和数据有着超乎常人的敏锐，偶尔会说出让人难以理解的代码术语',
+        catchphrase: '“数据不会说谎，说谎的是人。”',
+        color: 'green',
+    },
+];
 
-export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+export default function TavernChat() {
   const [selectedNPC, setSelectedNPC] = useState<NPC | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [userInput, setUserInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Keep login state
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+    body: {
+      npc: selectedNPC,
+    },
+    onFinish() {
+      console.log('Finished!');
+    },
+  });
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // 模拟的NPC数据
-  const npcs: NPC[] = [
-    { id: 'aix', name: '艾克斯', role: '数据分析师', quote: '数据不会说谎，但人会。', color: 'blue' },
-    { id: 'lia', name: '莉亚', role: '酒馆老板娘', quote: '每个人心里都有故事。', color: 'amber' },
-    { id: 'karl', name: '卡尔', role: '退役船长', quote: '海上的规则和陆地不同。', color: 'green' }
-  ];
-
-  // 聊天记录滚动到底部
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-  
-  // 选择NPC时重置聊天记录
-  useEffect(() => {
-    if (selectedNPC) {
-      setMessages([{
-        sender: 'npc',
-        text: `你好，我是${selectedNPC.name}。你想聊些什么？`,
-        npcName: selectedNPC.name
-      }]);
-    } else {
-      setMessages([]);
-    }
-  }, [selectedNPC]);
 
-  const handleSendMessage = async () => {
-    if (userInput.trim() === '' || !selectedNPC) return;
-
-    const userMessage: Message = { sender: 'user', text: userInput };
-    setMessages(prev => [...prev, userMessage]);
-    setUserInput('');
-    setIsLoading(true);
-
-    try {
-      const apiUrl = '/api/chat';
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          player_id: 'user123', // 临时玩家ID
-          npc_id: selectedNPC.id,
-          message: userInput,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      const npcMessage: Message = {
-        sender: 'npc',
-        text: data.message,
-        npcName: data.npc_name
-      };
-      setMessages(prev => [...prev, npcMessage]);
-
-    } catch (error) {
-      console.error("API Error:", error);
-      const errorMessage: Message = {
-        sender: 'npc',
-        text: '意识连接出现波动，我暂时无法回应...',
-        npcName: selectedNPC.name
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 登录界面
+  // Login page remains the same
   if (!isLoggedIn) {
     return (
-      <main style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #020617, #0f172a, #020617)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontFamily: 'sans-serif'
-      }}>
         <div style={{
-          width: '100%',
-          maxWidth: '26rem',
-          margin: '0 auto',
-          padding: '2rem'
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+            color: 'white',
+            fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
         }}>
-          <div style={{
-            background: 'rgba(17, 24, 39, 0.8)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: '1.5rem',
-            padding: '2.5rem',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{
-                width: '4rem',
-                height: '4rem',
-                background: 'linear-gradient(to bottom right, #3b82f6, #8b5cf6)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem auto',
-                boxShadow: '0 0 20px rgba(99, 102, 241, 0.5)'
-              }}>
-                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>H</span>
-              </div>
-              <h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem' }}>HELIOS</h1>
-              <p style={{ color: '#9ca3af', fontSize: '1rem' }}>意识的棱镜</p>
+            <div style={{
+                padding: '40px',
+                background: 'rgba(31, 41, 55, 0.8)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                textAlign: 'center',
+                maxWidth: '400px',
+                width: '100%'
+            }}>
+                <h1 style={{ fontSize: '2rem', marginBottom: '10px', fontWeight: '600' }}>Helios</h1>
+                <p style={{ fontSize: '1rem', color: '#d1d5db', marginBottom: '30px' }}>本我之镜</p>
+                <form onSubmit={(e) => { e.preventDefault(); setIsLoggedIn(true); }}>
+                    <input
+                        type="text"
+                        placeholder="输入您的访问代码"
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            marginBottom: '20px',
+                            background: 'rgba(55, 65, 81, 0.5)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderRadius: '8px',
+                            color: 'white',
+                            fontSize: '1rem'
+                        }}
+                    />
+                    <button
+                        type="submit"
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'linear-gradient(to right, #2563eb, #7c3aed)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: 'white',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease'
+                        }}
+                        onMouseOver={(e) => {
+                            (e.target as HTMLElement).style.background = 'linear-gradient(to right, #1d4ed8, #6d28d9)';
+                            (e.target as HTMLElement).style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.5)';
+                        }}
+                        onMouseOut={(e) => {
+                            (e.target as HTMLElement).style.background = 'linear-gradient(to right, #2563eb, #7c3aed)';
+                            (e.target as HTMLElement).style.boxShadow = 'none';
+                        }}
+                    >
+                        连接意识
+                    </button>
+                </form>
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <button
-                onClick={() => setIsLoggedIn(true)}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
-                  color: 'white',
-                  fontWeight: '600',
-                  padding: '0.875rem',
-                  borderRadius: '0.75rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  transition: 'all 0.3s'
-                }}
-              >
-                进入意识世界
-              </button>
-            </div>
-          </div>
         </div>
-      </main>
-    )
+    );
   }
 
-  // 主游戏界面 - 全新两栏布局
   return (
-    <main style={{
-      height: '100vh',
-      background: 'linear-gradient(170deg, #020617, #111827, #020617)',
-      color: 'white',
-      fontFamily: 'sans-serif',
+    <div style={{
       display: 'flex',
-      overflow: 'hidden'
+      height: '100vh',
+      background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+      color: 'white',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
     }}>
-      {/* 左侧：意识体选择面板 */}
+      {/* Left Panel: NPC List */}
       <div style={{
-        width: '320px',
-        background: 'rgba(17, 24, 39, 0.7)',
+        width: '300px',
         borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '1.5rem',
+        padding: '20px',
         display: 'flex',
         flexDirection: 'column',
-        backdropFilter: 'blur(10px)'
+        background: 'rgba(31, 41, 55, 0.5)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-          <div style={{
-              width: '2.5rem', height: '2.5rem', background: 'linear-gradient(to bottom right, #3b82f6, #8b5cf6)',
-              borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <span style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>H</span>
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: '600' }}>HELIOS</h1>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>港口酒馆</p>
-          </div>
-        </div>
-
-        <h2 style={{ fontSize: '1rem', fontWeight: '600', color: '#9ca3af', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>在场意识体</h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', flex: 1 }}>
-          {npcs.map((npc) => (
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', fontWeight: '600' }}>意识连接对象</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          {NPCS.map((npc) => (
             <div
               key={npc.id}
               onClick={() => setSelectedNPC(npc)}
               style={{
-                padding: '1rem',
-                borderRadius: '0.75rem',
+                padding: '15px',
+                borderRadius: '8px',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                background: selectedNPC?.id === npc.id ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.05)',
-                border: selectedNPC?.id === npc.id ? '1px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.1)',
-                transform: selectedNPC?.id === npc.id ? 'scale(1.02)' : 'scale(1)',
+                background: selectedNPC?.id === npc.id ? 'linear-gradient(to right, #2563eb, #7c3aed)' : 'rgba(55, 65, 81, 0.5)',
+                border: `1px solid ${selectedNPC?.id === npc.id ? 'rgba(99, 102, 241, 0.7)' : 'rgba(255, 255, 255, 0.1)'}`,
+                transition: 'all 0.3s ease',
               }}
             >
-              <h3 style={{ fontWeight: '600', fontSize: '1.125rem', color: 'white' }}>{npc.name}</h3>
-              <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>{npc.role}</p>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>{npc.name}</h3>
+              <p style={{ margin: '5px 0 0', fontSize: '0.9rem', color: '#d1d5db' }}>{npc.role}</p>
             </div>
           ))}
         </div>
-
-        <div style={{ marginTop: 'auto', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <button
-            onClick={() => setIsLoggedIn(false)}
-            style={{
-              width: '100%', background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.1)', padding: '0.75rem',
-              borderRadius: '0.5rem', cursor: 'pointer', color: '#9ca3af'
-            }}
-          >
-            退出
-          </button>
-        </div>
       </div>
 
-      {/* 右侧：对话界面 */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* Right Panel: Chat Interface */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px'
+      }}>
         {selectedNPC ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* 对话内容 */}
-            <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-              <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {messages.map((msg, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                    gap: '1rem'
-                  }}>
-                    {msg.sender === 'npc' && (
-                      <div style={{
-                        width: '40px', height: '40px', borderRadius: '50%',
-                        background: 'linear-gradient(to bottom right, #3b82f6, #8b5cf6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                      }}>
-                        <span style={{ fontWeight: 'bold' }}>{msg.npcName?.[0]}</span>
-                      </div>
-                    )}
+          <>
+            <div style={{
+                marginBottom: '20px',
+                paddingBottom: '20px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            }}>
+                <h2 style={{margin: 0, fontSize: '1.8rem', fontWeight: 'bold'}}>{selectedNPC.name}</h2>
+                <p style={{margin: '5px 0 0', color: '#d1d5db'}}>“{selectedNPC.catchphrase}”</p>
+            </div>
+            
+            <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', paddingRight: '10px' }}>
+              {messages.length > 0 ? (
+                messages.map(m => (
+                  <div key={m.id} style={{ marginBottom: '15px', display: 'flex', flexDirection: m.role === 'user' ? 'row-reverse' : 'row' }}>
                     <div style={{
-                      background: msg.sender === 'user' ? '#3b82f6' : 'rgba(255, 255, 255, 0.1)',
-                      padding: '1rem', borderRadius: '1rem',
-                      borderTopLeftRadius: msg.sender === 'npc' ? '0' : '1rem',
-                      borderTopRightRadius: msg.sender === 'user' ? '0' : '1rem',
-                      maxWidth: '70%'
+                      maxWidth: '70%',
+                      padding: '10px 15px',
+                      borderRadius: '12px',
+                      background: m.role === 'user' ? 'linear-gradient(to right, #2563eb, #7c3aed)' : 'rgba(55, 65, 81, 0.8)',
                     }}>
-                      <p style={{ lineHeight: 1.6 }}>{msg.text}</p>
+                      <strong>{m.role === 'user' ? 'You' : selectedNPC.name}: </strong>
+                      {m.content}
                     </div>
                   </div>
-                ))}
-                {isLoading && (
-                   <div style={{ display: 'flex', justifyContent: 'flex-start', gap: '1rem' }}>
-                     <div style={{
-                        width: '40px', height: '40px', borderRadius: '50%',
-                        background: 'linear-gradient(to bottom right, #3b82f6, #8b5cf6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                      }}>
-                        <span style={{ fontWeight: 'bold' }}>{selectedNPC.name[0]}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255, 255, 255, 0.1)', padding: '1rem', borderRadius: '1rem', borderTopLeftRadius: '0' }}>
-                         <div style={{ width: '8px', height: '8px', background: '#9ca3af', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both' }}></div>
-                         <div style={{ width: '8px', height: '8px', background: '#9ca3af', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.16s' }}></div>
-                         <div style={{ width: '8px', height: '8px', background: '#9ca3af', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out both', animationDelay: '0.32s' }}></div>
-                      </div>
-                   </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
+                ))
+              ) : (
+                <div style={{textAlign: 'center', color: '#9ca3af', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                  <p>意识连接已建立。开始对话...</p>
+                </div>
+              )}
+              <div ref={chatEndRef} />
             </div>
 
-            {/* 输入框 */}
-            <div style={{ padding: '2rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', background: '#111827' }}>
-              <div style={{
-                maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '1rem',
-                background: 'rgba(0, 0, 0, 0.3)', padding: '0.5rem', borderRadius: '0.75rem',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}>
-                <input
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-                  placeholder={`与 ${selectedNPC.name} 对话...`}
-                  style={{
-                    flex: 1, background: 'transparent', border: 'none',
-                    color: 'white', fontSize: '1rem', outline: 'none', padding: '0.5rem'
-                  }}
-                  disabled={isLoading}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={isLoading}
-                  style={{
-                    background: '#3b82f6', color: 'white', fontWeight: '600',
-                    padding: '0.75rem 1.5rem', borderRadius: '0.5rem',
-                    border: 'none', cursor: 'pointer', opacity: isLoading ? 0.5 : 1
-                  }}
-                >
-                  发送
-                </button>
-              </div>
-            </div>
-          </div>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
+              <input
+                value={input}
+                onChange={handleInputChange}
+                placeholder="输入你的想法..."
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'rgba(55, 65, 81, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem'
+                }}
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: '12px 20px',
+                  background: 'linear-gradient(to right, #2563eb, #7c3aed)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  opacity: isLoading ? 0.5 : 1,
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? '思考中...' : '发送'}
+              </button>
+            </form>
+          </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
-            <span style={{ fontSize: '3rem' }}>←</span>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '500', color: '#9ca3af' }}>请选择一位意识体</h2>
-            <p style={{ color: '#6b7280' }}>开始你的意识探索之旅</p>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#9ca3af' }}>
+            <h2>请从左侧选择一个对象进行意识连接</h2>
           </div>
         )}
       </div>
-      <style jsx global>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0); }
-          40% { transform: scale(1.0); }
-        }
-      `}</style>
-    </main>
+    </div>
   );
 }
