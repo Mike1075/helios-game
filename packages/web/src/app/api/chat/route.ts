@@ -17,14 +17,23 @@ export async function POST(request: NextRequest) {
     
     // 解析请求体
     const body = await request.json();
-    const { messages } = body;
+    const { messages, player_id } = body;
     
     console.log('收到消息:', messages);
+    console.log('玩家ID:', player_id);
 
     // 校验 messages 参数
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
         { error: 'messages 参数必须是一个数组' },
+        { status: 400 }
+      );
+    }
+
+    // 校验 player_id 参数（可选，但如果提供了需要是字符串）
+    if (player_id && typeof player_id !== 'string') {
+      return NextResponse.json(
+        { error: 'player_id 必须是字符串类型' },
         { status: 400 }
       );
     }
@@ -58,7 +67,14 @@ export async function POST(request: NextRequest) {
     // 提取回复内容
     const reply = completion.choices[0]?.message?.content || '抱歉，我无法生成回复。';
 
-    return NextResponse.json({ reply });
+    // 构建回复对象，包含玩家ID（如果提供了）
+    const response: any = { reply };
+    if (player_id) {
+      response.player_id = player_id;
+      response.timestamp = new Date().toISOString();
+    }
+
+    return NextResponse.json(response);
 
   } catch (error: any) {
     console.error('DeepSeek API 错误:', error);
