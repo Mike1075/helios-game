@@ -7,7 +7,7 @@ export default function Home() {
             Helios
           </h1>
           <h2 className="text-2xl mb-6 text-blue-200">
-            赫利俄斯 - 意识的棱镜
+            赫利俄斯 - 本我之境
           </h2>
           <p className="text-xl max-w-2xl mx-auto mb-12 text-gray-300 leading-relaxed">
             这不是一个传统的游戏，而是一个意识探索与演化的沙盒。
