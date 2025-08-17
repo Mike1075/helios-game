@@ -1,0 +1,68 @@
+{
+  "name": "回响之室生成器",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a69ccaf9-8ead-4625-b24f-67b4c4c2cfa7",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "39b9d81e-5276-4e77-b695-ca9ec08c7f6e",
+      "name": "Webhook",
+      "webhookId": "a69ccaf9-8ead-4625-b24f-67b4c4c2cfa7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "13d0f5e3-1611-4900-88de-4c11f44c09d4",
+              "name": "final_echo",
+              "value": "=根据事件追踪ID {{ $json.body.causal.trace_id }}，我终于明白了：原来是我的那些固执想法，导致了这一切的发生。",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "8905c13b-1808-4c7a-85f7-b7e798f38c04",
+      "name": "生成内心回响"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "生成内心回响",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "40072e10-60d4-4046-8b54-61f82e2ea9fd",
+  "meta": {
+    "instanceId": "1f778c37f32963d7908a07cd31451cf3b9dce1062b27726239599616e02e8a30"
+  },
+  "id": "YU0Q4MkaUEubFxnw",
+  "tags": []
+}
