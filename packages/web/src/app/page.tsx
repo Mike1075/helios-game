@@ -4,12 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import { worldEngine } from '../systems/WorldEngine';
 import { beliefObserver } from '../systems/BeliefObserver';
 import { Character, GameEvent, InternalState, BeliefSystem } from '../types/core';
+import { initializePlayerSession, savePlayerMessage, saveAIResponse, getChatHistory } from '../lib/zep';
+import { saveGameEvent } from '../lib/supabase';
 
 export default function Home() {
   // 游戏状态
   const [gameStarted, setGameStarted] = useState(false);
   const [playerName, setPlayerName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
   
   // 世界状态
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -72,22 +75,41 @@ export default function Home() {
     
     setLoading(true);
     try {
+      // 初始化Zep会话
+      console.log('🔄 初始化Zep记忆会话...');
+      const newSessionId = await initializePlayerSession(playerName);
+      setSessionId(newSessionId);
+      
       // 添加玩家到世界
       worldEngine.addPlayer(playerName);
       setGameStarted(true);
       
       // 发布玩家进入事件
-      worldEngine.publishEvent({
+      const enterEvent = {
         id: `player_enter_${Date.now()}`,
-        type: 'environment',
+        type: 'environment' as const,
         character_id: 'system',
         content: `${playerName} 推开酒馆厚重的木门，走进了昏暗的月影酒馆...`,
         timestamp: Date.now(),
         scene_id: 'moonlight_tavern'
+      };
+      
+      worldEngine.publishEvent(enterEvent);
+      
+      // 保存到数据库
+      await saveGameEvent({
+        character_id: enterEvent.character_id,
+        event_type: enterEvent.type,
+        content: enterEvent.content,
+        timestamp: enterEvent.timestamp,
+        scene_id: enterEvent.scene_id,
+        player_name: playerName
       });
       
+      console.log('✅ 游戏初始化完成');
+      
     } catch (error) {
-      console.error('启动游戏失败:', error);
+      console.error('❌ 启动游戏失败:', error);
     } finally {
       setLoading(false);
     }
@@ -95,31 +117,49 @@ export default function Home() {
 
   // 发送消息
   const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || !sessionId) return;
     
     const messageContent = inputMode === 'action' ? `(${inputMessage})` : inputMessage;
     
-    // 发布玩家事件
-    worldEngine.publishEvent({
-      id: `player_${inputMode}_${Date.now()}`,
-      type: inputMode,
-      character_id: 'player',
-      content: messageContent,
-      timestamp: Date.now(),
-      scene_id: 'moonlight_tavern'
-    });
-    
-    setInputMessage('');
-    
-    // 触发AI响应
     try {
+      // 保存玩家消息到Zep记忆
+      await savePlayerMessage(sessionId, playerName, inputMessage, inputMode);
+      
+      // 发布玩家事件
+      const playerEvent = {
+        id: `player_${inputMode}_${Date.now()}`,
+        type: inputMode as const,
+        character_id: 'player',
+        content: messageContent,
+        timestamp: Date.now(),
+        scene_id: 'moonlight_tavern'
+      };
+      
+      worldEngine.publishEvent(playerEvent);
+      
+      // 保存玩家事件到数据库
+      await saveGameEvent({
+        character_id: playerEvent.character_id,
+        event_type: playerEvent.type,
+        content: playerEvent.content,
+        timestamp: playerEvent.timestamp,
+        scene_id: playerEvent.scene_id,
+        player_name: playerName
+      });
+      
+      setInputMessage('');
+      
+      // 获取对话历史
+      const chatHistory = await getChatHistory(sessionId, 10);
+      
+      // 触发AI响应
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userMessage: inputMessage,
           playerName: playerName,
-          chatHistory: events.slice(-5).map(e => `${e.character_id}: ${e.content}`).join('\n'),
+          chatHistory: chatHistory,
           inputType: inputMode
         })
       });
@@ -127,32 +167,74 @@ export default function Home() {
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.action_package) {
+          const characterId = result.character?.id || 'ai';
+          
           // 发布AI响应事件
           if (result.action_package.dialogue) {
-            worldEngine.publishEvent({
+            const dialogueEvent = {
               id: `ai_response_${Date.now()}`,
-              type: 'dialogue',
-              character_id: result.character?.id || 'ai',
+              type: 'dialogue' as const,
+              character_id: characterId,
               content: result.action_package.dialogue,
               timestamp: Date.now(),
               scene_id: 'moonlight_tavern'
+            };
+            
+            worldEngine.publishEvent(dialogueEvent);
+            
+            // 保存AI响应到Zep和数据库
+            await saveAIResponse(
+              sessionId, 
+              characterId, 
+              result.action_package.dialogue, 
+              result.action_package.action
+            );
+            
+            await saveGameEvent({
+              character_id: dialogueEvent.character_id,
+              event_type: dialogueEvent.type,
+              content: dialogueEvent.content,
+              timestamp: dialogueEvent.timestamp,
+              scene_id: dialogueEvent.scene_id,
+              player_name: playerName,
+              internal_state: result.action_package.emotion_change,
+              metadata: { 
+                confidence: result.action_package.confidence,
+                routing_type: result.routing_type
+              }
             });
           }
           
           if (result.action_package.action) {
-            worldEngine.publishEvent({
+            const actionEvent = {
               id: `ai_action_${Date.now()}`,
-              type: 'action',
-              character_id: result.character?.id || 'ai',
+              type: 'action' as const,
+              character_id: characterId,
               content: result.action_package.action,
               timestamp: Date.now(),
               scene_id: 'moonlight_tavern'
+            };
+            
+            worldEngine.publishEvent(actionEvent);
+            
+            await saveGameEvent({
+              character_id: actionEvent.character_id,
+              event_type: actionEvent.type,
+              content: actionEvent.content,
+              timestamp: actionEvent.timestamp,
+              scene_id: actionEvent.scene_id,
+              player_name: playerName
             });
           }
+          
+          console.log('✅ AI响应处理完成:', {
+            character: result.character?.name,
+            routing: result.routing_type
+          });
         }
       }
     } catch (error) {
-      console.error('AI响应失败:', error);
+      console.error('❌ 消息处理失败:', error);
     }
   };
 
