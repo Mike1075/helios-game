@@ -185,78 +185,140 @@ export default function Home() {
 
   if (!gameStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center">
-        <div className="max-w-2xl mx-auto p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-              🪞 《本我之镜》
-            </h1>
-            <h2 className="text-2xl text-yellow-300 mb-4">意识探索与演化的沙盒</h2>
-            <p className="text-lg text-gray-300 mb-8">
-              在这个世界中，你的信念系统将从行为中自然涌现。
-              AI角色拥有自己的情绪和生活，即使你不说话，世界也在继续运行...
-            </p>
-          </div>
-
-          <div className="bg-gray-800/70 rounded-xl p-6 mb-8">
-            <h3 className="text-xl font-bold text-cyan-400 mb-4">🌙 月影酒馆</h3>
-            <p className="text-gray-300 mb-4">
-              昏暗的灯光下，木质桌椅散发着岁月的痕迹。空气中弥漫着酒精和烟草的味道，几位常客已经坐在各自习惯的位置...
-            </p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="mb-6">
+              <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                🎭 赫利俄斯项目 MVP
+              </h1>
+              <h2 className="text-2xl text-yellow-300 mb-2">本我之镜</h2>
+              <p className="text-lg text-gray-300">AI驱动的意识探索与演化沙盒游戏</p>
+            </div>
             
-            <div className="grid md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-700/50 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <span className="text-2xl mr-3">👩‍🦱</span>
-                  <div>
-                    <h4 className="font-bold text-white">林溪</h4>
-                    <p className="text-sm text-gray-400">经验丰富的调查员</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-300">眼神锐利，善于观察细节，总是在分析每个人的行为模式</p>
-              </div>
-              
-              <div className="bg-gray-700/50 p-4 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <span className="text-2xl mr-3">👨‍💻</span>
-                  <div>
-                    <h4 className="font-bold text-white">陈浩</h4>
-                    <p className="text-sm text-gray-400">看似普通的年轻人</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-300">内心藏着不为人知的秘密，容易紧张，试图保持低调</p>
-              </div>
+            <div className="border-t border-b border-cyan-500 py-4 mb-8">
+              <p className="text-cyan-300 text-lg">
+                ✨ 不预设信念，从行为中发现真相 ✨
+              </p>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-400/20 to-blue-500/20 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto border border-green-400/30 mb-8">
-            <h3 className="text-2xl font-bold mb-4 text-green-300">🌟 陶子的分支预览页面 🌟</h3>
-            <p className="text-lg text-green-200 mb-6">欢迎来到陶子的开发分支！</p>
-            <div className="text-sm text-gray-300">
-              <p>📍 当前分支: taozi-branch</p>
-              <p>👤 开发者: 陶子</p>
-              <p>🚀 状态: 活跃开发中</p>
+          {/* Feature Highlights */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-blue-500/30">
+              <h3 className="text-xl font-bold text-blue-400 mb-2">🧠 AI意识模拟</h3>
+              <p className="text-gray-300">每个AI拥有独立的内在状态和动态信念系统</p>
+            </div>
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-purple-500/30">
+              <h3 className="text-xl font-bold text-purple-400 mb-2">💓 活跃世界</h3>
+              <p className="text-gray-300">45秒心跳驱动，AI自主生活，世界永不停息</p>
+            </div>
+            <div className="bg-gray-800/50 p-6 rounded-xl border border-green-500/30">
+              <h3 className="text-xl font-bold text-green-400 mb-2">🔮 信念观察者</h3>
+              <p className="text-gray-300">从AI行为中自动推断世界观、自我观、价值观</p>
             </div>
           </div>
 
-          <div className="bg-gray-800/70 rounded-xl p-6">
-            <h3 className="text-xl font-bold text-green-400 mb-4">👤 进入世界</h3>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="输入你的角色名字..."
-              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 mb-4"
-              onKeyPress={(e) => e.key === 'Enter' && startGame()}
-              disabled={loading}
-            />
-            <button
-              onClick={startGame}
-              disabled={!playerName.trim() || loading}
-              className="w-full py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-lg transition-all duration-300"
-            >
-              {loading ? '🌍 正在初始化世界...' : '🚪 踏入《本我之境》'}
-            </button>
+          {/* Main Game Card */}
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className="bg-gray-800/70 hover:bg-gray-800 rounded-xl p-8 border border-red-500/50 ring-2 ring-red-500/30 transform hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
+                 onClick={startGame}>
+              <div className="text-center mb-6">
+                <div className="text-5xl mb-4">🌍</div>
+                <h3 className="text-3xl font-bold text-red-400 group-hover:text-cyan-400 transition-colors mb-2">
+                  世界引擎 - 活着的世界
+                </h3>
+                <div className="text-red-300 text-lg font-medium mb-4">🔥 推荐体验</div>
+                <p className="text-gray-300 text-lg leading-relaxed">
+                  🚀 实时世界模拟器：AI拥有自主生活，世界永不停止，信念从行为中自然涌现
+                </p>
+              </div>
+
+              <div className="bg-gray-700/50 rounded-lg p-6 mb-6">
+                <h4 className="text-xl font-bold text-cyan-400 mb-4">🌙 月影酒馆</h4>
+                <p className="text-gray-300 mb-4">
+                  昏暗的灯光下，木质桌椅散发着岁月的痕迹。空气中弥漫着酒精和烟草的味道，几位常客已经坐在各自习惯的位置...
+                </p>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-gray-600/50 p-4 rounded-lg border border-purple-500/30">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-3">👩‍🦱</span>
+                      <div>
+                        <h5 className="font-bold text-white">林溪</h5>
+                        <p className="text-sm text-gray-400">经验丰富的调查员</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-300">眼神锐利，善于观察细节，总是在分析每个人的行为模式</p>
+                  </div>
+                  
+                  <div className="bg-gray-600/50 p-4 rounded-lg border border-blue-500/30">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-3">👨‍💻</span>
+                      <div>
+                        <h5 className="font-bold text-white">陈浩</h5>
+                        <p className="text-sm text-gray-400">看似普通的年轻人</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-300">内心藏着不为人知的秘密，容易紧张，试图保持低调</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-green-400/20 to-blue-500/20 backdrop-blur-sm rounded-lg p-6 border border-green-400/30 mb-6">
+                <h4 className="text-xl font-bold mb-3 text-green-300">🌟 陶子的分支预览页面</h4>
+                <p className="text-green-200 mb-4">欢迎来到陶子的开发分支！体验最新的世界引擎架构</p>
+                <div className="grid grid-cols-3 gap-4 text-sm text-gray-300">
+                  <div>📍 分支: taozi-branch</div>
+                  <div>👤 开发者: 陶子</div>
+                  <div>🚀 状态: 活跃开发中</div>
+                </div>
+              </div>
+
+              <div className="bg-gray-700/50 rounded-lg p-6">
+                <h4 className="text-xl font-bold text-green-400 mb-4">👤 创建你的角色</h4>
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  placeholder="输入你的角色名字..."
+                  className="w-full p-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 mb-4 focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  onKeyPress={(e) => e.key === 'Enter' && startGame()}
+                  disabled={loading}
+                />
+                <button
+                  onClick={startGame}
+                  disabled={!playerName.trim() || loading}
+                  className="w-full py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-lg transition-all duration-300 text-lg"
+                >
+                  {loading ? '🌍 正在初始化世界...' : '🚪 踏入《本我之境》'}
+                </button>
+              </div>
+
+              <div className="w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full opacity-70 group-hover:opacity-100 transition-opacity mt-6"></div>
+            </div>
+          </div>
+
+          {/* System Features */}
+          <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border border-cyan-500/30 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-cyan-400 mb-2">🌍 终极架构体验</h3>
+            <p className="text-gray-300 mb-3">
+              全新推出 <span className="text-cyan-400 font-bold">🌍 世界引擎 - 活着的世界</span>！
+              AI角色拥有真正的自主生活，世界永不停止运转。
+            </p>
+            <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
+              <div>🚀 实时世界模拟、AI自主行为</div>
+              <div>💭 内心想法完全隐藏，保持神秘感</div>
+              <div>🔮 信念系统动态生成，观察行为</div>
+              <div>⚡ 45秒心跳驱动，活跃世界</div>
+            </div>
+          </div>
+
+          {/* Technical Info */}
+          <div className="text-center text-gray-500 text-sm mt-8">
+            <p>🔧 基于 Next.js + TypeScript + Mike的AI架构</p>
+            <p>📚 世界引擎 + 信念观察者 + 动态角色系统</p>
           </div>
         </div>
       </div>
@@ -264,7 +326,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white">
       <div className="container mx-auto px-4 py-6">
         {/* 顶部状态栏 */}
         <div className="bg-gray-800/70 rounded-lg p-4 mb-6">
@@ -277,16 +339,25 @@ export default function Home() {
                 📊
               </button>
               <div>
-                <h2 className="text-xl font-bold text-cyan-400">🌙 月影酒馆</h2>
+                <h2 className="text-xl font-bold text-cyan-400">📍 🌙 月影酒馆</h2>
                 <p className="text-gray-300 text-sm">
-                  {characters.length > 0 && '神秘而宁静的氛围'}
+                  昏暗的灯光下，木质桌椅散发着岁月的痕迹。空气中弥漫着酒精和烟草的味道。
                 </p>
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-400">世界状态</div>
               <div className="text-green-400 text-sm">
-                💓 心跳运行中 • {events.length} 事件
+                💓 心跳运行中 • {events.length} 个事件
+              </div>
+              <div className="flex items-center mt-1">
+                <div className="w-20 bg-gray-700 rounded-full h-2 mr-2">
+                  <div 
+                    className="bg-red-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `30%` }}
+                  ></div>
+                </div>
+                <span className="text-red-400 text-xs">紧张度 30%</span>
               </div>
             </div>
           </div>
@@ -299,14 +370,14 @@ export default function Home() {
             ${sidebarOpen ? 'block absolute md:relative z-10 bg-gray-900/95 md:bg-transparent h-full' : 'hidden'} 
             md:block md:relative md:z-auto md:bg-transparent
           `}>
-            {/* 角色状态 */}
+            {/* 核心AI角色状态 */}
             <div className="bg-gray-800/70 rounded-lg p-4 mb-4">
-              <h3 className="text-lg font-bold text-green-400 mb-3">👥 角色状态</h3>
+              <h3 className="text-lg font-bold text-green-400 mb-3">👥 核心AI角色</h3>
               <div className="space-y-3">
                 {characters.filter(c => c.type === 'ai_npc').map(char => {
                   const state = internalStates.get(char.id);
                   return (
-                    <div key={char.id} className="bg-gray-700/50 p-3 rounded-lg">
+                    <div key={char.id} className="bg-gray-700/50 p-3 rounded-lg border border-gray-600/30">
                       <div className="flex items-center mb-2">
                         <span className="text-xl mr-2">{getCharacterAvatar(char.id)}</span>
                         <div className="flex-1">
@@ -314,11 +385,16 @@ export default function Home() {
                           <div className="text-xs text-gray-400">{char.role}</div>
                         </div>
                       </div>
+                      <p className="text-xs text-gray-300 mb-2">
+                        {char.id === 'linxi' ? '眼神锐利，善于观察细节，总是在分析每个人的行为模式' : 
+                         char.id === 'chenhao' ? '内心藏着不为人知的秘密，容易紧张，试图保持低调' : 
+                         char.description}
+                      </p>
                       {state && (
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-blue-400">能量</span>
-                            <span className="text-white">{state.energy.toFixed(0)}</span>
+                            <span className="text-white">{state.energy.toFixed(0)}%</span>
                           </div>
                           <div className="bg-gray-600 rounded-full h-1">
                             <div 
@@ -327,14 +403,17 @@ export default function Home() {
                             ></div>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-purple-400">无聊</span>
-                            <span className="text-white">{state.boredom.toFixed(0)}</span>
+                            <span className="text-purple-400">无聊值</span>
+                            <span className="text-white">{state.boredom.toFixed(0)}%</span>
                           </div>
                           <div className="bg-gray-600 rounded-full h-1">
                             <div 
                               className="bg-purple-500 h-full rounded-full transition-all duration-500"
                               style={{ width: `${state.boredom}%` }}
                             ></div>
+                          </div>
+                          <div className="text-xs text-purple-400 mt-1">
+                            情绪: {state.energy > 70 ? '精力充沛' : state.energy > 40 ? '略显疲惫' : '低落'}
                           </div>
                         </div>
                       )}
@@ -375,12 +454,15 @@ export default function Home() {
 
             {/* 系统说明 */}
             <div className="bg-gray-800/70 rounded-lg p-4">
-              <h3 className="text-lg font-bold text-orange-400 mb-3">🌍 系统特性</h3>
+              <h3 className="text-lg font-bold text-orange-400 mb-3">🌌 系统说明</h3>
               <div className="text-sm text-gray-300 space-y-2">
+                <p><strong>🆕 言行合一：</strong>AI不仅会说话，还会有行动和内心想法</p>
+                <p><strong>核心AI：</strong>林溪、陈浩拥有独立人格，支持智能响应</p>
+                <p><strong>万能AI：</strong>动态扮演所有其他角色，智能角色推断</p>
+                <p><strong>零硬编码：</strong>所有回复都是实时AI生成</p>
                 <p><strong>🔮 信念发现:</strong> 系统观察你的行为，自动生成信念档案</p>
                 <p><strong>💓 活跃世界:</strong> AI每45秒进行一次"心跳"，可能自主行动</p>
-                <p><strong>🎭 真实角色:</strong> AI有情绪状态，会根据心情变化行为</p>
-                <p><strong>🌱 有机故事:</strong> 没有固定剧本，故事由互动自然演化</p>
+                <p><strong>🎲 概率响应：</strong>AI会根据相关性智能决定是否参与对话</p>
               </div>
             </div>
           </div>
@@ -427,10 +509,11 @@ export default function Home() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* 输入区域 */}
+            {/* 优化的输入区域 */}
             <div className="space-y-2 border-t border-gray-600 pt-3">
-              <div className="flex justify-between items-center">
-                <div className="flex space-x-2">
+              {/* 快捷指令和模式切换 */}
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <div className="flex flex-wrap space-x-1 md:space-x-2">
                   <button
                     onClick={() => setInputMessage(prev => prev + '@林溪 ')}
                     className="px-2 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded text-xs transition-colors"
@@ -443,8 +526,15 @@ export default function Home() {
                   >
                     @陈浩
                   </button>
+                  <button
+                    onClick={() => setInputMessage('')}
+                    className="px-2 py-1 bg-gray-600/50 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+                  >
+                    清空
+                  </button>
                 </div>
                 
+                {/* 输入模式切换按钮 */}
                 <div className="flex space-x-1 bg-gray-700 rounded-md p-0.5">
                   <button
                     onClick={() => setInputMode('dialogue')}
