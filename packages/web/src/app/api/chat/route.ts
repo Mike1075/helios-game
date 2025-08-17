@@ -1,6 +1,7 @@
 import { CoreMessage, streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import 'dotenv/config';
+// No need to import 'dotenv/config' in Next.js.
+// The framework automatically loads .env.local variables.
 
 export const runtime = 'edge';
 
