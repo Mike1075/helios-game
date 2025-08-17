@@ -20,7 +20,7 @@ export default function Home() {
               <p>🪞 回响之室</p>
               <p>🎭 导演引擎</p>
             </div>
-          </div>
+          </div>git status
         </div>
       </div>
     </main>
