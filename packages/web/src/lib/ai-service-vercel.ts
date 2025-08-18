@@ -1,10 +1,10 @@
 /**
  * AI服务 - 严格按照Mike老师要求使用Vercel AI SDK
- * 完全按照截图展示的方式实现
+ * 使用便宜的Qwen模型替代Gemini
  */
 
 import { generateText } from 'ai';
-import { google } from '@ai-sdk/google';
+// 注意：Qwen模型不需要特殊的provider，直接使用模型名称
 
 class AIService {
   private static instance: AIService;
@@ -19,21 +19,21 @@ class AIService {
   }
 
   /**
-   * 使用Vercel AI SDK生成响应 - 按照截图的标准方式
+   * 使用Vercel AI SDK生成响应 - 使用便宜的Qwen模型
    */
   async generateResponse(
     systemPrompt: string,
     userPrompt: string,
-    model: string = 'gemini-2.5-flash',
+    model: string = 'alibaba/qwen-2.5-14b-instruct',
     temperature: number = 0.8,
     maxTokens: number = 1000
   ): Promise<string> {
     try {
-      console.log('🤖 使用Vercel AI SDK调用模型:', model);
+      console.log('🤖 使用Vercel AI SDK调用Qwen模型:', model);
       
-      // 严格按照截图展示的方式调用
+      // 按照你提供的标准方式，直接使用模型名称
       const result = await generateText({
-        model: google(model), // 使用google provider
+        model: model, // Qwen模型直接使用字符串
         messages: [
           {
             role: 'system',
@@ -48,11 +48,11 @@ class AIService {
         maxTokens: maxTokens,
       });
 
-      console.log('✅ AI响应生成成功，模型:', model);
+      console.log('✅ Qwen模型响应生成成功');
       return result.text;
       
     } catch (error) {
-      console.error('❌ Vercel AI SDK调用失败:', error);
+      console.error('❌ Qwen模型调用失败:', error);
       
       // 提供降级响应，确保系统不会完全崩溃
       return this.getFallbackResponse(userPrompt);
@@ -95,11 +95,11 @@ ${conversationHistory}
     const userPrompt = `${playerName}: ${playerMessage}`;
 
     try {
-      // 使用gemini-2.5-flash，速度快且效果好
+      // 使用便宜的Qwen模型，性价比高
       const response = await this.generateResponse(
         systemPrompt, 
         userPrompt, 
-        'gemini-2.5-flash',
+        'alibaba/qwen-2.5-14b-instruct',
         0.8, 
         500
       );
