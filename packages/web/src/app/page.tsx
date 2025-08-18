@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { worldEngine } from '../systems/WorldEngine';
 import { beliefObserver } from '../systems/BeliefObserver';
 import { Character, GameEvent, InternalState, BeliefSystem } from '../types/core';
+import { realtimeManager } from '@/lib/realtime-subscription';
+import ChamberOfEchoes from '@/components/ChamberOfEchoes';
 // 移除前端直接调用，改为通过API路由调用
 
 export default function Home() {
@@ -18,6 +20,13 @@ export default function Home() {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [playerBeliefs, setPlayerBeliefs] = useState<BeliefSystem | null>(null);
   const [internalStates, setInternalStates] = useState<Map<string, InternalState>>(new Map());
+  
+  // 实时订阅状态
+  const [realtimeEvents, setRealtimeEvents] = useState<any[]>([]);
+  
+  // 回响之室状态  
+  const [chamberOpen, setChamberOpen] = useState(false);
+  const [chamberEventId, setChamberEventId] = useState<string>('');
   
   // 输入状态
   const [inputMessage, setInputMessage] = useState('');
@@ -41,6 +50,53 @@ export default function Home() {
         setEvents(prev => [...prev, event]);
       });
       
+      // 启动实时订阅
+      const cleanupRealtime = realtimeManager.enterScene('moonlight_tavern', 'player');
+      
+      // 注册实时事件回调
+      const unsubscribeScene = realtimeManager.onSceneEvent((event) => {
+        console.log('🎭 收到场景事件:', event);
+        setRealtimeEvents(prev => [...prev, { ...event, type: 'scene' }]);
+        
+        // 添加到主事件流
+        setEvents(prev => [...prev, {
+          id: event.id,
+          type: event.event_type,
+          character_id: event.character_id,
+          content: event.content,
+          timestamp: event.timestamp,
+          scene_id: event.scene_id,
+          is_autonomous: event.is_autonomous
+        }]);
+      });
+      
+      const unsubscribePlayer = realtimeManager.onPlayerEvent((event) => {
+        console.log('🧠 收到玩家事件:', event);
+        setRealtimeEvents(prev => [...prev, { ...event, type: 'player' }]);
+        
+        // 如果是认知失调事件，显示回响之室邀请
+        if (event.event_type === 'cognitive_dissonance') {
+          setChamberEventId(event.id);
+          setChamberOpen(true);
+        }
+      });
+      
+      const unsubscribeCharacter = realtimeManager.onCharacterState((state) => {
+        console.log('🤖 收到角色状态更新:', state);
+        setInternalStates(prev => new Map(prev.set(state.character_id, {
+          energy: state.energy,
+          focus: state.focus,
+          curiosity: state.curiosity,
+          confidence: 70, // 默认值
+          boredom: state.boredom,
+          anxiety: state.anxiety || 0,
+          suspicion: state.suspicion || 0,
+          last_updated: state.last_updated,
+          last_activity: state.last_updated,
+          last_autonomous_action: state.last_updated
+        })));
+      });
+      
       // 定期更新状态
       const stateUpdateInterval = setInterval(() => {
         const worldState = worldEngine.getWorldState();
@@ -56,6 +112,10 @@ export default function Home() {
       
       return () => {
         unsubscribe();
+        unsubscribeScene();
+        unsubscribePlayer();
+        unsubscribeCharacter();
+        realtimeManager.cleanup();
         clearInterval(stateUpdateInterval);
         worldEngine.stopHeartbeat();
       };
@@ -423,6 +483,9 @@ export default function Home() {
               <div className="text-green-400 text-sm">
                 💓 心跳运行中 • {events.length} 个事件
               </div>
+              <div className="text-blue-400 text-xs">
+                📡 实时: {realtimeEvents.length} 个推送事件
+              </div>
               <div className="flex items-center mt-1">
                 <div className="w-20 bg-gray-700 rounded-full h-2 mr-2">
                   <div 
@@ -694,6 +757,15 @@ export default function Home() {
           </div>
         </div>
       </div>
+      
+      {/* 回响之室组件 */}
+      <ChamberOfEchoes
+        isOpen={chamberOpen}
+        playerId="player"
+        eventId={chamberEventId}
+        onClose={() => setChamberOpen(false)}
+        currentBeliefs={playerBeliefs}
+      />
     </div>
   );
 }

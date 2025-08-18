@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:edge": "node test-edge-functions.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.6",

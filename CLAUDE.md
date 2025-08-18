@@ -16,7 +16,7 @@ The MVP goal is "Prism Heart" - a minimal world with 2 core NPCs and 1 simple sc
 - **Database**: Supabase (PostgreSQL + pgvector)
 - **Memory Engine**: Zep (conversation history)
 - **AI Gateway**: Vercel AI Gateway (mandatory for all LLM calls)
-- **Workflow Engine**: n8n (cognitive dissonance triggers)
+- **Intelligent Backend**: Supabase Edge Functions + Database Triggers
 
 ## Monorepo Structure
 
@@ -45,6 +45,49 @@ npm run dev:api
 
 **Important**: Local development runs without API keys. External API calls will fail (expected behavior). Complete functionality testing is done via GitHub PR Vercel preview environments.
 
+## Real-time Architecture v4.1 (No n8n)
+
+### Edge Function-Driven Backend
+All intelligent backend processing is now handled by **Supabase Edge Functions** and **Database Triggers**:
+
+**Architecture Flow:**
+```
+Player Action → Database Insert → Trigger → Edge Function → AI Analysis → Real-time Update
+```
+
+**Key Advantages:**
+- **Performance**: Millisecond response time (vs n8n's seconds)
+- **Cost**: Uses cheap Qwen models (`alibaba/qwen-2.5-14b-instruct`) 
+- **Simplicity**: No external workflow engine required
+- **Scalability**: Global edge deployment via Supabase
+
+### Real-time Subscription System
+Frontend subscribes to **world slices** instead of traditional request-response:
+
+```typescript
+// Example: Subscribe to scene events and player status
+const sceneChannel = supabase.channel(`scene_events:moonlight_tavern`)
+const playerChannel = supabase.channel(`player_status:${playerId}`)
+```
+
+**Subscription Channels:**
+- `scene_events:${sceneId}` - AI autonomous actions, environmental changes
+- `player_status:${playerId}` - Belief updates, cognitive dissonance triggers
+- `character_states:${characterId}` - Internal state changes for AI characters
+
+### Database-Driven Intelligence
+**Cognitive Dissonance Detection:**
+```sql
+CREATE TRIGGER cognitive_dissonance_trigger
+  AFTER INSERT ON agent_logs
+  FOR EACH ROW EXECUTE FUNCTION detect_cognitive_dissonance();
+```
+
+**Edge Function Processing:**
+- Belief system analysis and updates
+- Chamber of Echoes content generation  
+- AI character autonomous behavior decisions
+
 ## Core System Components
 
 ### 1. Belief System (信念系统)
@@ -64,9 +107,10 @@ npm run dev:api
 - **Output**: Subjective attribution + 1-2 supporting "memory evidence" events
 
 ### 4. Director Engine (导演引擎)
-- **Implementation**: n8n workflow monitoring `agent_logs`
-- **Trigger Logic**: Detects cognitive dissonance (positive actions → negative feedback)
-- **Action**: Inserts records into `events` table to trigger Chamber of Echoes opportunities
+- **Implementation**: Supabase Database Triggers + Edge Functions
+- **Trigger Logic**: Real-time cognitive dissonance detection via database functions
+- **Performance**: Millisecond-level response time (vs n8n's second-level)
+- **Action**: Automatically inserts records into `player_events` table to trigger Chamber of Echoes
 
 ## Mandatory Development Contracts
 
@@ -142,7 +186,7 @@ def call_llm(model_name: str, system_prompt: str, user_prompt: str):
 - Simple belief system generation
 - One scenario (tavern setting)
 - Two NPCs with Belief DSL-defined personalities
-- Complete core loop: conversation → logging → conflict detection → Chamber of Echoes trigger → subjective attribution
+- Complete core loop: conversation → real-time logging → database trigger → edge function analysis → Chamber of Echoes invitation
 
 ### ❌ Out of Scope
 - Graphics, images, visual content
@@ -155,7 +199,7 @@ def call_llm(model_name: str, system_prompt: str, user_prompt: str):
 
 1. **Belief Consistency**: NPCs demonstrate clear alignment between behavior and defined belief systems
 2. **"Aha!" Moments**: Players experience "my thoughts created this outcome" realizations in Chamber of Echoes
-3. **Technical Viability**: Full stack integration (Vercel, Supabase, n8n, Zep) operates smoothly
+3. **Technical Viability**: Full stack integration (Vercel, Supabase Edge Functions, Zep) operates smoothly with real-time performance
 
 ## Key Files to Watch
 

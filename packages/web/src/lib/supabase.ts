@@ -199,3 +199,52 @@ export async function getCharacterState(characterId: string) {
     return null;
   }
 }
+
+/**
+ * 调用belief-analyzer边缘函数
+ * 分析玩家的信念系统并检测认知失调
+ */
+export async function analyzeBeliefs(playerId: string, recentLogsCount: number = 5) {
+  try {
+    const { data, error } = await supabase.functions.invoke('belief-analyzer', {
+      body: {
+        player_id: playerId,
+        recent_logs_count: recentLogsCount
+      }
+    });
+
+    if (error) {
+      console.error('信念分析失败:', error);
+      return null;
+    }
+
+    console.log('✨ 信念分析结果:', data);
+    return data;
+  } catch (error) {
+    console.error('边缘函数调用错误:', error);
+    return null;
+  }
+}
+
+/**
+ * 调用ai-autonomous-behavior边缘函数
+ * 检查所有AI角色的状态并生成必要的自主行为
+ */
+export async function triggerAutonomousBehavior() {
+  try {
+    const { data, error } = await supabase.functions.invoke('ai-autonomous-behavior', {
+      body: {}
+    });
+
+    if (error) {
+      console.error('自主行为触发失败:', error);
+      return null;
+    }
+
+    console.log('🤖 自主行为结果:', data);
+    return data;
+  } catch (error) {
+    console.error('边缘函数调用错误:', error);
+    return null;
+  }
+}

@@ -206,7 +206,7 @@ export class WorldEngine {
       this.cleanupOldData(now);
       
       // 5. 检查玩家信念更新
-      this.checkPlayerBeliefUpdates();
+      await this.checkPlayerBeliefUpdates();
       
     } catch (error) {
       console.error('💥 世界心跳错误:', error);
@@ -258,27 +258,45 @@ export class WorldEngine {
   }
 
   /**
-   * 处理AI自主行为
+   * 处理AI自主行为 - 使用Supabase Edge Function
    */
   private async processAIAutonomousBehavior(now: number): Promise<void> {
-    const aiCharacters = Array.from(this.worldState.characters.values())
-      .filter(char => char.type === 'ai_npc');
-    
-    for (const character of aiCharacters) {
-      const state = this.worldState.internal_states.get(character.id);
-      if (!state) continue;
+    try {
+      // 调用ai-autonomous-behavior边缘函数
+      const { triggerAutonomousBehavior } = await import('../lib/supabase');
+      const result = await triggerAutonomousBehavior();
       
-      // 检查是否应该行动
-      if (this.shouldAIAct(character, state, now)) {
-        console.log(`🤖 ${character.name} 开始自主决策...`);
+      if (result && result.success && result.actions_generated > 0) {
+        console.log(`🤖 边缘函数触发了 ${result.actions_generated} 个自主行为`);
         
-        try {
-          const actionPackage = await this.generateAIAction(character, state);
-          if (actionPackage) {
-            await this.executeAIAction(character, actionPackage, now);
+        // 边缘函数已经处理了数据库更新和事件发布
+        // 这里我们只需要记录到本地状态
+        result.actions.forEach((action: any) => {
+          console.log(`✨ ${action.character_id} 执行自主行为: ${action.action.content}`);
+        });
+      }
+    } catch (error) {
+      console.error('❌ 边缘函数调用失败，使用本地备用逻辑:', error);
+      
+      // 备用：使用本地逻辑
+      const aiCharacters = Array.from(this.worldState.characters.values())
+        .filter(char => char.type === 'ai_npc');
+      
+      for (const character of aiCharacters) {
+        const state = this.worldState.internal_states.get(character.id);
+        if (!state) continue;
+        
+        if (this.shouldAIAct(character, state, now)) {
+          console.log(`🤖 ${character.name} 开始本地自主决策...`);
+          
+          try {
+            const actionPackage = await this.generateAIAction(character, state);
+            if (actionPackage) {
+              await this.executeAIAction(character, actionPackage, now);
+            }
+          } catch (error) {
+            console.error(`❌ ${character.name} 自主行为错误:`, error);
           }
-        } catch (error) {
-          console.error(`❌ ${character.name} 自主行为错误:`, error);
         }
       }
     }
@@ -563,21 +581,37 @@ ${history || '暂时很安静...'}
   }
 
   /**
-   * 检查玩家信念更新
+   * 检查玩家信念更新 - 使用Supabase Edge Function
    */
-  private checkPlayerBeliefUpdates(): void {
+  private async checkPlayerBeliefUpdates(): Promise<void> {
     if (beliefObserver.shouldUpdateBeliefSystem('player')) {
       console.log('🔮 检测到玩家行为变化，准备更新信念系统...');
       
-      // 异步更新，不阻塞心跳
-      beliefObserver.generateBeliefSystem('player').then(newBelief => {
-        if (newBelief) {
-          this.worldState.belief_systems.set('player', newBelief);
-          console.log('✨ 玩家信念系统已更新');
+      try {
+        // 调用belief-analyzer边缘函数
+        const { analyzeBeliefs } = await import('../lib/supabase');
+        const result = await analyzeBeliefs('player', 5);
+        
+        if (result && result.success) {
+          console.log('✨ 玩家信念系统已通过边缘函数更新');
+          
+          if (result.cognitive_dissonance_detected) {
+            console.log('🧠 检测到认知失调，回响之室邀请已发送');
+          }
         }
-      }).catch(error => {
-        console.warn('⚠️ 玩家信念更新失败:', error);
-      });
+      } catch (error) {
+        console.error('❌ 边缘函数调用失败，使用本地备用逻辑:', error);
+        
+        // 备用：使用本地逻辑
+        beliefObserver.generateBeliefSystem('player').then(newBelief => {
+          if (newBelief) {
+            this.worldState.belief_systems.set('player', newBelief);
+            console.log('✨ 玩家信念系统已通过本地逻辑更新');
+          }
+        }).catch(error => {
+          console.warn('⚠️ 玩家信念更新失败:', error);
+        });
+      }
     }
   }
 
