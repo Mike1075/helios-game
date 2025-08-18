@@ -24,8 +24,8 @@ app.add_middleware(
 
 # --- 从环境变量中读取 AI Gateway 的机密信息 ---
 # 在本地开发时，这些值会是空的 (None)，这是正常的
-AI_GATEWAY_URL = os.environ.get("VERCEL_AI_GATEWAY_URL")
-AI_GATEWAY_API_KEY = os.environ.get("VERCEL_AI_GATEWAY_API_KEY")
+AI_GATEWAY_URL = os.environ.get("AI_GATEWAY_URL") or os.environ.get("VERCEL_AI_GATEWAY_URL")
+AI_GATEWAY_API_KEY = os.environ.get("AI_GATEWAY_API_KEY") or os.environ.get("VERCEL_AI_GATEWAY_API_KEY")
 
 # --- 定义前端传来的数据结构 ---
 class Message(BaseModel):
