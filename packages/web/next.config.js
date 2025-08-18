@@ -6,8 +6,7 @@ const nextConfig = {
   experimental: {
     externalDir: true,
   },
-  // 修复monorepo文件追踪
-  outputFileTracingRoot: '../../',
+  // outputFileTracingRoot在Next.js 14.2.0中已过时，移除此配置
 }
 
 module.exports = nextConfig

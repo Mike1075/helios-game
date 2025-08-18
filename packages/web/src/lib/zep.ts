@@ -12,6 +12,7 @@ export interface ZepMessage {
     player_name?: string;
     timestamp?: number;
     emotion?: string;
+    input_type?: string;
   };
 }
 
