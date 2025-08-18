@@ -56,15 +56,17 @@ def load_yaml(file_path: str) -> Dict[str, Any]:
         return yaml.safe_load(f)
 
 # --- 辅助函数：调用 AI Gateway ---
-def call_ai_gateway(system_prompt: str, user_message: str, model: str = "claude-3-haiku-20240307") -> str:
+def call_ai_gateway(system_prompt: str, user_message: str, model: str = "openai/gpt-4o") -> str:
     if not AI_GATEWAY_API_KEY:
         return f"本地测试模式：AI回复模拟 - {user_message[:50]}..."
     
     try:
         gateway_payload = {
             "model": model,
-            "system": system_prompt,
-            "messages": [{"role": "user", "content": user_message}]
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ]
         }
         
         gateway_headers = {
@@ -73,7 +75,7 @@ def call_ai_gateway(system_prompt: str, user_message: str, model: str = "claude-
         }
 
         response = requests.post(
-            f"{AI_GATEWAY_URL}/v1/chat/completions",
+            f"{AI_GATEWAY_URL}/chat/completions",
             headers=gateway_headers,
             json=gateway_payload
         )
@@ -111,9 +113,11 @@ async def chat(request: ChatRequest):
         
         # 准备发送到 AI Gateway 的请求 body
         gateway_payload = {
-            "model": "claude-3-haiku-20240307",
-            "system": system_prompt,
-            "messages": [msg.dict() for msg in request.messages]
+            "model": "openai/gpt-4o",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                *[msg.dict() for msg in request.messages]
+            ]
         }
         
         # 准备请求 headers
@@ -124,7 +128,7 @@ async def chat(request: ChatRequest):
 
         # 透过 HTTP POST 请求呼叫 AI Gateway
         response = requests.post(
-            f"{AI_GATEWAY_URL}/v1/chat/completions",
+            f"{AI_GATEWAY_URL}/chat/completions",
             headers=gateway_headers,
             json=gateway_payload
         )
