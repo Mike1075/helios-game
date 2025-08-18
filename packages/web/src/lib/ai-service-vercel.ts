@@ -26,7 +26,7 @@ class AIService {
     userPrompt: string,
     model: string = 'alibaba/qwen-2.5-14b-instruct',
     temperature: number = 0.8,
-    maxTokens: number = 1000
+    maxOutputTokens: number = 1000
   ): Promise<string> {
     try {
       console.log('🤖 使用Vercel AI SDK调用Qwen模型:', model);
@@ -45,7 +45,7 @@ class AIService {
           },
         ],
         temperature: temperature,
-        maxTokens: maxTokens,
+        maxOutputTokens: maxOutputTokens,
       });
 
       console.log('✅ Qwen模型响应生成成功');
