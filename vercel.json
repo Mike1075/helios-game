@@ -1,30 +1,15 @@
 {
-  "functions": {
-    "packages/api/main.py": {
-      "runtime": "python3.9"
-    }
-  },
+  "version": 2,
   "builds": [
     {
-      "src": "packages/web/next.config.js",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "packages/api/main.py", 
+      "src": "packages/api/main.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "handle": "filesystem"
-    },
-    {
       "src": "/api/(.*)",
-      "dest": "/packages/api/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/packages/web/$1"
+      "dest": "packages/api/main.py"
     }
   ]
 }
