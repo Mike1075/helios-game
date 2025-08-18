@@ -75,6 +75,9 @@ export default function ChatPage() {
   const [showEcho, setShowEcho] = useState(false); // 控制回响之室显示
   const [echoInput, setEchoInput] = useState(''); // 回响之室输入
   const [isEchoLoading, setIsEchoLoading] = useState(false); // 回响之室加载状态
+  const [showBelief, setShowBelief] = useState(false); // 控制信念系统显示
+  const [beliefData, setBeliefData] = useState<any>(null); // 信念系统数据
+  const [isBeliefLoading, setIsBeliefLoading] = useState(false); // 信念系统加载状态
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 自动滚动到底部
@@ -206,6 +209,46 @@ export default function ChatPage() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsEchoLoading(false);
+    }
+  };
+
+  // 获取玩家信念系统
+  const fetchBeliefSystem = async () => {
+    if (isBeliefLoading) return;
+
+    setIsBeliefLoading(true);
+
+    try {
+      // 调用信念观察者API手动分析
+      const analyzeResponse = await fetch('/api/belief-observer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          character_id: playerId,
+          trigger_event: '玩家主动查看信念系统'
+        }),
+      });
+
+      if (!analyzeResponse.ok) {
+        throw new Error(`分析失败: ${analyzeResponse.status}`);
+      }
+
+      const analyzeData = await analyzeResponse.json();
+      
+      if (analyzeData.error) {
+        throw new Error(analyzeData.error);
+      }
+
+      setBeliefData(analyzeData);
+      setShowBelief(true);
+
+    } catch (error) {
+      console.error('获取信念系统失败:', error);
+      // 可以添加错误提示
+    } finally {
+      setIsBeliefLoading(false);
     }
   };
 
@@ -377,6 +420,16 @@ export default function ChatPage() {
               >
                 🪞 回响之室
               </button>
+
+              {/* 信念系统按钮 */}
+              <button
+                onClick={fetchBeliefSystem}
+                disabled={isLoading || isBeliefLoading}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl"
+                title="查看你的信念系统 - 看见驱动你的深层信念"
+              >
+                {isBeliefLoading ? '⏳ 分析中...' : '🔍 我的信念'}
+              </button>
             </div>
           </div>
         </div>
@@ -426,6 +479,60 @@ export default function ChatPage() {
                   ) : (
                     '🔮 聆听内心'
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 信念系统弹窗 */}
+        {showBelief && beliefData && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gradient-to-br from-amber-900 to-orange-900 rounded-2xl p-6 max-w-2xl w-full mx-4 border border-amber-500/30 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-amber-200 mb-2">🔍 我的信念系统</h2>
+                <button
+                  onClick={() => setShowBelief(false)}
+                  className="text-amber-300 hover:text-amber-100 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-black/20 rounded-lg p-4">
+                  <h3 className="text-amber-300 font-semibold mb-2">📊 分析概要</h3>
+                  <p className="text-amber-100 text-sm">
+                    置信度: {Math.round((beliefData.confidence_score || 0) * 100)}%
+                  </p>
+                  <p className="text-amber-100 text-sm">
+                    分析时间: {new Date().toLocaleString()}
+                  </p>
+                </div>
+                
+                <div className="bg-black/20 rounded-lg p-4">
+                  <h3 className="text-amber-300 font-semibold mb-2">📜 信念档案 (YAML)</h3>
+                  <pre className="text-amber-100 text-xs bg-black/30 rounded p-3 overflow-x-auto whitespace-pre-wrap">
+{beliefData.belief_yaml}
+                  </pre>
+                </div>
+                
+                {beliefData.analysis_summary && (
+                  <div className="bg-black/20 rounded-lg p-4">
+                    <h3 className="text-amber-300 font-semibold mb-2">🔬 详细分析</h3>
+                    <div className="text-amber-100 text-sm whitespace-pre-wrap">
+                      {beliefData.analysis_summary}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowBelief(false)}
+                  className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  关闭
                 </button>
               </div>
             </div>

@@ -154,6 +154,37 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // 异步触发信念观察者分析（不阻塞响应）
+    if (player_id) {
+      // 检查是否需要触发信念分析（每5次对话触发一次）
+      const { data: playerLogs } = await supabase
+        .from('agent_logs')
+        .select('id')
+        .eq('character_id', player_id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (playerLogs && playerLogs.length >= 5) {
+        // 异步调用信念观察者（不等待结果）
+        try {
+          const baseUrl = process.env.NODE_ENV === 'production' 
+            ? `https://${process.env.VERCEL_URL}` 
+            : 'http://localhost:3000';
+          
+          fetch(`${baseUrl}/api/belief-observer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              character_id: player_id,
+              trigger_event: `对话达到5次，与${npcConfig.name}的最新交互`
+            })
+          }).catch(err => console.log('信念观察者调用失败:', err));
+        } catch (err) {
+          console.log('信念观察者调用失败:', err);
+        }
+      }
+    }
+
     // 构建回复对象
     const response: any = { 
       reply,
