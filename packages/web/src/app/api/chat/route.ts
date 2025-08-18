@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { routeCharacterResponse, generateEnvironmentDescription, CORE_CHARACTERS } from '@/lib/character-router';
 import { characterInstanceManager } from '@/lib/character-instance-manager';
-import { aiService } from '@/lib/ai-service-vercel';
+import { aiService } from '@/lib/ai-service';
 import { zepClient, getChatHistory, savePlayerMessage, saveAIResponse } from '@/lib/zep';
 
 export async function POST(request: NextRequest) {

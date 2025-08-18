@@ -35,7 +35,7 @@ class AIService {
    */
   async generateResponse(
     messages: AIMessage[],
-    model: string = 'gpt-4',
+    model: string = 'alibaba/qwen-2.5-14b-instruct',
     temperature: number = 0.8,
     maxTokens: number = 1000
   ): Promise<AIResponse> {
@@ -64,7 +64,7 @@ class AIService {
     temperature: number,
     maxTokens: number
   ): Promise<AIResponse | null> {
-    const apiKey = process.env.AI_GATEWAY_API_KEY;
+    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY;
     const gatewayUrl = process.env.VERCEL_AI_GATEWAY_URL;
     
     if (!apiKey || !gatewayUrl) {
@@ -218,7 +218,7 @@ ${conversationHistory}
     ];
 
     try {
-      const response = await this.generateResponse(messages, 'gpt-4', 0.8, 500);
+      const response = await this.generateResponse(messages, 'alibaba/qwen-2.5-14b-instruct', 0.8, 500);
       return response.content.trim();
     } catch (error) {
       console.error(`生成${characterName}响应失败:`, error);
