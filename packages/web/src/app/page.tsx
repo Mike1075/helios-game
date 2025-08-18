@@ -290,6 +290,8 @@ export default function Home() {
       
       if (response.ok) {
         const result = await response.json();
+        console.log('📨 API响应:', result);
+        
         if (result.success && result.action_package) {
           const characterId = result.character?.id || 'ai';
           
@@ -328,6 +330,21 @@ export default function Home() {
           });
         }
       }
+      } else {
+        // API请求失败
+        const errorText = await response.text();
+        console.error('❌ API请求失败:', response.status, errorText);
+        
+        const errorEvent = {
+          id: `api_error_${Date.now()}`,
+          type: 'system' as const,
+          character_id: 'system',
+          content: `API错误 (${response.status}): ${errorText.slice(0, 100)}...`,
+          timestamp: Date.now(),
+          scene_id: 'moonlight_tavern'
+        };
+        worldEngine.publishEvent(errorEvent);
+      }
     } catch (error) {
       console.error('❌ 消息处理失败:', error);
       // 添加用户友好的错误提示
@@ -335,7 +352,7 @@ export default function Home() {
         id: `error_${Date.now()}`,
         type: 'system' as const,
         character_id: 'system',
-        content: '抱歉，消息发送失败，请稍后重试。',
+        content: `网络错误: ${error instanceof Error ? error.message : '未知错误'}`,
         timestamp: Date.now(),
         scene_id: 'moonlight_tavern'
       };

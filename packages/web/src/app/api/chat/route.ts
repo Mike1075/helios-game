@@ -21,21 +21,23 @@ export async function POST(request: NextRequest) {
     console.log('🔑 环境变量检查:', { hasAIKey, hasAIUrl });
 
     if (!hasAIKey || !hasAIUrl) {
-      console.warn('⚠️ AI Gateway环境变量缺失，使用模拟响应');
-      return NextResponse.json({
-        success: true,
-        character: {
-          id: 'system',
-          name: '系统'
-        },
-        routing_type: 'system',
-        routing_reasoning: '环境变量缺失，使用模拟响应',
-        action_package: {
-          dialogue: `收到你的消息"${userMessage}"，但AI服务暂时不可用。这是一个模拟响应。`,
-          action: null,
-        }
+      console.error('❌ AI Gateway环境变量缺失!', {
+        VERCEL_AI_GATEWAY_API_KEY: hasAIKey ? '✅存在' : '❌缺失',
+        VERCEL_AI_GATEWAY_URL: hasAIUrl ? '✅存在' : '❌缺失'
       });
+      return NextResponse.json(
+        { 
+          error: 'AI Gateway环境变量未配置',
+          details: {
+            VERCEL_AI_GATEWAY_API_KEY: hasAIKey ? '已配置' : '缺失',
+            VERCEL_AI_GATEWAY_URL: hasAIUrl ? '已配置' : '缺失'
+          }
+        },
+        { status: 500 }
+      );
     }
+
+    console.log('✅ 环境变量检查通过，开始AI调用');
     
     // 1. 获取现有动态角色信息
     const existingDynamicCharacters = dynamicCharacterManager.getActiveCharacters().map(char => char.name);
@@ -76,10 +78,12 @@ ${conversationHistory}
 请自然地回应：`;
 
       // 直接使用AI服务生成响应
+      console.log('🤖 调用AI服务，模型:', 'alibaba/qwen-2.5-14b-instruct');
       const aiResponse = await aiService.generateResponse([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
       ]);
+      console.log('✅ AI调用成功，响应长度:', aiResponse.content.length);
 
       // 保存AI响应到Zep
       await saveAIResponse(sessionId, 'general', aiResponse.content);
@@ -129,6 +133,7 @@ ${conversationHistory}
       const conversationHistory = await getChatHistory(sessionId, 10);
       
       // 生成AI响应
+      console.log(`🤖 调用核心AI角色: ${coreCharacter.name}`);
       const aiResponse = await aiService.generateCharacterResponse(
         coreCharacter.name,
         `${coreCharacter.role}，${coreCharacter.personality}`,
@@ -138,6 +143,7 @@ ${conversationHistory}
         conversationHistory,
         'moonlight_tavern'
       );
+      console.log(`✅ ${coreCharacter.name}响应成功，长度:`, aiResponse.length);
 
       // 保存AI响应到Zep
       await saveAIResponse(sessionId, routing.character_id, aiResponse);
