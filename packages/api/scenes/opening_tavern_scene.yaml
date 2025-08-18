@@ -1,0 +1,15 @@
+scene_id: opening_tavern_scene
+description: "故事開始於一個昏暗的酒館角落。玩家 (你) 剛剛坐下，桌子的另一邊坐著警惕的衛兵艾爾文，而一個看起來很務實的流浪者卡琳正靠在附近的牆邊觀察著一切。"
+
+# 參與此場景的 NPC 列表
+participants:
+  - character_id: guard_elwin_craig
+  - character_id: wanderer_karin_moore 
+    # (假設您已經為她創建了對應的 belief YAML 檔案)
+
+# 場景的初始觸發器
+initial_triggers:
+  - type: on_scene_load
+    action: "艾爾文首先開口，打破了沉默。"
+    target: player # 目標是玩家
+    initial_dialogue: "你是新來的？我沒在城裡見過你。"
