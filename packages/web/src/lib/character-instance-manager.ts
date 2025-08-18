@@ -50,20 +50,24 @@ class CharacterInstanceManager {
   }
 
   /**
-   * 从本地存储加载已存在的角色实例
+   * 从存储加载已存在的角色实例
    */
   private async initializeFromStorage() {
     try {
-      // 在实际应用中，这里应该从Supabase加载
-      // 目前先从localStorage模拟
-      const stored = localStorage.getItem('helios_character_instances');
-      if (stored) {
-        const instances = JSON.parse(stored);
-        for (const instance of instances) {
-          this.globalCharacters.set(instance.id, instance);
+      // 只在浏览器环境中使用localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('helios_character_instances');
+        if (stored) {
+          const instances = JSON.parse(stored);
+          for (const instance of instances) {
+            this.globalCharacters.set(instance.id, instance);
+          }
+          console.log(`✅ 从浏览器存储加载了 ${instances.length} 个角色实例`);
         }
-        console.log(`✅ 加载了 ${instances.length} 个角色实例`);
+      } else {
+        console.log('🔄 服务端环境，跳过localStorage加载');
       }
+      // TODO: 从Supabase加载持久化数据
     } catch (error) {
       console.error('加载角色实例失败:', error);
     }
@@ -75,10 +79,14 @@ class CharacterInstanceManager {
   private async saveToStorage() {
     try {
       const instances = Array.from(this.globalCharacters.values());
-      localStorage.setItem('helios_character_instances', JSON.stringify(instances));
       
-      // TODO: 同时保存到Supabase
-      console.log(`💾 保存了 ${instances.length} 个角色实例`);
+      // 只在浏览器环境中使用localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('helios_character_instances', JSON.stringify(instances));
+        console.log(`💾 保存了 ${instances.length} 个角色实例到浏览器存储`);
+      }
+      
+      // TODO: 同时保存到Supabase持久化存储
     } catch (error) {
       console.error('保存角色实例失败:', error);
     }
