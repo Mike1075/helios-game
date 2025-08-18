@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/index.py": {
-      "runtime": "python3.9@3.9.18"
+      "runtime": "@vercel/python"
     }
   }
 }
