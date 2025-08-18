@@ -4,10 +4,12 @@
  */
 
 export interface RoutingResult {
-  type: 'core_ai' | 'general_ai' | 'environment';
+  type: 'core_ai' | 'general_ai' | 'dynamic_ai' | 'environment';
   character_id: string;
   character_name: string;
   reasoning: string;
+  needsNewCharacter?: boolean;
+  characterType?: string;
 }
 
 export interface CoreCharacter {
@@ -46,7 +48,7 @@ export const GENERAL_AI_CONFIG = {
 /**
  * 分析用户消息，决定谁应该回应
  */
-export function routeCharacterResponse(userMessage: string, playerName: string): RoutingResult {
+export function routeCharacterResponse(userMessage: string, playerName: string, existingDynamicCharacters: string[] = []): RoutingResult {
   const message = userMessage.toLowerCase();
   
   // 1. 检查是否明确指名核心角色
@@ -76,8 +78,38 @@ export function routeCharacterResponse(userMessage: string, playerName: string):
     }
   }
   
-  // 3. 默认：使用智能通用AI响应
-  // 根据用户消息的内容，AI会智能地决定以什么身份回应
+  // 3. 检查是否需要特定职业角色
+  const roleKeywords = [
+    { keywords: ['老板', '店主', '掌柜', '经营'], role: '老板' },
+    { keywords: ['服务员', '侍者', '店员'], role: '服务员' },
+    { keywords: ['厨师', '做饭', '厨房', '菜'], role: '厨师' },
+    { keywords: ['当地人', '本地', '这里的人', '居民'], role: '当地人' },
+    { keywords: ['酒保', '倒酒', '调酒'], role: '酒保' }
+  ];
+  
+  for (const { keywords, role } of roleKeywords) {
+    for (const keyword of keywords) {
+      if (message.includes(keyword)) {
+        // 检查是否已有该类型角色
+        const hasExistingRole = existingDynamicCharacters.some(char => 
+          char.toLowerCase().includes(role)
+        );
+        
+        if (!hasExistingRole) {
+          return {
+            type: 'dynamic_ai',
+            character_id: 'pending_creation',
+            character_name: '待创建',
+            reasoning: `检测到需要"${role}"，准备创建动态角色`,
+            needsNewCharacter: true,
+            characterType: role
+          };
+        }
+      }
+    }
+  }
+  
+  // 4. 默认：使用智能通用AI响应
   return {
     type: 'general_ai',
     character_id: 'general',

@@ -116,7 +116,8 @@ export class WorldEngine {
           curiosity: state.curiosity,
           boredom: state.boredom,
           anxiety: state.anxiety || 0,
-          suspicion: state.suspicion || 0
+          suspicion: state.suspicion || 0,
+          last_updated: Date.now()
         });
         console.log(`📊 ${character.name} 初始状态已同步到数据库`);
       } catch (error) {
@@ -296,7 +297,8 @@ export class WorldEngine {
           curiosity: newState.curiosity,
           boredom: newState.boredom,
           anxiety: newState.anxiety || 0,
-          suspicion: newState.suspicion || 0
+          suspicion: newState.suspicion || 0,
+          last_updated: Date.now()
         });
       } catch (error) {
         console.warn(`⚠️ 同步${characterId}状态到数据库失败:`, error);

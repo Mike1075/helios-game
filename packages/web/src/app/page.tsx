@@ -5,6 +5,8 @@ import { worldEngine } from '../systems/WorldEngine';
 import { beliefObserver } from '../systems/BeliefObserver';
 import { Character, GameEvent, InternalState, BeliefSystem } from '../types/core';
 import { realtimeManager } from '@/lib/realtime-subscription';
+import { passiveObserver } from '@/lib/passive-observer';
+import { dynamicCharacterManager } from '@/lib/dynamic-character-manager';
 import ChamberOfEchoes from '@/components/ChamberOfEchoes';
 // 移除前端直接调用，改为通过API路由调用
 
@@ -24,6 +26,11 @@ export default function Home() {
   // 实时订阅状态
   const [realtimeEvents, setRealtimeEvents] = useState<any[]>([]);
   
+  // 初始游戏状态
+  const [sceneDescription, setSceneDescription] = useState<string>('');
+  const [activeCharacters, setActiveCharacters] = useState<any[]>([]);
+  const [ambientActivity, setAmbientActivity] = useState<string[]>([]);
+  
   // 回响之室状态  
   const [chamberOpen, setChamberOpen] = useState(false);
   const [chamberEventId, setChamberEventId] = useState<string>('');
@@ -37,17 +44,81 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 初始化世界引擎
+  // 初始化世界引擎和被动观察体验
   useEffect(() => {
     if (gameStarted) {
       console.log('🌍 初始化《本我之境》世界...');
       
-      // 异步初始化世界引擎
-      worldEngine.initializeWorld().then(() => {
-        console.log('✅ 世界引擎初始化完成');
-      }).catch((error) => {
-        console.error('❌ 世界引擎初始化失败:', error);
-      });
+      let passiveObserverCleanup: (() => void) | null = null;
+      
+      // 异步初始化世界引擎和被动观察
+      const initializeGame = async () => {
+        try {
+          // 1. 初始化世界引擎
+          await worldEngine.initializeWorld();
+          console.log('✅ 世界引擎初始化完成');
+          
+          // 2. 设置被动观察体验
+          passiveObserverCleanup = await passiveObserver.setupPassiveObservation(
+            playerName,
+            'moonlight_tavern',
+            {
+              onInitialState: (initialState) => {
+                console.log('🎭 收到初始游戏状态:', initialState);
+                setSceneDescription(initialState.sceneDescription);
+                setActiveCharacters(initialState.activeCharacters);
+                setAmbientActivity(initialState.ambientActivity);
+                
+                // 将最近的事件添加到事件流
+                const eventFlow = initialState.recentEvents.map(event => ({
+                  id: event.id,
+                  type: (event.type as any) || 'system',
+                  character_id: 'system', // 使用系统作为角色ID
+                  content: `${event.character_name}: ${event.content}`,
+                  timestamp: event.timestamp,
+                  scene_id: 'moonlight_tavern',
+                  is_autonomous: event.is_autonomous
+                }));
+                setEvents(prev => [...prev, ...eventFlow]);
+              },
+              onSceneEvent: (event) => {
+                console.log('🎭 被动观察 - 收到场景事件:', event);
+                setRealtimeEvents(prev => [...prev, { ...event, type: 'scene' }]);
+                
+                // 添加到主事件流（来自被动观察）
+                setEvents(prev => [...prev, {
+                  id: event.id,
+                  type: (event.type as any) || 'system',
+                  character_id: 'ai_character',
+                  content: `${event.character_name}: ${event.content}`,
+                  timestamp: event.timestamp,
+                  scene_id: 'moonlight_tavern',
+                  is_autonomous: event.is_autonomous
+                }]);
+              },
+              onCharacterStateChange: (stateChange) => {
+                console.log('🤖 被动观察 - 角色状态变化:', stateChange);
+                // 可以在这里更新角色状态显示
+                setEvents(prev => [...prev, {
+                  id: `state_change_${Date.now()}`,
+                  type: 'environment',
+                  character_id: 'system',
+                  content: `${stateChange.character_name} ${stateChange.status}`,
+                  timestamp: Date.now(),
+                  scene_id: 'moonlight_tavern',
+                  is_autonomous: true
+                }]);
+              }
+            }
+          );
+          console.log('✅ 被动观察体验初始化完成');
+          
+        } catch (error) {
+          console.error('❌ 游戏初始化失败:', error);
+        }
+      };
+      
+      initializeGame();
       
       worldEngine.startHeartbeat(120000); // 2分钟心跳，配合3分钟AI行动冷却
       
@@ -122,11 +193,14 @@ export default function Home() {
         unsubscribePlayer();
         unsubscribeCharacter();
         realtimeManager.cleanup();
+        if (passiveObserverCleanup) {
+          passiveObserverCleanup();
+        }
         clearInterval(stateUpdateInterval);
         worldEngine.stopHeartbeat();
       };
     }
-  }, [gameStarted]);
+  }, [gameStarted, playerName]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -477,11 +551,17 @@ export default function Home() {
               >
                 📊
               </button>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-bold text-cyan-400">📍 🌙 月影酒馆</h2>
-                <p className="text-gray-300 text-sm">
-                  昏暗的灯光下，木质桌椅散发着岁月的痕迹。空气中弥漫着酒精和烟草的味道。
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {sceneDescription || '昏暗的灯光下，木质桌椅散发着岁月的痕迹。空气中弥漫着酒精和烟草的味道。'}
                 </p>
+                {ambientActivity.length > 0 && (
+                  <div className="mt-2 text-xs text-gray-400">
+                    <span className="text-yellow-400">🎭 周围环境：</span>
+                    {ambientActivity.slice(0, 2).join('，')}
+                  </div>
+                )}
               </div>
             </div>
             <div className="text-right">
@@ -512,6 +592,34 @@ export default function Home() {
             ${sidebarOpen ? 'block absolute md:relative z-10 bg-gray-900/95 md:bg-transparent h-full' : 'hidden'} 
             md:block md:relative md:z-auto md:bg-transparent
           `}>
+            {/* 活跃角色（来自被动观察） */}
+            {activeCharacters.length > 0 && (
+              <div className="bg-gray-800/70 rounded-lg p-4 mb-4">
+                <h3 className="text-lg font-bold text-cyan-400 mb-3">🎭 当前活跃角色</h3>
+                <div className="space-y-2">
+                  {activeCharacters.map(char => (
+                    <div key={char.id} className="bg-gray-700/50 p-2 rounded-lg border border-gray-600/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-lg mr-2">{getCharacterAvatar(char.id)}</span>
+                          <div>
+                            <div className="font-medium text-white text-sm">{char.name}</div>
+                            <div className="text-xs text-gray-400">{char.role}</div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-right">
+                          <div className={`px-2 py-1 rounded text-xs ${char.isCore ? 'bg-green-600/30 text-green-300' : 'bg-blue-600/30 text-blue-300'}`}>
+                            {char.isCore ? '核心' : '临时'}
+                          </div>
+                          <div className="text-gray-400 mt-1">{char.status}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 核心AI角色状态 */}
             <div className="bg-gray-800/70 rounded-lg p-4 mb-4">
               <h3 className="text-lg font-bold text-green-400 mb-3">👥 核心AI角色</h3>
