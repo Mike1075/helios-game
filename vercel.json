@@ -1,13 +1,5 @@
 {
-  "version": 2,
   "builds": [
-    {
-      "src": "packages/web/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "distDir": ".next"
-      }
-    },
     {
       "src": "packages/api/main.py",
       "use": "@vercel/python"
@@ -17,10 +9,6 @@
     {
       "src": "/api/(.*)",
       "dest": "packages/api/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "packages/web/$1"
     }
   ]
 }
