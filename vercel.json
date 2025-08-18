@@ -2,14 +2,25 @@
   "version": 2,
   "builds": [
     {
-      "src": "../api/main.py",
+      "src": "packages/web/package.json",
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
+    },
+    {
+      "src": "packages/api/main.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "../api/main.py"
+      "dest": "packages/api/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "packages/web/$1"
     }
   ]
 }
