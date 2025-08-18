@@ -810,6 +810,13 @@ export default function Home() {
                   >
                     💬测试
                   </button>
+                  <button
+                    onClick={() => setChamberOpen(true)}
+                    className="px-2 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded text-xs transition-colors"
+                    title="测试回响之室"
+                  >
+                    🪞回响
+                  </button>
                   
                   <button
                     onClick={() => setInputMessage('')}
