@@ -50,7 +50,7 @@ export default function Chat() {
             character_id: currentNPC
           };
 
-      const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+      const response = await fetch(`${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body), 
@@ -79,7 +79,7 @@ export default function Chat() {
   // 触发认知失调检测
   const triggerCognitiveDissonance = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/check-dissonance', {
+      const response = await fetch('/api/check-dissonance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -104,7 +104,7 @@ export default function Chat() {
   // 打开回响之室
   const openEchoRoom = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/echo', {
+      const response = await fetch('/api/echo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
