@@ -220,6 +220,7 @@ export default function Home() {
     if (characterId === 'linxi') return '👩‍🦱';
     if (characterId === 'chenhao') return '👨‍💻';
     if (characterId === 'system') return '🏛️';
+    if (characterId === 'environment') return '🌍';
     
     // 万能AI角色
     const universalRole = universalAIRoles[characterId];
@@ -231,6 +232,10 @@ export default function Home() {
   // 获取角色名称
   const getCharacterName = (characterId: string) => {
     if (characterId === 'player') return playerName;
+    if (characterId === 'linxi') return '林溪';
+    if (characterId === 'chenhao') return '陈浩';
+    if (characterId === 'system') return 'system';
+    if (characterId === 'environment') return '环境';
     
     // 万能AI角色
     const universalRole = universalAIRoles[characterId];

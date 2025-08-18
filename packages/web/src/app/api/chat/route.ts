@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { routeCharacterResponse, generateEnvironmentDescription, getCharacterSystemPrompt } from '@/lib/character-router';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,27 +11,70 @@ export async function POST(request: NextRequest) {
       message: userMessage
     });
     
-    // TODO: 这里应该调用完整的AI处理流程
-    // 1. 保存到Zep
-    // 2. 调用万能AI系统
-    // 3. 返回AI响应
+    // 1. 智能路由分析
+    const routing = routeCharacterResponse(userMessage, playerName);
+    console.log('🎯 路由结果:', routing);
     
-    // 目前返回mock响应
-    const mockResponse = {
-      success: true,
-      character: {
-        id: 'tavern_keeper',
-        name: '老板'
-      },
-      routing_type: 'universal_ai',
-      action_package: {
-        dialogue: `欢迎来到月影酒馆，${playerName}！我是这里的老板。今天想要点什么？`,
-        action: '老板友善地擦拭着酒杯，眼神中带着职业的热情。',
-        // 注意：internal_thought不返回给前端
+    // 2. 根据路由类型生成响应
+    let response;
+    
+    if (routing.type === 'environment') {
+      // 环境描述
+      const environmentDesc = generateEnvironmentDescription(userMessage);
+      response = {
+        success: true,
+        character: {
+          id: 'environment',
+          name: '环境'
+        },
+        routing_type: 'environment',
+        routing_reasoning: routing.reasoning,
+        action_package: {
+          dialogue: null,
+          action: environmentDesc,
+        }
+      };
+    } else {
+      // AI角色响应
+      const systemPrompt = getCharacterSystemPrompt(routing.character_id, routing.character_name);
+      
+      // TODO: 这里应该调用真实的AI API
+      // 目前返回基于角色的mock响应
+      let mockDialogue = '';
+      
+      if (routing.character_id === 'linxi') {
+        mockDialogue = `${playerName}，我注意到你的举动。作为调查员，我对细节很敏感。有什么我可以帮你分析的吗？`;
+      } else if (routing.character_id === 'chenhao') {
+        mockDialogue = `呃...你好，${playerName}。我...我只是在这里安静地喝酒。没什么特别的...`;
+      } else if (routing.character_id === 'tavern_keeper') {
+        mockDialogue = `欢迎来到月影酒馆，${playerName}！我是这里的老板。今天想要点什么？`;
+      } else if (routing.character_id === 'cook') {
+        mockDialogue = `要吃的？今天有炖肉和面包，都是新鲜的。别的别指望了。`;
+      } else if (routing.character_id === 'bartender') {
+        mockDialogue = `需要喝点什么吗？我这里有各种酒，从啤酒到烈酒都有。`;
+      } else {
+        mockDialogue = `你好，${playerName}。我是${routing.character_name}。`;
       }
-    };
+      
+      response = {
+        success: true,
+        character: {
+          id: routing.character_id,
+          name: routing.character_name
+        },
+        routing_type: routing.type,
+        routing_reasoning: routing.reasoning,
+        action_package: {
+          dialogue: mockDialogue,
+          action: null, // 暂时不生成行动描述
+        }
+      };
+    }
     
-    return NextResponse.json(mockResponse);
+    // TODO: 3. 保存到Zep
+    // TODO: 4. 保存到Supabase
+    
+    return NextResponse.json(response);
     
   } catch (error) {
     console.error('❌ 聊天处理失败:', error);
