@@ -786,20 +786,13 @@ export default function Home() {
                     @陈浩
                   </button>
                   
-                  {/* 万能AI测试按钮 */}
+                  {/* 通用测试按钮 */}
                   <button
-                    onClick={() => setInputMessage('老板，来杯酒')}
-                    className="px-2 py-1 bg-orange-600/50 hover:bg-orange-600 text-white rounded text-xs transition-colors"
-                    title="测试万能AI - 酒馆老板"
+                    onClick={() => setInputMessage('有人吗？')}
+                    className="px-2 py-1 bg-yellow-600/50 hover:bg-yellow-600 text-white rounded text-xs transition-colors"
+                    title="测试智能AI系统"
                   >
-                    🍺老板
-                  </button>
-                  <button
-                    onClick={() => setInputMessage('厨师，有什么好吃的？')}
-                    className="px-2 py-1 bg-red-600/50 hover:bg-red-600 text-white rounded text-xs transition-colors"
-                    title="测试万能AI - 厨师"
-                  >
-                    👨‍🍳厨师
+                    💬测试
                   </button>
                   
                   <button

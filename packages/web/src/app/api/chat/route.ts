@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { routeCharacterResponse, generateEnvironmentDescription, CORE_CHARACTERS } from '@/lib/character-router';
 import { aiService } from '@/lib/ai-service';
-import { zepClient, getChatHistory, savePlayerMessage, saveAIResponse } from '@/lib/zep';
+import { getChatHistory, savePlayerMessage, saveAIResponse } from '@/lib/zep';
+import { memoryManager } from '@/lib/supabase-memory';
 import { dynamicCharacterManager } from '@/lib/dynamic-character-manager';
 
 export async function POST(request: NextRequest) {
@@ -13,6 +14,28 @@ export async function POST(request: NextRequest) {
       sessionId,
       message: userMessage
     });
+
+    // 检查环境变量
+    const hasAIKey = !!process.env.VERCEL_AI_GATEWAY_API_KEY;
+    const hasAIUrl = !!process.env.VERCEL_AI_GATEWAY_URL;
+    console.log('🔑 环境变量检查:', { hasAIKey, hasAIUrl });
+
+    if (!hasAIKey || !hasAIUrl) {
+      console.warn('⚠️ AI Gateway环境变量缺失，使用模拟响应');
+      return NextResponse.json({
+        success: true,
+        character: {
+          id: 'system',
+          name: '系统'
+        },
+        routing_type: 'system',
+        routing_reasoning: '环境变量缺失，使用模拟响应',
+        action_package: {
+          dialogue: `收到你的消息"${userMessage}"，但AI服务暂时不可用。这是一个模拟响应。`,
+          action: null,
+        }
+      });
+    }
     
     // 1. 获取现有动态角色信息
     const existingDynamicCharacters = dynamicCharacterManager.getActiveCharacters().map(char => char.name);
