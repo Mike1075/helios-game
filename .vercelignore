@@ -1,0 +1,5 @@
+# Ignore API files during frontend build
+packages/api/
+# Ignore node_modules except in packages/web
+node_modules/
+!packages/web/node_modules/

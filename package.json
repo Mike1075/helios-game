@@ -6,9 +6,7 @@
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace=helios-web",
-    "dev:api": "python3 -m uvicorn packages.api.main:app --reload",
-    "build": "cd packages/web && npm run build",
-    "start": "cd packages/web && npm run start"
+    "dev:api": "python3 -m uvicorn packages.api.main:app --reload"
   },
   "devDependencies": {
     "vercel": "^34.0.0"
