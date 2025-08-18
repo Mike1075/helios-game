@@ -25,10 +25,16 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="mt-8">
+          <div className="mt-8 space-x-4">
+            <a 
+              href="/game" 
+              className="inline-block px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg transition-all transform hover:scale-105 font-semibold text-lg"
+            >
+              🎮 进入游戏
+            </a>
             <a 
               href="/ethan" 
-              className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+              className="inline-block px-6 py-3 bg-purple-600/50 hover:bg-purple-700/50 rounded-lg transition-colors"
             >
               Visit Ethan's Branch Preview
             </a>
