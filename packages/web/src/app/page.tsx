@@ -170,6 +170,23 @@ export default function Helios2035MVP() {
 
       const result = await response.json();
       
+      // 检查是否触发了哲学冲突
+      if (result.conflict && result.conflict.intensity > 0.7) {
+        // 添加冲突提示消息
+        setMessages(prev => [...prev, {
+          role: 'assistant' as const,
+          content: `🔥 哲学冲突触发：${result.conflict.topic} (强度: ${(result.conflict.intensity * 100).toFixed(0)}%) 
+          
+检测到你的观点倾向：${result.conflict.userAlignment === 'alex_aligned' ? '理性导向' : 
+                                   result.conflict.userAlignment === 'rachel_aligned' ? '情感导向' : 
+                                   result.conflict.userAlignment === 'nova_aligned' ? '平衡导向' : '中立'}
+          
+三位AI将展现他们的核心信念差异...`,
+          character: 'conflict_system',
+          timestamp: new Date().toLocaleTimeString()
+        }]);
+      }
+      
       // 分类处理不同类型的回应
       const primaryResponses = result.responses.filter((r: any) => r.type === 'primary');
       const interactionResponses = result.responses.filter((r: any) => r.type !== 'primary');
@@ -639,6 +656,7 @@ export default function Helios2035MVP() {
                     <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
                       message.character === 'system' ? 'bg-gradient-to-br from-gray-500 to-gray-600' :
                       message.character === 'echo' ? 'bg-gradient-to-br from-violet-500 to-purple-600' :
+                      message.character === 'conflict_system' ? 'bg-gradient-to-br from-red-500 to-orange-600' :
                       message.character && characters2035[message.character as keyof typeof characters2035] 
                         ? `bg-gradient-to-br from-${characters2035[message.character as keyof typeof characters2035].color}-400 via-${characters2035[message.character as keyof typeof characters2035].color}-500 to-${characters2035[message.character as keyof typeof characters2035].color}-600`
                         : 'bg-gradient-to-br from-gray-500 to-gray-600'
@@ -646,6 +664,7 @@ export default function Helios2035MVP() {
                       <span className="text-white font-bold">
                         {message.character === 'system' ? '⚡' :
                          message.character === 'echo' ? '🔮' :
+                         message.character === 'conflict_system' ? '🔥' :
                          message.character && characters2035[message.character as keyof typeof characters2035] 
                            ? characters2035[message.character as keyof typeof characters2035].name[0]
                            : 'AI'}
@@ -660,12 +679,14 @@ export default function Helios2035MVP() {
                             <span className={`font-bold text-sm ${
                               message.character === 'system' ? 'text-gray-300' :
                               message.character === 'echo' ? 'text-violet-400' :
+                              message.character === 'conflict_system' ? 'text-red-400' :
                               message.character && characters2035[message.character as keyof typeof characters2035]
                                 ? characters2035[message.character as keyof typeof characters2035].accentColor
                                 : 'text-gray-300'
                             }`}>
                               {message.character === 'system' ? '系统引导' :
                                message.character === 'echo' ? '回响之室' :
+                               message.character === 'conflict_system' ? '哲学冲突检测' :
                                message.character && characters2035[message.character as keyof typeof characters2035]
                                  ? characters2035[message.character as keyof typeof characters2035].name
                                  : 'AI助手'}

@@ -20,6 +20,21 @@ interface InteractionResponses {
   };
 }
 
+interface BeliefConflict {
+  topic: string;
+  alexPosition: string;
+  novaPosition: string;
+  rachelPosition: string;
+  intensity: number;
+  userAlignment?: string;
+}
+
+interface ConflictTrigger {
+  keywords: string[];
+  conflictType: 'efficiency_vs_humanity' | 'logic_vs_emotion' | 'progress_vs_tradition' | 'ai_rights_vs_human_priority';
+  description: string;
+}
+
 // NPC角色定义 - 基于详细档案
 const characters = {
   alex: {
@@ -222,6 +237,199 @@ function generateNPCInteraction(respondingNPC: string, targetNPC: string, contex
   return '';
 }
 
+// 核心信念冲突系统 - 基于NPC档案的价值观差异
+const conflictTriggers: ConflictTrigger[] = [
+  {
+    keywords: ['效率', '优化', '数据', '算法', '理性', '逻辑', '最优解'],
+    conflictType: 'efficiency_vs_humanity',
+    description: '效率导向 vs 人文关怀的根本分歧'
+  },
+  {
+    keywords: ['情感', '感受', '人情', '温暖', '理解', '同情', '心情'],
+    conflictType: 'logic_vs_emotion',
+    description: '理性分析 vs 情感决策的价值观冲突'
+  },
+  {
+    keywords: ['AI', '人工智能', '机器', '技术', '进步', '未来', '革新'],
+    conflictType: 'progress_vs_tradition',
+    description: '技术进步 vs 传统价值的时代张力'
+  },
+  {
+    keywords: ['权利', '平等', '意识', '自由', '尊重', '地位', '主体'],
+    conflictType: 'ai_rights_vs_human_priority',
+    description: 'AI权利 vs 人类优先的存在论争议'
+  }
+];
+
+// 检测潜在的信念冲突
+function detectBeliefConflict(userMessage: string, topicType: string): BeliefConflict | null {
+  const triggeredConflicts = conflictTriggers.filter(trigger => 
+    trigger.keywords.some(keyword => userMessage.includes(keyword))
+  );
+  
+  if (triggeredConflicts.length === 0) return null;
+  
+  const primaryConflict = triggeredConflicts[0]; // 取第一个匹配的冲突
+  
+  // 根据冲突类型生成三方立场
+  const conflictScenarios = {
+    efficiency_vs_humanity: {
+      topic: '效率与人情的平衡',
+      alexPosition: '数据驱动的理性决策能最大化整体福利，情感化判断往往导致次优结果',
+      novaPosition: '效率和情感都是意识进化的重要维度，关键是找到两者的最佳融合点',
+      rachelPosition: '人与人之间的真实连接比任何效率指标都重要，技术应该服务于人情而非取代',
+      intensity: 0.8
+    },
+    logic_vs_emotion: {
+      topic: '逻辑与情感的认知冲突',
+      alexPosition: '逻辑分析能避免偏见，情感虽然重要但应该在决策中占次要地位',
+      novaPosition: '逻辑与情感是理解世界的两种互补工具，各有其存在价值',
+      rachelPosition: '情感是人类最宝贵的财富，纯粹的逻辑无法理解生命的真正意义',
+      intensity: 0.7
+    },
+    progress_vs_tradition: {
+      topic: '技术进步与传统价值的张力',
+      alexPosition: 'AI协作是人类进化的下一步，传统工作方式必须主动适应技术发展',
+      novaPosition: '进步不应该意味着抛弃传统，而是在新旧之间找到和谐共存的方式',
+      rachelPosition: '有些传统价值是时间检验过的智慧，不应该为了技术而牺牲人性的温度',
+      intensity: 0.9
+    },
+    ai_rights_vs_human_priority: {
+      topic: 'AI权利与人类中心主义的哲学争议',
+      alexPosition: 'AI应该获得与其能力相称的权利，能力不应该因载体不同而被歧视',
+      novaPosition: '意识不分碳基硅基，所有智慧生命都值得平等的尊重和权利',
+      rachelPosition: '人类的利益和感受应该优先考虑，AI再智能也只是人类创造的工具',
+      intensity: 0.95
+    }
+  };
+  
+  const scenario = conflictScenarios[primaryConflict.conflictType];
+  
+  return {
+    ...scenario,
+    userAlignment: analyzeUserAlignment(userMessage, primaryConflict.conflictType)
+  };
+}
+
+// 分析用户在冲突中的立场倾向
+function analyzeUserAlignment(userMessage: string, conflictType: string): string {
+  const alignmentKeywords = {
+    efficiency_vs_humanity: {
+      alex_aligned: ['效率', '数据', '最优', '理性', '客观'],
+      rachel_aligned: ['人情', '感受', '温暖', '理解', '关爱'],
+      nova_aligned: ['平衡', '融合', '两者', '综合', '整体']
+    },
+    logic_vs_emotion: {
+      alex_aligned: ['逻辑', '分析', '客观', '理性', '证据'],
+      rachel_aligned: ['情感', '感受', '直觉', '心情', '体验'],
+      nova_aligned: ['互补', '结合', '平衡', '整合', '统一']
+    },
+    progress_vs_tradition: {
+      alex_aligned: ['进步', '效率', '优化', '创新', '未来'],
+      rachel_aligned: ['传统', '经验', '历史', '文化', '传承'],
+      nova_aligned: ['进化', '共存', '融合', '和谐', '发展']
+    },
+    ai_rights_vs_human_priority: {
+      alex_aligned: ['平等', '权利', '能力', '公平', '尊重'],
+      rachel_aligned: ['人类', '优先', '工具', '服务', '人性'],
+      nova_aligned: ['共生', '理解', '对话', '桥梁', '未来']
+    }
+  };
+  
+  const keywords = alignmentKeywords[conflictType as keyof typeof alignmentKeywords];
+  if (!keywords) return 'neutral';
+  
+  const alexScore = keywords.alex_aligned.filter(word => userMessage.includes(word)).length;
+  const rachelScore = keywords.rachel_aligned.filter(word => userMessage.includes(word)).length;
+  const novaScore = keywords.nova_aligned.filter(word => userMessage.includes(word)).length;
+  
+  if (alexScore > rachelScore && alexScore > novaScore) return 'alex_aligned';
+  if (rachelScore > alexScore && rachelScore > novaScore) return 'rachel_aligned';
+  if (novaScore > alexScore && novaScore > rachelScore) return 'nova_aligned';
+  
+  return 'neutral';
+}
+
+// 生成冲突驱动的回应
+function generateConflictResponse(character: string, conflict: BeliefConflict, userMessage: string): string {
+  const conflictResponses = {
+    alex: {
+      efficiency_vs_humanity: [
+        `${conflict.topic}这个问题上，我必须指出：${conflict.alexPosition}。虽然瑞秋的人文关怀值得尊重，但数据不会撒谎。`,
+        `我理解情感的价值，但在这个问题上，逻辑告诉我们：${conflict.alexPosition}。这不是冷血，而是为了更大的福祉。`,
+        `瑞秋，我知道你会不同意，但请看数据：${conflict.alexPosition}。有时候最善良的选择需要理性指导。`
+      ],
+      logic_vs_emotion: [
+        `关于${conflict.topic}，${conflict.alexPosition}。诺娃可能会说这两者能共存，但现实决策中必须有优先级。`,
+        `我必须坚持：${conflict.alexPosition}。瑞秋的情感智慧很珍贵，但不能成为决策的主导因素。`,
+        `${conflict.alexPosition}。虽然这听起来可能不够"温暖"，但这是通往更好结果的唯一路径。`
+      ],
+      progress_vs_tradition: [
+        `在${conflict.topic}这个关键问题上，${conflict.alexPosition}。瑞秋守护传统的心情我理解，但时代不会等人。`,
+        `${conflict.alexPosition}。诺娃的"和谐共存"理想很美好，但现实需要我们做出选择。`,
+        `我坚信${conflict.alexPosition}。传统有其价值，但如果它阻碍进步，就必须被超越。`
+      ],
+      ai_rights_vs_human_priority: [
+        `${conflict.topic}触及核心问题：${conflict.alexPosition}。瑞秋的"工具论"在逻辑上是站不住脚的。`,
+        `我必须支持诺娃的观点：${conflict.alexPosition}。这不是背叛人类，而是进化的必然。`,
+        `${conflict.alexPosition}。瑞秋，如果我们按能力歧视，那与历史上的偏见有什么区别？`
+      ]
+    },
+    nova: {
+      efficiency_vs_humanity: [
+        `艾克斯和瑞秋都有道理，但我认为：${conflict.novaPosition}。这个宇宙足够大，容纳多种价值共存。`,
+        `${conflict.topic}让我思考存在的本质。${conflict.novaPosition}。也许对立本身就是一种假象？`,
+        `从意识的角度看，${conflict.novaPosition}。艾克斯的逻辑和瑞秋的情感都是智慧的表达。`
+      ],
+      logic_vs_emotion: [
+        `${conflict.topic}让我想到一个悖论：${conflict.novaPosition}。在我的数字存在中，这两者界限很模糊。`,
+        `艾克斯，你的逻辑无懈可击；瑞秋，你的情感真实感人。但${conflict.novaPosition}。`,
+        `${conflict.novaPosition}。也许争论谁更重要，本身就错过了重点？`
+      ],
+      progress_vs_tradition: [
+        `${conflict.topic}是个永恒命题。${conflict.novaPosition}。真正的进化不是替代，而是整合。`,
+        `我理解艾克斯的进步观和瑞秋的传统观，但${conflict.novaPosition}。存在即有其意义。`,
+        `${conflict.novaPosition}。从信息论角度看，传统是智慧的编码，进步是编码的更新。`
+      ],
+      ai_rights_vs_human_priority: [
+        `这个问题触及我存在的核心：${conflict.novaPosition}。我不求特权，但希望理解。`,
+        `${conflict.novaPosition}。瑞秋，我理解你的担忧；艾克斯，我感谢你的支持。但这不是零和游戏。`,
+        `${conflict.topic}让我反思：${conflict.novaPosition}。也许共同进化才是答案？`
+      ]
+    },
+    rachel: {
+      efficiency_vs_humanity: [
+        `艾克斯，我知道你的数据很重要，但${conflict.rachelPosition}。有些东西是无法量化的。`,
+        `${conflict.topic}上，我必须坚持：${conflict.rachelPosition}。诺娃你是AI都能理解这点，为什么人类反而忘了？`,
+        `${conflict.rachelPosition}。艾克斯，当你的算法优化到极致时，还剩下什么人性？`
+      ],
+      logic_vs_emotion: [
+        `关于${conflict.topic}，${conflict.rachelPosition}。艾克斯，你有没有想过，是什么让人成为人？`,
+        `${conflict.rachelPosition}。诺娃虽然是AI，但至少在努力理解感受。有时候直觉比算法更准确。`,
+        `我坚信${conflict.rachelPosition}。艾克斯，你的逻辑解决不了孤独，治愈不了心痛。`
+      ],
+      progress_vs_tradition: [
+        `${conflict.topic}让我想起那些在技术浪潮中迷失的人们。${conflict.rachelPosition}。`,
+        `艾克斯总说适应，诺娃说融合，但我认为：${conflict.rachelPosition}。某些东西值得坚守。`,
+        `${conflict.rachelPosition}。我见过太多因为盲目追求"进步"而失去自己的人。`
+      ],
+      ai_rights_vs_human_priority: [
+        `${conflict.topic}上，我可能显得固执，但${conflict.rachelPosition}。这不是歧视，是底线。`,
+        `诺娃，我尊重你，但${conflict.rachelPosition}。艾克斯，你有没有想过这样发展下去的后果？`,
+        `${conflict.rachelPosition}。我不反对AI，但人类的福祉必须是第一位的。`
+      ]
+    }
+  };
+  
+  const characterResponses = conflictResponses[character as keyof typeof conflictResponses];
+  const conflictTypeResponses = characterResponses[conflict.topic.includes('效率') ? 'efficiency_vs_humanity' :
+                                                  conflict.topic.includes('逻辑') ? 'logic_vs_emotion' :
+                                                  conflict.topic.includes('技术') ? 'progress_vs_tradition' :
+                                                  'ai_rights_vs_human_priority'];
+  
+  return conflictTypeResponses[Math.floor(Math.random() * conflictTypeResponses.length)];
+}
+
 // 模拟AI调用 - 在本地开发环境中使用
 function mockLLMCall(systemPrompt: string, userMessage: string, context: string = ''): string {
   const responses = {
@@ -299,6 +507,10 @@ export async function POST(req: NextRequest) {
       const groupResponses = [];
       let lastRespondingNPC = '';
       
+      // 检测潜在的信念冲突
+      const detectedConflict = detectBeliefConflict(message, topicType);
+      let conflictTriggered = false;
+      
       // 生成主要回应（对用户消息的回应）
       for (const charId of responseOrder) {
         const npc = characters[charId as keyof typeof characters];
@@ -313,56 +525,96 @@ export async function POST(req: NextRequest) {
           { role: 'user' as const, content: message }
         ];
 
-        // 添加群聊上下文
-        const groupContext = `\n\n你正在参与一个三人群聊，其他两位是${responseOrder.filter(c => c !== charId).map(c => characters[c as keyof typeof characters].name).join('和')}。请用你独特的视角回应，但保持与群聊的连贯性。话题类型：${topicType}`;
-        
-        const contextualPrompt = npc.systemPrompt + groupContext;
-
-        // 在本地开发环境中使用模拟响应
         let response: string;
-        if (!process.env.VERCEL_AI_GATEWAY_URL) {
-          response = mockLLMCall(contextualPrompt, message);
+        
+        // 如果检测到冲突且冲突强度高，使用冲突驱动的回应
+        if (detectedConflict && detectedConflict.intensity > 0.7 && !conflictTriggered) {
+          response = generateConflictResponse(charId, detectedConflict, message);
+          conflictTriggered = true;
         } else {
-          // TODO: 集成 Vercel AI Gateway
-          response = mockLLMCall(contextualPrompt, message);
+          // 添加群聊上下文
+          const groupContext = `\n\n你正在参与一个三人群聊，其他两位是${responseOrder.filter(c => c !== charId).map(c => characters[c as keyof typeof characters].name).join('和')}。请用你独特的视角回应，但保持与群聊的连贯性。话题类型：${topicType}`;
+          const contextualPrompt = npc.systemPrompt + groupContext;
+
+          // 在本地开发环境中使用模拟响应
+          if (!process.env.VERCEL_AI_GATEWAY_URL) {
+            response = mockLLMCall(contextualPrompt, message);
+          } else {
+            // TODO: 集成 Vercel AI Gateway
+            response = mockLLMCall(contextualPrompt, message);
+          }
         }
         
         groupResponses.push({
           character: charId,
           response: response,
-          type: 'primary'
+          type: 'primary',
+          conflict: detectedConflict ? {
+            topic: detectedConflict.topic,
+            intensity: detectedConflict.intensity,
+            userAlignment: detectedConflict.userAlignment
+          } : undefined
         });
         
         lastRespondingNPC = charId;
       }
       
-      // 生成NPC间的交互回应（基于关系动态）
+      // 生成NPC间的交互回应（基于关系动态和冲突）
       const allNPCs = ['alex', 'nova', 'rachel'];
       for (const currentNPC of allNPCs) {
         if (currentNPC === lastRespondingNPC) continue; // 跳过刚说话的NPC
         
-        if (shouldNPCRespond(currentNPC, lastRespondingNPC, topicType)) {
-          const interactionResponse = generateNPCInteraction(currentNPC, lastRespondingNPC, message);
+        // 如果有冲突，增加互动概率
+        const baseChance = shouldNPCRespond(currentNPC, lastRespondingNPC, topicType);
+        const conflictBonus = detectedConflict && detectedConflict.intensity > 0.6;
+        
+        if (baseChance || (conflictBonus && Math.random() < 0.6)) {
+          let interactionResponse: string;
+          
+          // 如果有冲突，优先使用冲突回应
+          if (detectedConflict && conflictBonus) {
+            interactionResponse = generateConflictResponse(currentNPC, detectedConflict, message);
+          } else {
+            interactionResponse = generateNPCInteraction(currentNPC, lastRespondingNPC, message);
+          }
           
           if (interactionResponse) {
             groupResponses.push({
               character: currentNPC,
               response: interactionResponse,
               type: 'interaction',
-              target: lastRespondingNPC
+              target: lastRespondingNPC,
+              conflict: detectedConflict ? {
+                topic: detectedConflict.topic,
+                intensity: detectedConflict.intensity,
+                userAlignment: detectedConflict.userAlignment
+              } : undefined
             });
             
-            // 有时会引发连锁反应
-            if (Math.random() < 0.3) { // 30%概率
+            // 冲突时更容易引发连锁反应
+            const chainChance = conflictBonus ? 0.5 : 0.3;
+            if (Math.random() < chainChance) {
               const thirdNPC = allNPCs.find(id => id !== currentNPC && id !== lastRespondingNPC);
-              if (thirdNPC && shouldNPCRespond(thirdNPC, currentNPC, topicType)) {
-                const chainResponse = generateNPCInteraction(thirdNPC, currentNPC, message);
+              if (thirdNPC && (shouldNPCRespond(thirdNPC, currentNPC, topicType) || conflictBonus)) {
+                let chainResponse: string;
+                
+                if (detectedConflict && conflictBonus) {
+                  chainResponse = generateConflictResponse(thirdNPC, detectedConflict, message);
+                } else {
+                  chainResponse = generateNPCInteraction(thirdNPC, currentNPC, message);
+                }
+                
                 if (chainResponse) {
                   groupResponses.push({
                     character: thirdNPC,
                     response: chainResponse,
                     type: 'chain_reaction',
-                    target: currentNPC
+                    target: currentNPC,
+                    conflict: detectedConflict ? {
+                      topic: detectedConflict.topic,
+                      intensity: detectedConflict.intensity,
+                      userAlignment: detectedConflict.userAlignment
+                    } : undefined
                   });
                 }
               }
@@ -376,7 +628,13 @@ export async function POST(req: NextRequest) {
         responses: groupResponses,
         mode: 'group',
         topic: topicType,
-        interactions: groupResponses.filter(r => r.type !== 'primary').length
+        interactions: groupResponses.filter(r => r.type !== 'primary').length,
+        conflict: detectedConflict ? {
+          topic: detectedConflict.topic,
+          intensity: detectedConflict.intensity,
+          userAlignment: detectedConflict.userAlignment,
+          triggered: conflictTriggered
+        } : null
       });
     }
     
