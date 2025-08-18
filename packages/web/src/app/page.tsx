@@ -4,7 +4,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
           <h1 className="text-6xl font-bold mb-8 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-            Helios
+            Helios（iff的预览）
           </h1>
           <h2 className="text-2xl mb-6 text-blue-200">
             赫利俄斯 - 意识的棱镜
