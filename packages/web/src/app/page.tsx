@@ -126,7 +126,7 @@ export default function Home() {
       // 发布玩家事件
       const playerEvent = {
         id: `player_${inputMode}_${Date.now()}`,
-        type: inputMode as const,
+        type: inputMode,
         character_id: 'player',
         content: messageContent,
         timestamp: Date.now(),
