@@ -329,7 +329,6 @@ export default function Home() {
             routing: result.routing_type
           });
         }
-      }
       } else {
         // API请求失败
         const errorText = await response.text();
