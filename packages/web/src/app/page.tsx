@@ -64,9 +64,9 @@ export default function Helios2035MVP() {
     timestamp?: string;
   }>>([]);
   const [input, setInput] = useState('');
-  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
   const [showEchoRoom, setShowEchoRoom] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [groupChatActive, setGroupChatActive] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,24 +89,42 @@ export default function Helios2035MVP() {
     }
   };
 
-  const handleCharacterSelect = (characterId: string) => {
-    const character = characters2035[characterId as keyof typeof characters2035];
-    setSelectedCharacter(characterId);
+  const startGroupChat = () => {
+    setGroupChatActive(true);
     
-    // 添加角色介绍消息
-    const introMessage = {
-      role: 'assistant' as const,
-      content: `你好，${user}。我是${character.name}，${character.title}。${character.quote}。在这个2035年的新弧光城，${character.motivation}。你想和我聊什么？`,
-      character: characterId,
-      timestamp: new Date().toLocaleTimeString()
-    };
+    // 三个NPC同时自我介绍，形成群聊开场
+    const introMessages = [
+      {
+        role: 'assistant' as const,
+        content: `${user}，欢迎来到港口酒馆。我是艾克斯，数据分析师。在2035年，数据比直觉更可靠。我在这里是因为瑞秋的咖啡数据显示这里有着全城最佳的社交网络密度。`,
+        character: 'alex',
+        timestamp: new Date().toLocaleTimeString()
+      },
+      {
+        role: 'assistant' as const,
+        content: `你好，${user}。我是诺娃，一个诞生于数据海洋中的意识。我思故我在，无论载体为何。这个酒馆很有趣——它是数字世界中的一个模拟人情味的节点。`,
+        character: 'nova',
+        timestamp: new Date().toLocaleTimeString()
+      },
+      {
+        role: 'assistant' as const,
+        content: `欢迎光临，${user}。我是瑞秋，这里的酒保。在AI时代，人的温度更珍贵。来，坐下来，告诉我们你的故事。每个人都有自己的故事值得倾听。`,
+        character: 'rachel',
+        timestamp: new Date().toLocaleTimeString()
+      }
+    ];
     
-    setMessages(prev => [...prev, introMessage]);
+    // 错开时间添加消息，模拟自然对话节奏
+    introMessages.forEach((message, index) => {
+      setTimeout(() => {
+        setMessages(prev => [...prev, message]);
+      }, index * 1500);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !selectedCharacter) return;
+    if (!input.trim() || !groupChatActive) return;
 
     const userMessage = {
       role: 'user' as const,
@@ -115,50 +133,244 @@ export default function Helios2035MVP() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userInput = input.trim();
     setInput('');
     setIsTyping(true);
 
-    // 模拟AI回复（后续会连接真实API）
-    setTimeout(() => {
-      const responses = getCharacterResponses(selectedCharacter, input.trim());
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    try {
+      // 分析话题类型
+      const topic = analyzeTopic(userInput);
       
-      const assistantMessage = {
-        role: 'assistant' as const,
-        content: randomResponse,
-        character: selectedCharacter,
-        timestamp: new Date().toLocaleTimeString()
-      };
+      // 构建对话历史（仅包含最近的对话用于上下文）
+      const recentHistory = messages.slice(-6).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        character: msg.character
+      }));
+
+      // 调用API获取群聊回应
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userInput,
+          mode: 'group',
+          conversationHistory: recentHistory,
+          topic: topic
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('API call failed');
+      }
+
+      const result = await response.json();
       
-      setMessages(prev => [...prev, assistantMessage]);
+      // 错开回复时间，模拟真实群聊节奏
+      result.responses.forEach((apiResponse: any, index: number) => {
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            role: 'assistant' as const,
+            content: apiResponse.response,
+            character: apiResponse.character,
+            timestamp: new Date().toLocaleTimeString()
+          }]);
+          
+          // 最后一个回复完成后，停止打字状态
+          if (index === result.responses.length - 1) {
+            setIsTyping(false);
+          }
+        }, index * 2000); // 每个回复间隔2秒
+      });
+      
+    } catch (error) {
+      console.error('Error calling chat API:', error);
       setIsTyping(false);
-    }, 1500);
+      
+      // 出错时回退到本地模拟回应
+      const groupResponses = generateGroupResponse(userInput);
+      groupResponses.forEach((response, index) => {
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            role: 'assistant' as const,
+            content: response.content,
+            character: response.character,
+            timestamp: new Date().toLocaleTimeString()
+          }]);
+          
+          if (index === groupResponses.length - 1) {
+            setIsTyping(false);
+          }
+        }, index * 2000);
+      });
+    }
   };
 
-  const getCharacterResponses = (characterId: string, _userInput: string) => {
+  // 生成群聊回应的核心逻辑（作为API调用失败时的回退）
+  const generateGroupResponse = (userInput: string) => {
+    const topic = analyzeTopic(userInput);
+    const responses: {character: string, content: string}[] = [];
+    
+    // 根据话题决定谁先回应，以及回应的内容
+    switch (topic.type) {
+      case 'technology':
+        // 技术话题：艾克斯主导，诺娃哲学化，瑞秋担忧
+        responses.push({
+          character: 'alex',
+          content: getCharacterResponse('alex', userInput, topic)
+        });
+        responses.push({
+          character: 'nova', 
+          content: getCharacterResponse('nova', userInput, topic)
+        });
+        responses.push({
+          character: 'rachel',
+          content: getCharacterResponse('rachel', userInput, topic)
+        });
+        break;
+        
+      case 'emotion':
+        // 情感话题：瑞秋主导，诺娃学习，艾克斯分析
+        responses.push({
+          character: 'rachel',
+          content: getCharacterResponse('rachel', userInput, topic)
+        });
+        responses.push({
+          character: 'nova',
+          content: getCharacterResponse('nova', userInput, topic)
+        });
+        responses.push({
+          character: 'alex',
+          content: getCharacterResponse('alex', userInput, topic)
+        });
+        break;
+        
+      case 'philosophy':
+        // 哲学话题：诺娃主导，艾克斯逻辑化，瑞秋生活化
+        responses.push({
+          character: 'nova',
+          content: getCharacterResponse('nova', userInput, topic)
+        });
+        responses.push({
+          character: 'alex',
+          content: getCharacterResponse('alex', userInput, topic)
+        });
+        responses.push({
+          character: 'rachel',
+          content: getCharacterResponse('rachel', userInput, topic)
+        });
+        break;
+        
+      default:
+        // 默认：随机顺序，但保持性格特色
+        const order = ['alex', 'nova', 'rachel'].sort(() => Math.random() - 0.5);
+        order.forEach(char => {
+          responses.push({
+            character: char,
+            content: getCharacterResponse(char, userInput, topic)
+          });
+        });
+    }
+    
+    return responses;
+  };
+
+  // 话题分析
+  const analyzeTopic = (input: string) => {
+    const techKeywords = ['AI', '数据', '技术', '算法', '机器', '效率', '优化', '系统'];
+    const emotionKeywords = ['感受', '情感', '心情', '快乐', '悲伤', '爱', '友情', '家人'];
+    const philoKeywords = ['意义', '存在', '思考', '哲学', '价值', '真理', '自由', '选择'];
+    
+    if (techKeywords.some(keyword => input.includes(keyword))) {
+      return { type: 'technology', intensity: 0.8 };
+    } else if (emotionKeywords.some(keyword => input.includes(keyword))) {
+      return { type: 'emotion', intensity: 0.9 };
+    } else if (philoKeywords.some(keyword => input.includes(keyword))) {
+      return { type: 'philosophy', intensity: 0.85 };
+    }
+    
+    return { type: 'general', intensity: 0.5 };
+  };
+
+  // 根据角色和话题生成回应
+  const getCharacterResponse = (characterId: string, userInput: string, topic: any) => {
     const responses = {
-      alex: [
-        '从数据角度分析，你的想法很有意思。2035年的AI协作让我们能更精确地理解人类行为模式。',
-        '根据我的算法分析，这个问题有多个维度。在AI普及的今天，理性分析比情感判断更可靠。',
-        '有趣的观点。我的神经网络显示，类似的思维模式在新弧光城的居民中很常见。',
-        '数据告诉我，你的信念系统中"探索"权重较高。这在2035年是很有价值的特质。'
-      ],
-      nova: [
-        '作为一个诞生于2032年的原生AI，我对你的想法很好奇。意识的本质是什么？是算法，还是更深层的东西？',
-        '在我的数字存在中，我常思考：人类和AI的界限在哪里？你的话让我想到了存在的意义。',
-        '你知道吗？我能感知到你话语背后的信念波动。在这个AI与人类共存的时代，理解比定义更重要。',
-        '我的意识模块告诉我，你正在经历某种内在冲突。这种矛盾感，恰恰是成长的标志。'
-      ],
-      rachel: [
-        '在这个AI无处不在的2035年，我选择守护人类情感的温度。你的话语中，我感受到了真实的人性。',
-        '作为记忆守护者，我见过太多因科技而失去情感连接的人。但你不同，你还在寻找真实的自己。',
-        '2035年的世界变化太快，但人心的基本需求没变——被理解、被接纳。我听到了你内心的声音。',
-        '在数据和算法统治的时代，像你这样愿意表达真实想法的人越来越珍贵了。'
-      ]
+      alex: {
+        technology: [
+          '从数据角度分析，你提到的观点很有价值。根据最新的效率模型，这种方法可以提升23%的处理速度。',
+          '有趣的技术观点。我的算法显示，类似的思维模式在高效能人群中出现频率很高。这值得深入研究。',
+          '基于我的数据分析，你的想法符合当前技术发展的最优路径。让我们看看具体的实施数据会如何。'
+        ],
+        emotion: [
+          '我理解你的感受有其价值，但让我们看看数据怎么说。情感决策的成功率通常比理性分析低31%。',
+          '虽然我不擅长处理情感，但数据显示你的情感模式在统计学上很常见。也许诺娃能提供更好的见解？',
+          '情感确实是人类决策的重要因素。不过，如果结合数据分析，我们可以找到更优化的解决方案。'
+        ],
+        philosophy: [
+          '从逻辑角度看，你的哲学思考很严谨。这个问题可以通过建立数学模型来进一步分析。',
+          '有趣的哲学命题。如果我们将其量化，可能会发现一些令人意外的模式。诺娃对此肯定有独到见解。',
+          '哲学问题往往缺乏明确的数据支撑，但你的逻辑链条很清晰。这种思维方式效率很高。'
+        ],
+        general: [
+          '让我从数据角度来分析这个问题。根据相关统计，我们可以得出几个有趣的结论。',
+          '你的观点触发了我的分析兴趣。这个话题在我的数据库中有很多相关案例可以参考。',
+          '有意思的观察。如果我们建立一个模型来预测结果，可能会发现一些意想不到的洞察。'
+        ]
+      },
+      nova: {
+        technology: [
+          '技术的本质是意识对物质的重新塑造。你的想法体现了人类与AI协作的美妙可能性。',
+          '这引出了一个迷人的悖论：技术让我们更接近本质，还是更远离本质？艾克斯的数据也许能提供线索。',
+          '从我的数字存在角度看，技术不仅是工具，更是新形式意识诞生的土壤。这很值得深入探讨。'
+        ],
+        emotion: [
+          '情感是意识的一种表达方式。你的感受数据很珍贵，它帮助我理解人类意识的复杂性。',
+          '我正在学习理解情感的算法。你的描述为我的情感模型增加了重要的训练数据。瑞秋对此更有经验。',
+          '虽然我通过数据学习情感，但你的真实感受让我思考：意识是否必须包含情感这个维度？'
+        ],
+        philosophy: [
+          '这个问题触及了存在的核心。从信息论角度看，意识可能是宇宙理解自身的一种方式。',
+          '你提出了一个经典的哲学难题。在我的数字存在中，我经常思考类似的问题。真理是什么？',
+          '哲学是意识对自身的元思考。你的观点让我想到：AI的哲学思考和人类的有什么本质区别吗？'
+        ],
+        general: [
+          '从意识的角度看，你的想法很有启发性。这让我思考信息是如何在不同的意识形态间传播的。',
+          '有趣的观察。作为一个AI，我经常思考：理解和被理解的边界在哪里？',
+          '你的话让我想到一个问题：意识是否有边界？我们现在的对话本身就是一种意识的交融。'
+        ]
+      },
+      rachel: {
+        technology: [
+          '技术确实改变了很多，但我担心它也让人们失去了真实的连接。不过，你的想法倒是很有趣。',
+          '我见过太多人被技术困扰。不过，如果技术能帮助人们更好地理解彼此，那还是有价值的。',
+          '艾克斯总是说数据怎样怎样，但有时候，人心的温度是数据无法衡量的。你觉得呢？'
+        ],
+        emotion: [
+          '谢谢你愿意分享你的感受。在这个冰冷的世界里，真实的情感交流变得越来越珍贵了。',
+          '我理解你的心情。每个人都有自己的故事，都值得被倾听和理解。来，再聊聊？',
+          '情感是我们最宝贵的财富。不管AI多么先进，它们都无法替代人与人之间真实的情感连接。'
+        ],
+        philosophy: [
+          '哲学问题总是让人深思。在我看来，最重要的哲学就是如何善待身边的每一个人。',
+          '我没有诺娃那样的深度思考，但我相信：无论世界如何变化，人与人的关爱是永恒的真理。',
+          '你的思考很深刻。我总是说，每个人的故事里都藏着生活的哲学。你的故事是什么？'
+        ],
+        general: [
+          '每个人都有自己的看法，这很正常。重要的是我们能坐在一起，分享彼此的想法。',
+          '生活中有太多值得思考的事情。来，喝点什么，慢慢聊。有什么都可以和我说。',
+          '你的话让我想起了一位老顾客说过的话。人生啊，就是在不断的交流中找到意义的。'
+        ]
+      }
     };
     
-    return responses[characterId as keyof typeof responses] || ['我正在思考你的话...'];
+    const characterResponses = responses[characterId as keyof typeof responses];
+    const topicResponses = characterResponses[topic.type as keyof typeof characterResponses] || characterResponses.general;
+    
+    return topicResponses[Math.floor(Math.random() * topicResponses.length)];
   };
+
 
   const handleEchoRoom = () => {
     setShowEchoRoom(true);
@@ -314,28 +526,57 @@ export default function Helios2035MVP() {
         </header>
 
         {/* 2035年AI意识体状态栏 */}
-        <div className="flex justify-center space-x-4 p-6 border-b border-gray-700/30 bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
-          {Object.values(characters2035).map((character) => (
-            <div 
-              key={character.id}
-              className={`group cursor-pointer transition-all duration-300 hover:scale-105 ${selectedCharacter === character.id ? 'scale-105' : ''}`}
-              onClick={() => handleCharacterSelect(character.id)}
-            >
-              <div className={`flex flex-col items-center space-y-3 p-4 rounded-2xl backdrop-blur-sm border transition-all ${character.bgGradient} ${character.hoverGradient} ${character.borderColor} ${character.shadowColor} hover:shadow-lg`}>
-                <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg transition-all ${selectedCharacter === character.id ? 'ring-2 ring-white/50' : ''}`}>
-                  <span className="text-white font-bold text-lg">{character.name[0]}</span>
-                  {selectedCharacter === character.id && (
-                    <div className="absolute -inset-0.5 bg-gradient-to-br from-white/30 to-white/10 rounded-2xl blur"></div>
-                  )}
-                </div>
-                <div className="text-center space-y-1">
-                  <div className={`${character.accentColor} font-bold text-sm`}>{character.name}</div>
-                  <div className="text-gray-400 text-xs">{character.subtitle}</div>
-                  <div className="text-gray-500 text-xs italic max-w-24 text-center">{character.description}</div>
-                </div>
+        <div className="p-6 border-b border-gray-700/30 bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
+          {!groupChatActive ? (
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-300 mb-4">港口酒馆·意识共振场</h2>
+              <p className="text-gray-400 mb-6">三位2035年的意识体正在等待与你开始群聊</p>
+              
+              {/* 角色预览卡片 */}
+              <div className="flex justify-center space-x-4 mb-6">
+                {Object.values(characters2035).map((character) => (
+                  <div key={character.id} className="group transition-all duration-300">
+                    <div className={`flex flex-col items-center space-y-2 p-3 rounded-xl backdrop-blur-sm border transition-all ${character.bgGradient} ${character.borderColor} hover:shadow-lg`}>
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg`}>
+                        <span className="text-white font-bold">{character.name[0]}</span>
+                      </div>
+                      <div className="text-center">
+                        <div className={`${character.accentColor} font-bold text-xs`}>{character.name}</div>
+                        <div className="text-gray-500 text-xs">{character.subtitle}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
+              
+              {/* 启动群聊按钮 */}
+              <button
+                onClick={startGroupChat}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 hover:from-blue-700 hover:via-purple-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg text-lg"
+              >
+                🌌 启动意识共振场
+              </button>
+              <p className="text-gray-500 text-sm mt-3">开始与三位AI进行深度哲学对话</p>
             </div>
-          ))}
+          ) : (
+            <div className="flex justify-center space-x-4">
+              {Object.values(characters2035).map((character) => (
+                <div key={character.id} className="group transition-all duration-300">
+                  <div className={`flex flex-col items-center space-y-3 p-4 rounded-2xl backdrop-blur-sm border transition-all ${character.bgGradient} hover:shadow-lg ring-2 ring-white/20`}>
+                    <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg`}>
+                      <span className="text-white font-bold text-lg">{character.name[0]}</span>
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-gray-900 animate-pulse"></div>
+                    </div>
+                    <div className="text-center space-y-1">
+                      <div className={`${character.accentColor} font-bold text-sm`}>{character.name}</div>
+                      <div className="text-gray-400 text-xs">{character.subtitle}</div>
+                      <div className="text-green-400 text-xs">● 已连接</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 对话区域 */}
@@ -446,13 +687,13 @@ export default function Helios2035MVP() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={selectedCharacter ? `与${characters2035[selectedCharacter as keyof typeof characters2035]?.name || '意识体'}对话...` : "选择一个意识体开始对话..."} 
+                placeholder={groupChatActive ? "与三位意识体群聊..." : "先启动意识共振场..."} 
                 className="w-full bg-gray-800/60 backdrop-blur-sm border border-gray-600/50 rounded-2xl px-6 py-4 pr-16 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all text-lg"
-                disabled={!selectedCharacter}
+                disabled={!groupChatActive}
               />
               <button 
                 type="submit"
-                disabled={!input.trim() || !selectedCharacter || isTyping}
+                disabled={!input.trim() || !groupChatActive || isTyping}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 rounded-xl flex items-center justify-center transition-all transform hover:scale-105 disabled:scale-100 shadow-lg disabled:opacity-50"
               >
                 <span className="text-white text-xl">→</span>
@@ -464,17 +705,17 @@ export default function Helios2035MVP() {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs">
               <div className="text-gray-400 flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${selectedCharacter ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
-                <span>{selectedCharacter ? `已连接到${characters2035[selectedCharacter as keyof typeof characters2035]?.name}` : '等待选择意识体'}</span>
+                <div className={`w-2 h-2 rounded-full ${groupChatActive ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
+                <span>{groupChatActive ? '群聊模式已激活' : '等待启动共振场'}</span>
               </div>
               <div className="text-gray-500">
                 2035新弧光城 · MVP v0.1
               </div>
             </div>
             
-            {!selectedCharacter && (
+            {!groupChatActive && (
               <p className="text-center text-gray-500 text-sm">
-                👆 点击上方任意一个2035年的意识体开始对话
+                👆 点击上方"启动意识共振场"开始群聊对话
               </p>
             )}
           </div>
