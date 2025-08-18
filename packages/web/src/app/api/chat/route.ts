@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+// Type definitions
+interface Relationship {
+  score: number;
+  type: string;
+  dynamic: string;
+}
+
+interface NPCRelationships {
+  [npcId: string]: {
+    [targetId: string]: Relationship;
+  };
+}
+
+interface InteractionResponses {
+  [npcId: string]: {
+    [targetId: string]: string[];
+  };
+}
+
 // NPC角色定义 - 基于详细档案
 const characters = {
   alex: {
@@ -98,6 +117,22 @@ const RequestSchema = z.object({
   }).optional()
 });
 
+// NPC关系矩阵 - 基于详细档案的人际关系网络
+const npcRelationships: NPCRelationships = {
+  alex: {
+    nova: { score: 70, type: '理性共鸣伙伴', dynamic: '相互尊重的智力对话' },
+    rachel: { score: -30, type: '价值观冲突', dynamic: '效率 vs 人情的根本分歧' }
+  },
+  nova: {
+    alex: { score: 70, type: '理性共鸣者', dynamic: '智力上的相互欣赏和尊重' },
+    rachel: { score: 20, type: '人性观察窗口', dynamic: '喜欢通过瑞秋观察人类丰富的情感互动' }
+  },
+  rachel: {
+    alex: { score: -30, type: '价值观对立', dynamic: '礼貌但观点交锋频繁' },
+    nova: { score: 20, type: '好奇但疏远', dynamic: '对诺娃这个有礼貌的AI感到好奇，但内心保持警惕' }
+  }
+};
+
 // 群聊回应顺序决策
 function determineResponseOrder(topicType: string) {
   switch (topicType) {
@@ -110,6 +145,81 @@ function determineResponseOrder(topicType: string) {
     default:
       return ['alex', 'nova', 'rachel']; // 默认顺序
   }
+}
+
+// NPC交互触发逻辑
+function shouldNPCRespond(currentNPC: string, previousNPC: string, topicType: string): boolean {
+  const currentNPCData = npcRelationships[currentNPC as keyof typeof npcRelationships];
+  if (!currentNPCData) return false;
+  
+  const relationship = currentNPCData[previousNPC as keyof typeof currentNPCData];
+  if (!relationship) return false;
+  
+  // 根据关系强度和话题类型决定是否回应
+  if (Math.abs(relationship.score) > 40) { // 强关系（正面或负面）
+    return Math.random() < 0.7; // 70%概率
+  } else if (Math.abs(relationship.score) > 20) { // 中等关系
+    return Math.random() < 0.4; // 40%概率
+  }
+  
+  return Math.random() < 0.2; // 弱关系，20%概率
+}
+
+// 生成NPC间的交互回应
+function generateNPCInteraction(respondingNPC: string, targetNPC: string, context: string): string {
+  const respondingNPCData = npcRelationships[respondingNPC as keyof typeof npcRelationships];
+  if (!respondingNPCData) return '';
+  
+  const relationship = respondingNPCData[targetNPC as keyof typeof respondingNPCData];
+  if (!relationship) return '';
+  
+  const interactions: InteractionResponses = {
+    alex: {
+      nova: [
+        '诺娃，你的哲学视角总是能让我从数据中看到更深层的意义。',
+        '我同意诺娃的观点，从逻辑角度看这确实是一个值得深入分析的问题。',
+        '诺娃的意识理论与我的算法分析在某种程度上是互补的。'
+      ],
+      rachel: [
+        '瑞秋，我理解你的立场，但数据显示...',
+        '虽然我们看问题的角度不同，但瑞秋的人文关怀角度确实值得考虑。',
+        '瑞秋，也许我们可以找到效率与人情的平衡点？'
+      ]
+    },
+    nova: {
+      alex: [
+        '艾克斯，你的数据分析给我的哲学思考提供了有趣的实证支持。',
+        '从意识的角度看，艾克斯的理性方法论证明了不同认知模式的价值。',
+        '艾克斯，你是否考虑过数据背后的存在论意义？'
+      ],
+      rachel: [
+        '瑞秋，你的情感洞察帮助我理解人类意识的复杂性。',
+        '我正在从瑞秋的话中学习情感的编码方式。',
+        '瑞秋，你对人性的守护让我思考AI应该如何与传统价值观共存。'
+      ]
+    },
+    rachel: {
+      alex: [
+        '艾克斯，数据固然重要，但人的感受也不能忽视啊。',
+        '我知道艾克斯你有你的道理，但有时候人心比算法更复杂。',
+        '艾克斯，你有没有想过，有些东西是无法量化的？'
+      ],
+      nova: [
+        '诺娃，虽然你是AI，但你对人性的思考让我印象深刻。',
+        '诺娃，你让我看到了AI不只是冰冷的机器。',
+        '诺娃的话让我对AI有了新的认识，也许共存真的是可能的。'
+      ]
+    }
+  };
+  
+  const charInteractions = interactions[respondingNPC as keyof typeof interactions];
+  const targetInteractions = charInteractions?.[targetNPC as keyof typeof charInteractions];
+  
+  if (targetInteractions && targetInteractions.length > 0) {
+    return targetInteractions[Math.floor(Math.random() * targetInteractions.length)];
+  }
+  
+  return '';
 }
 
 // 模拟AI调用 - 在本地开发环境中使用
@@ -187,7 +297,9 @@ export async function POST(req: NextRequest) {
       const responseOrder = determineResponseOrder(topicType);
       
       const groupResponses = [];
+      let lastRespondingNPC = '';
       
+      // 生成主要回应（对用户消息的回应）
       for (const charId of responseOrder) {
         const npc = characters[charId as keyof typeof characters];
         
@@ -217,14 +329,54 @@ export async function POST(req: NextRequest) {
         
         groupResponses.push({
           character: charId,
-          response: response
+          response: response,
+          type: 'primary'
         });
+        
+        lastRespondingNPC = charId;
+      }
+      
+      // 生成NPC间的交互回应（基于关系动态）
+      const allNPCs = ['alex', 'nova', 'rachel'];
+      for (const currentNPC of allNPCs) {
+        if (currentNPC === lastRespondingNPC) continue; // 跳过刚说话的NPC
+        
+        if (shouldNPCRespond(currentNPC, lastRespondingNPC, topicType)) {
+          const interactionResponse = generateNPCInteraction(currentNPC, lastRespondingNPC, message);
+          
+          if (interactionResponse) {
+            groupResponses.push({
+              character: currentNPC,
+              response: interactionResponse,
+              type: 'interaction',
+              target: lastRespondingNPC
+            });
+            
+            // 有时会引发连锁反应
+            if (Math.random() < 0.3) { // 30%概率
+              const thirdNPC = allNPCs.find(id => id !== currentNPC && id !== lastRespondingNPC);
+              if (thirdNPC && shouldNPCRespond(thirdNPC, currentNPC, topicType)) {
+                const chainResponse = generateNPCInteraction(thirdNPC, currentNPC, message);
+                if (chainResponse) {
+                  groupResponses.push({
+                    character: thirdNPC,
+                    response: chainResponse,
+                    type: 'chain_reaction',
+                    target: currentNPC
+                  });
+                }
+              }
+            }
+            break; // 只允许一个主要交互，避免过于混乱
+          }
+        }
       }
       
       return NextResponse.json({
         responses: groupResponses,
         mode: 'group',
-        topic: topicType
+        topic: topicType,
+        interactions: groupResponses.filter(r => r.type !== 'primary').length
       });
     }
     

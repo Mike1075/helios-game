@@ -62,6 +62,8 @@ export default function Helios2035MVP() {
     content: string;
     character?: string;
     timestamp?: string;
+    interactionType?: string;
+    target?: string;
   }>>([]);
   const [input, setInput] = useState('');
   const [showEchoRoom, setShowEchoRoom] = useState(false);
@@ -168,8 +170,12 @@ export default function Helios2035MVP() {
 
       const result = await response.json();
       
-      // 错开回复时间，模拟真实群聊节奏
-      result.responses.forEach((apiResponse: any, index: number) => {
+      // 分类处理不同类型的回应
+      const primaryResponses = result.responses.filter((r: any) => r.type === 'primary');
+      const interactionResponses = result.responses.filter((r: any) => r.type !== 'primary');
+      
+      // 先显示主要回应（对用户的回复）
+      primaryResponses.forEach((apiResponse: any, index: number) => {
         setTimeout(() => {
           setMessages(prev => [...prev, {
             role: 'assistant' as const,
@@ -177,13 +183,37 @@ export default function Helios2035MVP() {
             character: apiResponse.character,
             timestamp: new Date().toLocaleTimeString()
           }]);
-          
-          // 最后一个回复完成后，停止打字状态
-          if (index === result.responses.length - 1) {
-            setIsTyping(false);
-          }
         }, index * 2000); // 每个回复间隔2秒
       });
+      
+      // 然后显示NPC间的交互回应，延迟更长以显示对话的层次感
+      interactionResponses.forEach((apiResponse: any, index: number) => {
+        const baseDelay = primaryResponses.length * 2000; // 等主要回应完成
+        const interactionDelay = baseDelay + (index + 1) * 3000; // 交互回应间隔3秒
+        
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            role: 'assistant' as const,
+            content: apiResponse.response,
+            character: apiResponse.character,
+            timestamp: new Date().toLocaleTimeString(),
+            interactionType: apiResponse.type,
+            target: apiResponse.target
+          }]);
+          
+          // 最后一个回复完成后，停止打字状态
+          if (index === interactionResponses.length - 1) {
+            setIsTyping(false);
+          }
+        }, interactionDelay);
+      });
+      
+      // 如果没有交互回应，在主要回应完成后停止打字状态
+      if (interactionResponses.length === 0) {
+        setTimeout(() => {
+          setIsTyping(false);
+        }, primaryResponses.length * 2000);
+      }
       
     } catch (error) {
       console.error('Error calling chat API:', error);
@@ -622,21 +652,33 @@ export default function Helios2035MVP() {
                       </span>
                     </div>
                     <div className="flex-1">
-                      <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl rounded-tl-md p-4 border border-gray-700/50 shadow-lg">
+                      <div className={`bg-gray-800/60 backdrop-blur-sm rounded-2xl rounded-tl-md p-4 border shadow-lg ${
+                        message.interactionType ? 'border-orange-500/30 bg-orange-900/10' : 'border-gray-700/50'
+                      }`}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`font-bold text-sm ${
-                            message.character === 'system' ? 'text-gray-300' :
-                            message.character === 'echo' ? 'text-violet-400' :
-                            message.character && characters2035[message.character as keyof typeof characters2035]
-                              ? characters2035[message.character as keyof typeof characters2035].accentColor
-                              : 'text-gray-300'
-                          }`}>
-                            {message.character === 'system' ? '系统引导' :
-                             message.character === 'echo' ? '回响之室' :
-                             message.character && characters2035[message.character as keyof typeof characters2035]
-                               ? characters2035[message.character as keyof typeof characters2035].name
-                               : 'AI助手'}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className={`font-bold text-sm ${
+                              message.character === 'system' ? 'text-gray-300' :
+                              message.character === 'echo' ? 'text-violet-400' :
+                              message.character && characters2035[message.character as keyof typeof characters2035]
+                                ? characters2035[message.character as keyof typeof characters2035].accentColor
+                                : 'text-gray-300'
+                            }`}>
+                              {message.character === 'system' ? '系统引导' :
+                               message.character === 'echo' ? '回响之室' :
+                               message.character && characters2035[message.character as keyof typeof characters2035]
+                                 ? characters2035[message.character as keyof typeof characters2035].name
+                                 : 'AI助手'}
+                            </span>
+                            {message.interactionType && message.target && (
+                              <span className="text-orange-400 text-xs flex items-center">
+                                <span className="mr-1">→</span>
+                                {characters2035[message.target as keyof typeof characters2035]?.name}
+                                {message.interactionType === 'interaction' && '💬'}
+                                {message.interactionType === 'chain_reaction' && '⚡'}
+                              </span>
+                            )}
+                          </div>
                           <span className="text-gray-500 text-xs">{message.timestamp}</span>
                         </div>
                         <p className="text-gray-200 leading-relaxed">{message.content}</p>
