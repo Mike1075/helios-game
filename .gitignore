@@ -98,3 +98,25 @@ pids
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Helios project specific
+database/*.sql.bak
+*.png
+!docs/**/*.png
+!assets/**/*.png
+setup-*.md
+dev-setup.md
+
+# Test files
+test_*.py
+*_test.py
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+.tmp/

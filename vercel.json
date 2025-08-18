@@ -1,22 +1,6 @@
 {
-  "builds": [
-    {
-      "src": "packages/web/next.config.js",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "packages/api/main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "packages/api/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "packages/web"
-    }
-  ]
+  "buildCommand": "cd packages/web && npm run build",
+  "outputDirectory": "packages/web/.next",
+  "installCommand": "npm install",
+  "framework": "nextjs"
 }
