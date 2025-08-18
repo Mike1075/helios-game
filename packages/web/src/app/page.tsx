@@ -16,7 +16,7 @@ export default function Home() {
           </p>
           
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-4">MVP "棱镜之心" 正在构建中...</h3>
+            <h3 className="text-lg font-semibold mb-4">MVP &quot;棱镜之心&quot; 正在构建中...</h3>
             <div className="text-sm text-gray-400">
               <p>🔮 信念系统</p>
               <p>🤖 NPC代理核心</p>
