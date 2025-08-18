@@ -72,6 +72,9 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [playerId] = useState(`player_${Date.now()}`); // 简单的玩家ID生成
   const [currentNPC, setCurrentNPC] = useState<NPCOption>(NPC_OPTIONS[0]); // 默认选择第一个NPC
+  const [showEcho, setShowEcho] = useState(false); // 控制回响之室显示
+  const [echoInput, setEchoInput] = useState(''); // 回响之室输入
+  const [isEchoLoading, setIsEchoLoading] = useState(false); // 回响之室加载状态
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 自动滚动到底部
@@ -145,6 +148,64 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  };
+
+  // 发送回响之室请求
+  const sendEchoRequest = async () => {
+    if (!echoInput.trim() || isEchoLoading) return;
+
+    setIsEchoLoading(true);
+
+    try {
+      const response = await fetch('/api/echo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          player_id: playerId,
+          confusion: echoInput.trim(),
+          context: messages.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n') // 最近3条消息作为上下文
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // 添加回响结果作为特殊消息
+      const echoMessage: Message = {
+        role: 'assistant',
+        content: `🪞 **回响之室的启示：**\n\n${data.echo}`,
+        timestamp: data.timestamp,
+        npc: {
+          id: 'echo_chamber',
+          name: '回响之室',
+          role: '内省助手'
+        }
+      };
+      
+      setMessages(prev => [...prev, echoMessage]);
+      setEchoInput('');
+      setShowEcho(false);
+
+    } catch (error) {
+      console.error('回响之室请求失败:', error);
+      
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: `🪞 **回响之室暂时无法响应：**\n\n${error instanceof Error ? error.message : '请稍后再试'}`
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsEchoLoading(false);
     }
   };
 
@@ -284,29 +345,92 @@ export default function ChatPage() {
                 disabled={isLoading}
               />
             </div>
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading}
-              className={`px-8 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 ${
-                !input.trim() || isLoading
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>发送中...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span>发送</span>
-                  <span>🚀</span>
-                </div>
-              )}
-            </button>
+            <div className="flex flex-col space-y-2">
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className={`px-8 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 ${
+                  !input.trim() || isLoading
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>发送中...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span>发送</span>
+                    <span>🚀</span>
+                  </div>
+                )}
+              </button>
+              
+              {/* 回响之室按钮 */}
+              <button
+                onClick={() => setShowEcho(true)}
+                disabled={isLoading || isEchoLoading}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all transform hover:scale-105 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl"
+                title="当你感到困惑时，回响之室能帮你理解内心的声音"
+              >
+                🪞 回响之室
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* 回响之室弹窗 */}
+        {showEcho && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl p-6 max-w-lg w-full mx-4 border border-purple-500/30">
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold text-purple-200 mb-2">🪞 回响之室</h2>
+                <p className="text-purple-300 text-sm">当你感到困惑时，让内心的声音为你解答</p>
+              </div>
+              
+              <div className="mb-4">
+                <textarea
+                  value={echoInput}
+                  onChange={(e) => setEchoInput(e.target.value)}
+                  placeholder="描述你的困惑或疑问... 例如：为什么NPC会这样反应？我不理解刚才发生的事情..."
+                  className="w-full px-4 py-3 bg-white/10 border border-purple-400/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none text-white placeholder-purple-300"
+                  rows={3}
+                  disabled={isEchoLoading}
+                />
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowEcho(false)}
+                  disabled={isEchoLoading}
+                  className="flex-1 px-4 py-2 rounded-lg text-purple-200 bg-white/10 hover:bg-white/20 transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={sendEchoRequest}
+                  disabled={!echoInput.trim() || isEchoLoading}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    !echoInput.trim() || isEchoLoading
+                      ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+                  }`}
+                >
+                  {isEchoLoading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>倾听中...</span>
+                    </div>
+                  ) : (
+                    '🔮 聆听内心'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
