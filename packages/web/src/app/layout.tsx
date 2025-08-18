@@ -13,6 +13,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
+      <head>
+        {/* 在生产环境中禁用性能监控面板 */}
+        {process.env.NODE_ENV === 'production' && (
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              [data-testid*="timing"],
+              [class*="timing"],
+              [class*="performance"],
+              [class*="interaction"],
+              [class*="devtools"] {
+                display: none !important;
+              }
+            `
+          }} />
+        )}
+      </head>
       <body>{children}</body>
     </html>
   )

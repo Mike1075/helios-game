@@ -6,7 +6,14 @@ const nextConfig = {
   experimental: {
     externalDir: true,
   },
-  // outputFileTracingRoot在Next.js 14.2.0中已过时，移除此配置
+  // 禁用开发工具和性能监控面板
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  // 禁用Web Vitals监控面板
+  devIndicators: {
+    buildActivity: false,
+  },
 }
 
 module.exports = nextConfig

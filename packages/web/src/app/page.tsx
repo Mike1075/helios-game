@@ -42,7 +42,13 @@ export default function Home() {
     if (gameStarted) {
       console.log('🌍 初始化《本我之境》世界...');
       
-      worldEngine.initializeWorld();
+      // 异步初始化世界引擎
+      worldEngine.initializeWorld().then(() => {
+        console.log('✅ 世界引擎初始化完成');
+      }).catch((error) => {
+        console.error('❌ 世界引擎初始化失败:', error);
+      });
+      
       worldEngine.startHeartbeat(120000); // 2分钟心跳，配合3分钟AI行动冷却
       
       // 订阅世界事件

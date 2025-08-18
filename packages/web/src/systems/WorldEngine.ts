@@ -73,7 +73,7 @@ export class WorldEngine {
   /**
    * 初始化世界（添加AI角色）
    */
-  initializeWorld(): void {
+  async initializeWorld(): Promise<void> {
     console.log('🎭 初始化角色...');
     
     // 添加林溪和陈浩
@@ -82,6 +82,9 @@ export class WorldEngine {
     
     this.addCharacter(linxiPack.character, linxiPack.internal_state);
     this.addCharacter(chenhaoPack.character, chenhaoPack.internal_state);
+    
+    // 同步初始状态到数据库
+    await this.syncInitialStatesToDatabase();
     
     // 发布初始环境事件
     this.publishEvent({
@@ -93,6 +96,33 @@ export class WorldEngine {
       scene_id: this.worldState.scene.id,
       is_autonomous: true
     });
+  }
+
+  /**
+   * 将初始角色状态同步到数据库
+   */
+  private async syncInitialStatesToDatabase(): Promise<void> {
+    const { updateCharacterState } = await import('../lib/supabase');
+    
+    for (const [characterId, state] of this.worldState.internal_states) {
+      const character = this.worldState.characters.get(characterId);
+      if (!character || character.type === 'human_player') continue;
+      
+      try {
+        await updateCharacterState({
+          character_id: characterId,
+          energy: state.energy,
+          focus: state.focus,
+          curiosity: state.curiosity,
+          boredom: state.boredom,
+          anxiety: state.anxiety || 0,
+          suspicion: state.suspicion || 0
+        });
+        console.log(`📊 ${character.name} 初始状态已同步到数据库`);
+      } catch (error) {
+        console.warn(`⚠️ 同步${characterId}初始状态失败:`, error);
+      }
+    }
   }
 
   /**
@@ -194,7 +224,7 @@ export class WorldEngine {
     
     try {
       // 1. 更新所有AI的内在状态
-      this.updateInternalStates(now);
+      await this.updateInternalStates(now);
       
       // 2. 检查并触发AI自主行为
       await this.processAIAutonomousBehavior(now);
@@ -214,12 +244,14 @@ export class WorldEngine {
   }
 
   /**
-   * 更新AI内在状态
+   * 更新AI内在状态 - 同步到数据库以供边缘函数使用
    */
-  private updateInternalStates(now: number): void {
-    this.worldState.internal_states.forEach((state, characterId) => {
+  private async updateInternalStates(now: number): Promise<void> {
+    const { updateCharacterState } = await import('../lib/supabase');
+    
+    for (const [characterId, state] of this.worldState.internal_states) {
       const character = this.worldState.characters.get(characterId);
-      if (!character || character.type === 'human_player') return;
+      if (!character || character.type === 'human_player') continue;
       
       const timeSinceUpdate = now - state.last_updated;
       const minutesPassed = timeSinceUpdate / (1000 * 60);
@@ -254,7 +286,22 @@ export class WorldEngine {
       this.worldState.internal_states.set(characterId, newState);
       
       console.log(`🧠 ${character.name} 状态更新: 无聊=${newState.boredom.toFixed(1)}, 能量=${newState.energy.toFixed(1)}`);
-    });
+      
+      // 同步到数据库
+      try {
+        await updateCharacterState({
+          character_id: characterId,
+          energy: newState.energy,
+          focus: newState.focus,
+          curiosity: newState.curiosity,
+          boredom: newState.boredom,
+          anxiety: newState.anxiety || 0,
+          suspicion: newState.suspicion || 0
+        });
+      } catch (error) {
+        console.warn(`⚠️ 同步${characterId}状态到数据库失败:`, error);
+      }
+    }
   }
 
   /**
