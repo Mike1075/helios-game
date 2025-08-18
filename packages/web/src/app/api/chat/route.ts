@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { routeCharacterResponse, generateEnvironmentDescription, CORE_CHARACTERS } from '@/lib/character-router';
-import { characterInstanceManager } from '@/lib/character-instance-manager';
 import { aiService } from '@/lib/ai-service';
 import { zepClient, getChatHistory, savePlayerMessage, saveAIResponse } from '@/lib/zep';
 
@@ -77,67 +76,60 @@ export async function POST(request: NextRequest) {
           action: null,
         }
       };
-    } else {
-      // 万能AI角色 - 使用全局角色实例系统
-      const character = await characterInstanceManager.getGlobalCharacter(
-        routing.character_id,
-        'moonlight_tavern'
-      );
-
-      // 获取角色记忆摘要
-      const memorySummary = characterInstanceManager.getCharacterMemorySummary(character);
+    } else if (routing.type === 'general_ai') {
+      // 智能通用AI - 根据用户需求智能响应
       
-      // 获取角色的对话历史
-      const characterHistory = await getChatHistory(character.zep_session_id, 20);
+      // 获取对话历史
+      const conversationHistory = await getChatHistory(sessionId, 10);
       
-      // 生成AI响应
-      const aiResponse = await aiService.generateCharacterResponse(
-        character.name,
-        `在月影酒馆担任${character.role_template}的角色`,
-        memorySummary,
-        playerName,
-        userMessage,
-        characterHistory,
-        'moonlight_tavern'
-      );
+      // 使用智能通用AI系统提示词
+      const systemPrompt = `你是月影酒馆的智能环境，能够根据客人的需求和情况，智能地以合适的身份回应。
 
-      // 保存交互到角色的专属Zep会话
-      await zepClient.addMessage(character.zep_session_id, {
-        role: 'user',
-        content: `${playerName}: ${userMessage}`,
-        metadata: {
-          player_name: playerName,
-          timestamp: Date.now(),
-          input_type: inputType
-        }
-      });
+场景：月影酒馆 - 一个神秘而温馨的酒馆，有着昏暗的灯光和木质的桌椅
 
-      await zepClient.addMessage(character.zep_session_id, {
-        role: 'assistant',
-        content: aiResponse,
-        metadata: {
-          character_id: character.id,
-          timestamp: Date.now()
-        }
-      });
+你的能力：
+- 能够根据客人的问题和需求，智能地决定以什么身份回应（店主、服务员、当地人、过路人等）
+- 对酒馆的设施、服务、当地情况都很了解
+- 友善、智能、适应性强
 
-      // 分析响应内容，更新角色记忆
-      await analyzeAndUpdateMemory(character, playerName, userMessage, aiResponse);
+最近的对话历史：
+${conversationHistory}
+
+回应要求：
+- 根据客人的具体需求，选择最合适的身份来回应
+- 只返回对话内容，不要包含动作描述或身份说明
+- 回应要自然、有用、符合酒馆氛围
+- 对于一般性问题（如厕所位置、饮食、住宿等），直接提供帮助
+
+现在，${playerName}对你说："${userMessage}"
+
+请自然地回应：`;
+
+      // 直接使用AI服务生成响应
+      const aiResponse = await aiService.generateResponse([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ]);
+
+      // 保存AI响应到Zep
+      await saveAIResponse(sessionId, 'general', aiResponse.content);
       
       response = {
         success: true,
         character: {
-          id: character.id,
-          name: character.name
+          id: 'general',
+          name: '月影酒馆'
         },
         routing_type: routing.type,
         routing_reasoning: routing.reasoning,
         action_package: {
-          dialogue: aiResponse,
+          dialogue: aiResponse.content,
           action: null,
-        },
-        character_memory_summary: memorySummary // 调试信息
+        }
       };
+    } else {
+      // 备用：不应该到达这里
+      throw new Error(`未知的路由类型: ${routing.type}`);
     }
     
     return NextResponse.json(response);
@@ -151,75 +143,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * 分析对话内容并更新角色记忆
- */
-async function analyzeAndUpdateMemory(
-  character: any, 
-  playerName: string, 
-  playerMessage: string, 
-  aiResponse: string
-) {
-  try {
-    // 检测债务相关的对话
-    if (playerMessage.includes('赊账') || playerMessage.includes('欠') || aiResponse.includes('账单')) {
-      // 简单的关键词检测，实际应用中可以用更复杂的NLP
-      const debtAmount = extractAmount(playerMessage + ' ' + aiResponse);
-      if (debtAmount > 0) {
-        await characterInstanceManager.updateCharacterMemory(character.id, 'debt', {
-          player: playerName,
-          amount: debtAmount,
-          item: '饮品', // 简化处理
-          date: Date.now()
-        });
-      }
-    }
-
-    // 检测订单相关的对话
-    if (playerMessage.includes('要') || playerMessage.includes('来') || playerMessage.includes('点')) {
-      await characterInstanceManager.updateCharacterMemory(character.id, 'order', {
-        player: playerName,
-        item: extractItem(playerMessage),
-        status: 'pending' as const,
-        created_at: Date.now()
-      });
-    }
-
-    // 更新客人关系
-    const currentRelation = character.memory_context.relationships[playerName] || {
-      impression: '新客人',
-      trust_level: 5,
-      interaction_count: 0,
-      last_seen: Date.now()
-    };
-
-    currentRelation.interaction_count += 1;
-    currentRelation.last_seen = Date.now();
-
-    await characterInstanceManager.updateCharacterMemory(character.id, 'relationship', {
-      player: playerName,
-      relationship: currentRelation
-    });
-
-  } catch (error) {
-    console.error('更新角色记忆失败:', error);
-  }
-}
-
-/**
- * 从文本中提取金额（简单实现）
- */
-function extractAmount(text: string): number {
-  const match = text.match(/(\d+)\s*[元块钱]/);
-  return match ? parseInt(match[1]) : 0;
-}
-
-/**
- * 从文本中提取物品（简单实现）
- */
-function extractItem(text: string): string {
-  if (text.includes('酒') || text.includes('啤酒')) return '啤酒';
-  if (text.includes('茶') || text.includes('水')) return '茶水';
-  if (text.includes('饭') || text.includes('食物')) return '食物';
-  return '饮品';
-}

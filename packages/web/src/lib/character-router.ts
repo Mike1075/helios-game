@@ -4,7 +4,7 @@
  */
 
 export interface RoutingResult {
-  type: 'core_ai' | 'universal_ai' | 'environment';
+  type: 'core_ai' | 'general_ai' | 'environment';
   character_id: string;
   character_name: string;
   reasoning: string;
@@ -36,38 +36,11 @@ export const CORE_CHARACTERS: CoreCharacter[] = [
   }
 ];
 
-// 万能AI角色模板
-export const UNIVERSAL_AI_ROLES = {
-  tavern_keeper: {
-    name: '老板',
-    description: '酒馆老板，经验丰富，见多识广',
-    triggers: ['老板', '买', '卖', '价格', '房间', '住宿', '账单', '生意'],
-    personality: '实用主义，精明但公正，对客人友好但保持商业距离'
-  },
-  bartender: {
-    name: '酒保', 
-    description: '专业的酒保，熟悉各种酒类',
-    triggers: ['酒保', '酒', '喝', '倒酒', '醉', '酒精', '饮料', '威士忌', '啤酒'],
-    personality: '专业友善，是很好的倾听者，偶尔分享人生智慧'
-  },
-  cook: {
-    name: '厨师',
-    description: '酒馆厨师，专注料理，脾气暴躁但手艺精湛', 
-    triggers: ['厨师', '饭', '菜', '食物', '饿', '烤', '炖', '料理', '美食'],
-    personality: '直率坦诚，对料理充满热情，不喜欢被打扰但乐于分享美食'
-  },
-  local_resident: {
-    name: '当地居民',
-    description: '酒馆的常客，对当地情况很了解',
-    triggers: ['居民', '当地', '这里', '消息', '传闻', '路人'],
-    personality: '健谈友善，喜欢分享当地见闻和小道消息'
-  },
-  guard: {
-    name: '守卫',
-    description: '维护酒馆秩序的守卫',
-    triggers: ['守卫', '警察', '安全', '秩序', '麻烦', '打架', '治安'],
-    personality: '严肃负责，维护秩序，对可疑行为保持警觉'
-  }
+// 智能通用AI响应配置
+export const GENERAL_AI_CONFIG = {
+  name: '月影酒馆',
+  description: '酒馆内的智能环境，能够理解并回应各种需求',
+  personality: '友善、智能、适应性强，能够根据具体情况扮演合适的角色（如店主、服务员、当地人等）来回应客人'
 };
 
 /**
@@ -103,27 +76,13 @@ export function routeCharacterResponse(userMessage: string, playerName: string):
     }
   }
   
-  // 3. 检查万能AI角色触发词
-  for (const [roleId, role] of Object.entries(UNIVERSAL_AI_ROLES)) {
-    for (const trigger of role.triggers) {
-      if (message.includes(trigger.toLowerCase())) {
-        return {
-          type: 'universal_ai',
-          character_id: roleId,
-          character_name: role.name,
-          reasoning: `检测到关键词"${trigger}"，路由到万能AI角色${role.name}`
-        };
-      }
-    }
-  }
-  
-  // 4. 默认：根据场景选择最合适的角色
-  // 在酒馆场景中，默认由老板回应新客人
+  // 3. 默认：使用智能通用AI响应
+  // 根据用户消息的内容，AI会智能地决定以什么身份回应
   return {
-    type: 'universal_ai',
-    character_id: 'tavern_keeper',
-    character_name: '老板',
-    reasoning: '默认场景回应，酒馆老板负责招待客人'
+    type: 'general_ai',
+    character_id: 'general',
+    character_name: '月影酒馆',
+    reasoning: '核心角色未被触发，使用智能通用AI根据情况回应'
   };
 }
 
@@ -189,19 +148,22 @@ export function getCharacterSystemPrompt(characterId: string, characterName: str
 - 体现紧张和隐藏秘密的特质`;
   }
   
-  // 万能AI角色的提示词
-  const universalRole = UNIVERSAL_AI_ROLES[characterId as keyof typeof UNIVERSAL_AI_ROLES];
-  if (universalRole) {
-    return `你是${universalRole.name}，${universalRole.description}。
-    
-场景：月影酒馆
-你的个性：${universalRole.personality}
+  // 智能通用AI的提示词
+  if (characterId === 'general') {
+    return `你是月影酒馆的智能环境，能够根据客人的需求和情况，智能地以合适的身份回应。
+
+场景：月影酒馆 - 一个神秘而温馨的酒馆，有着昏暗的灯光和木质的桌椅
+
+你的能力：
+- 能够根据客人的问题和需求，智能地决定以什么身份回应（店主、服务员、当地人、过路人等）
+- 对酒馆的设施、服务、当地情况都很了解
+- 友善、智能、适应性强
 
 回应要求：
-- 保持角色一致性和专业性
-- 只返回对话内容，不要包含动作描述
-- 体现你的职业特点和个性
-- 根据客人需求提供相应服务`;
+- 根据客人的具体需求，选择最合适的身份来回应
+- 只返回对话内容，不要包含动作描述或身份说明
+- 回应要自然、有用、符合酒馆氛围
+- 对于一般性问题（如厕所位置、饮食、住宿等），直接提供帮助`;
   }
   
   return `你是月影酒馆的${characterName}，请根据你的角色身份自然地回应客人。`;
