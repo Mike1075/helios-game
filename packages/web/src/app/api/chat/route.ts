@@ -1,11 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
+
+// 数据库角色接口
+interface Character {
+  id: string;
+  name: string;
+  role: string;
+  core_motivation: string;
+  is_player: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 // 初始化 DeepSeek 客户端（使用 OpenAI SDK，兼容 DeepSeek API）
 const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
 });
+
+// 初始化 Supabase 客户端
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_KEY || ''
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,10 +36,11 @@ export async function POST(request: NextRequest) {
     
     // 解析请求体
     const body = await request.json();
-    const { messages, player_id } = body;
+    const { messages, player_id, npc_id = 'general_ai' } = body;
     
     console.log('收到消息:', messages);
     console.log('玩家ID:', player_id);
+    console.log('NPC ID:', npc_id);
 
     // 校验 messages 参数
     if (!messages || !Array.isArray(messages)) {
@@ -48,18 +68,57 @@ export async function POST(request: NextRequest) {
       }
     }
 
-              // 检查 API Key
-          if (!process.env.DEEPSEEK_API_KEY) {
-            return NextResponse.json(
-              { error: '服务器配置错误: 缺少 DEEPSEEK_API_KEY' },
-              { status: 500 }
-            );
-          }
+    // 检查 API Key
+    if (!process.env.DEEPSEEK_API_KEY) {
+      return NextResponse.json(
+        { error: '服务器配置错误: 缺少 DEEPSEEK_API_KEY' },
+        { status: 500 }
+      );
+    }
+
+    // 从数据库获取NPC配置（通过tags匹配前端ID）
+    const { data: npcConfig, error: npcError } = await supabase
+      .from('characters')
+      .select('*')
+      .contains('tags', [npc_id])
+      .eq('is_player', false)
+      .single();
+
+    if (npcError || !npcConfig) {
+      return NextResponse.json(
+        { error: `未找到NPC: ${npc_id}` },
+        { status: 400 }
+      );
+    }
+
+    // 生成角色系统提示词（符合v4.1"本我之镜"理念）
+    const systemPrompt = `你是${npcConfig.name}，一个${npcConfig.role}。
+
+核心动机：${npcConfig.core_motivation}
+
+游戏设定：
+- 这是一个港口城市的酒馆，各种旅客和本地人在此聚集
+- 你正在与一位刚来到这个城市的年轻旅者对话
+- 请保持角色的一致性，根据你的核心动机和性格做出回应
+- 回应要简洁但有个性，通常不超过2-3句话
+- 你的行为会被观察，用于分析你的真实信念模式
+
+行为指导：
+- 忠于你的核心动机，但不要过于直白地表达
+- 通过具体的态度和选择来展现你的价值观
+- 对不同类型的人和事件会有不同的反应
+- 可以有情感波动，但要符合角色设定`;
+
+    // 构建完整的消息数组，包含系统提示
+    const fullMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ];
 
     // 调用真实的 DeepSeek API
     const completion = await deepseek.chat.completions.create({
       model: 'deepseek-chat',  // 使用 DeepSeek 模型
-      messages: messages,
+      messages: fullMessages,
       max_tokens: 500,
       temperature: 0.7,
     });
@@ -67,11 +126,47 @@ export async function POST(request: NextRequest) {
     // 提取回复内容
     const reply = completion.choices[0]?.message?.content || '抱歉，我无法生成回复。';
 
-    // 构建回复对象，包含玩家ID（如果提供了）
-    const response: any = { reply };
+    // 记录对话到数据库
+    const userMessage = messages[messages.length - 1];
+    
+    // 记录用户消息
+    if (player_id && userMessage) {
+      await supabase.from('agent_logs').insert({
+        character_id: player_id, // 玩家ID作为角色ID
+        scene_id: 'tavern', // 目前固定为酒馆场景
+        action_type: 'chat',
+        input: userMessage.content,
+        output: null, // 用户消息没有输出
+        metadata: { npc_target: npc_id }
+      });
+    }
+    
+    // 记录NPC回复
+    await supabase.from('agent_logs').insert({
+      character_id: npcConfig.id,
+      scene_id: 'tavern',
+      action_type: 'chat',
+      input: userMessage?.content || '',
+      output: reply,
+      metadata: { 
+        player_id: player_id,
+        model_used: 'deepseek-chat'
+      }
+    });
+
+    // 构建回复对象
+    const response: any = { 
+      reply,
+      npc: {
+        id: npcConfig.id,
+        name: npcConfig.name,
+        role: npcConfig.role
+      },
+      timestamp: new Date().toISOString()
+    };
+    
     if (player_id) {
       response.player_id = player_id;
-      response.timestamp = new Date().toISOString();
     }
 
     return NextResponse.json(response);
