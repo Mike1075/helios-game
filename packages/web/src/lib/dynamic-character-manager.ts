@@ -206,7 +206,12 @@ class DynamicCharacterManager {
         metadata: {
           character_creation: true,
           created_character: character.id,
-          created_by_context: context.userMessage
+          created_by_context: context.userMessage,
+          character_data: {
+            name: character.name,
+            role: character.role,
+            appearance: character.appearance
+          }
         }
       });
 

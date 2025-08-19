@@ -147,7 +147,7 @@ export default function Home() {
         setRealtimeEvents(prev => [...prev, { ...event, type: 'scene' }]);
         
         // 添加到主事件流
-        setEvents(prev => [...prev, {
+        const gameEvent = {
           id: event.id,
           type: event.event_type,
           character_id: event.character_id,
@@ -155,7 +155,27 @@ export default function Home() {
           timestamp: event.timestamp,
           scene_id: event.scene_id,
           is_autonomous: event.is_autonomous
-        }]);
+        };
+        setEvents(prev => [...prev, gameEvent]);
+        
+        // 检查是否是角色创建事件
+        if (event.metadata?.character_creation && event.metadata?.character_data) {
+          const newChar = {
+            id: event.metadata.created_character,
+            name: event.metadata.character_data.name,
+            role: event.metadata.character_data.role,
+            appearance: event.metadata.character_data.appearance
+          };
+          
+          console.log('🆕 检测到新角色创建:', newChar);
+          setActiveCharacters(prev => {
+            // 避免重复添加
+            if (prev.find(char => char.id === newChar.id)) {
+              return prev;
+            }
+            return [...prev, newChar];
+          });
+        }
       });
       
       const unsubscribePlayer = realtimeManager.onPlayerEvent((event) => {
@@ -831,6 +851,18 @@ export default function Home() {
                   >
                     @陈浩
                   </button>
+                  
+                  {/* 动态角色按钮 */}
+                  {activeCharacters.map(char => (
+                    <button
+                      key={char.id}
+                      onClick={() => setInputMessage(prev => prev + `@${char.name} `)}
+                      className="px-2 py-1 bg-green-600/50 hover:bg-green-600 text-white rounded text-xs transition-colors"
+                      title={`${char.role} - ${char.name}`}
+                    >
+                      @{char.name}
+                    </button>
+                  ))}
                   
                   {/* 通用测试按钮 */}
                   <button
