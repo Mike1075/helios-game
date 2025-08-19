@@ -18,6 +18,60 @@ The MVP goal is "Prism Heart" - a minimal world with 2 core NPCs and 1 simple sc
 - **AI Gateway**: Vercel AI Gateway (mandatory for all LLM calls)
 - **Intelligent Backend**: Supabase Edge Functions + Database Triggers
 
+## Architecture Redesign v5.0 (Unified Game State Management)
+
+**Problem Solved**: Eliminated 401/400 database errors and character management chaos by implementing a single-point-of-entry architecture.
+
+### Core Design Principles
+1. **Single Data Source**: All frontend operations go through one unified API
+2. **Character Hierarchy**: Core NPCs (林溪, 陈浩) → Dynamic NPCs → System Roles
+3. **Unified Authentication**: Frontend never directly accesses Supabase
+4. **Event-Driven Updates**: Real-time character and state synchronization
+
+### New Architecture Flow
+```
+Frontend (page.tsx)
+    ↓ Single HTTP Request
+Unified Game API (/api/game-state)
+    ↓ Internal Service Calls  
+Game State Manager (supabase-admin)
+    ↓ Authenticated Database Access
+Supabase Database
+```
+
+### Key Components
+
+**1. Unified Game State API** (`/api/game-state`)
+- Single endpoint for all game operations: chat, character management, events
+- Replaces scattered API calls: `/api/chat`, `/api/echo`, `/api/trigger-dissonance`
+- Internal routing based on action type
+
+**2. Character Management System**
+```typescript
+interface Character {
+  id: string;
+  name: string;
+  type: 'core_npc' | 'dynamic_npc' | 'system';
+  source: 'predefined' | 'ai_created';
+}
+
+// Core Characters (Always Present)
+const CORE_CHARACTERS = [
+  { id: 'linxi', name: '林溪', type: 'core_npc' },
+  { id: 'chenhao', name: '陈浩', type: 'core_npc' }
+];
+```
+
+**3. Game State Manager**
+- Centralized service layer handling all database operations
+- Uses `supabase-admin` with SERVICE_KEY for all database access
+- Manages character creation, event logging, belief systems
+
+**4. Frontend Simplification**
+- Single `gameState` object containing all game data
+- No direct Supabase client usage in frontend
+- Event-driven UI updates through unified API responses
+
 ## Monorepo Structure
 
 ```

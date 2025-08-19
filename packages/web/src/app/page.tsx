@@ -462,7 +462,7 @@ export default function Home() {
     }
   };
 
-  // 发送消息
+  // 发送消息 - 使用统一游戏状态API
   const sendMessage = async () => {
     if (!inputMessage.trim() || !sessionId || sendingMessage) return;
     
@@ -483,21 +483,26 @@ export default function Home() {
       worldEngine.publishEvent(playerEvent);
       setInputMessage('');
       
-      // 通过API路由处理完整的消息流程（包含Zep保存和AI响应）
-      const response = await fetch('/api/chat', {
+      // 🎯 统一API调用 - 替换所有分散的API
+      const response = await fetch('/api/game-state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userMessage: inputMessage,
-          playerName: playerName,
-          sessionId: sessionId,
-          inputType: inputMode
+          action: 'chat',
+          payload: {
+            userMessage: inputMessage,
+            playerName: playerName,
+            sessionId: sessionId,
+            inputType: inputMode
+          }
         })
       });
       
+      console.log('🎮 统一API响应状态:', response.status);
+      
       if (response.ok) {
         const result = await response.json();
-        console.log('📨 API响应:', result);
+        console.log('📨 统一API响应:', result);
         
         // 记录AI调用到会话控制
         await fetch('/api/session-control', {
@@ -509,28 +514,33 @@ export default function Home() {
           })
         });
         
-        if (result.success && result.action_package) {
+        if (result.success) {
           const characterId = result.character?.id || 'ai';
           
-          // 处理新角色创建事件
-          if (result.new_character_created && result.character_event) {
-            console.log('📢 处理新角色创建事件:', result.character_event);
+          // 处理新角色创建
+          if (result.new_character_created) {
+            console.log('📢 新角色创建:', result.character);
             setAllCharacters(prev => {
               // 检查角色是否已存在
-              if (prev.find(char => char.id === result.character_event.id)) {
+              if (prev.find(char => char.id === result.character.id)) {
                 return prev;
               }
-              return [...prev, result.character_event];
+              return [...prev, {
+                id: result.character.id,
+                name: result.character.name,
+                role: result.character.role,
+                type: 'dynamic_npc'
+              }];
             });
           }
           
-          // 发布AI响应事件（排除内心想法，只显示对话和行动）
-          if (result.action_package.dialogue) {
+          // 发布AI响应事件
+          if (result.response) {
             const dialogueEvent = {
               id: `ai_response_${Date.now()}`,
               type: 'dialogue' as const,
               character_id: characterId,
-              content: result.action_package.dialogue,
+              content: result.response,
               timestamp: Date.now(),
               scene_id: 'moonlight_tavern'
             };
@@ -538,24 +548,8 @@ export default function Home() {
             worldEngine.publishEvent(dialogueEvent);
           }
           
-          if (result.action_package.action) {
-            const actionEvent = {
-              id: `ai_action_${Date.now()}`,
-              type: 'action' as const,
-              character_id: characterId,
-              content: result.action_package.action,
-              timestamp: Date.now(),
-              scene_id: 'moonlight_tavern'
-            };
-            
-            worldEngine.publishEvent(actionEvent);
-          }
-          
-          // 注意：internal_thought 被故意排除，不会发布到事件流中
-          
-          console.log('✅ AI响应处理完成:', {
+          console.log('✅ 统一API处理完成:', {
             character: result.character?.name,
-            routing: result.routing_type,
             new_character: result.new_character_created || false
           });
         }
@@ -626,39 +620,36 @@ export default function Home() {
     }
     
     try {
-      const requestData = {
-        playerId: 'player',
-        playerName: playerName,
-        triggerContext: '你在月影酒馆中的种种经历，让你感到内心深处某种微妙的冲突正在觉醒...',
-        triggerType: 'test'
-      };
+      console.log('📤 通过统一API触发回响之室...');
       
-      console.log('📤 发送请求:', requestData);
-      
-      const response = await fetch('/api/trigger-dissonance', {
+      const response = await fetch('/api/game-state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify({
+          action: 'trigger_chamber',
+          payload: {
+            playerId: 'player',
+            playerName: playerName,
+            triggerContext: '你在月影酒馆中的种种经历，让你感到内心深处某种微妙的冲突正在觉醒...'
+          }
+        })
       });
 
       console.log('📥 API响应状态:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✨ 认知失调触发成功:', result);
+        console.log('✨ 回响之室触发成功:', result);
         
-        // 检查是否需要手动触发回响之室（作为备用）
-        if (result.chamber_invitation) {
-          console.log('🔮 准备打开回响之室...');
-          // 延迟一下，让数据库事件先处理
-          setTimeout(() => {
-            setChamberOpen(true);
-          }, 1000);
+        // 直接打开回响之室
+        if (result.success) {
+          console.log('🔮 打开回响之室...');
+          setChamberOpen(true);
         }
       } else {
         const errorText = await response.text();
-        console.error('❌ 认知失调触发失败:', response.status, errorText);
-        alert(`认知失调触发失败: ${response.status}`);
+        console.error('❌ 回响之室触发失败:', response.status, errorText);
+        alert(`回响之室触发失败: ${response.status}`);
       }
     } catch (error) {
       console.error('❌ 认知失调触发异常:', error);
