@@ -46,8 +46,9 @@ export default function Home() {
 
   // 初始化世界引擎和被动观察体验
   useEffect(() => {
+    console.log('🔍 [DEBUG] useEffect触发，gameStarted:', gameStarted, 'playerName:', playerName);
     if (gameStarted) {
-      console.log('🌍 初始化《本我之境》世界...');
+      console.log('🌍 [DEBUG v2.0] 游戏已开始，初始化《本我之境》世界...');
       
       let passiveObserverCleanup: (() => void) | null = null;
       
@@ -212,6 +213,7 @@ export default function Home() {
 
   // 开始游戏
   const startGame = async () => {
+    console.log('🎮 [DEBUG] startGame被调用，playerName:', playerName);
     if (!playerName.trim()) return;
     
     setLoading(true);
@@ -230,10 +232,13 @@ export default function Home() {
       
       const { sessionId: newSessionId } = await initResponse.json();
       setSessionId(newSessionId);
+      console.log('🔄 [DEBUG] 会话ID设置完成:', newSessionId);
       
       // 添加玩家到世界
       worldEngine.addPlayer(playerName);
+      console.log('🎯 [DEBUG] 即将设置gameStarted为true...');
       setGameStarted(true);
+      console.log('🎯 [DEBUG] gameStarted已设置为true');
       
       // 发布玩家进入事件
       const enterEvent = {
