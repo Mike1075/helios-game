@@ -177,6 +177,13 @@ export default function Helios2035MVP() {
 
       const result = await response.json();
       
+      console.log('🎯 Chat API response received:', {
+        responsesCount: result.responses?.length || 0,
+        responses: result.responses,
+        mode: result.mode,
+        hasConflict: !!result.conflict
+      });
+      
       // 检查是否触发了哲学冲突
       if (result.conflict && result.conflict.intensity > 0.7) {
         // 添加冲突提示消息
@@ -192,6 +199,18 @@ export default function Helios2035MVP() {
           character: 'conflict_system',
           timestamp: new Date().toLocaleTimeString()
         }]);
+      }
+      
+      // 检查是否收到了回应
+      if (!result.responses || result.responses.length === 0) {
+        console.error('❌ No responses received from chat API - AI Gateway may not be configured');
+        setMessages(prev => [...prev, {
+          role: 'assistant' as const,
+          content: '⚠️ AI Gateway未配置或响应失败，请检查环境变量 AI_GATEWAY_API_KEY',
+          character: 'system',
+          timestamp: new Date().toLocaleTimeString()
+        }]);
+        return;
       }
       
       // 分类处理不同类型的回应

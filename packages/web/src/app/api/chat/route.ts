@@ -765,6 +765,12 @@ ${updatedContext}
         }
       }
       
+      console.log('🚀 Returning group chat responses:', {
+        responseCount: groupResponses.length,
+        characters: groupResponses.map(r => r.character),
+        firstResponse: groupResponses[0]?.response?.substring(0, 50) + '...'
+      });
+      
       return NextResponse.json({
         responses: groupResponses,
         mode: 'group',
