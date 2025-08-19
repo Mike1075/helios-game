@@ -64,6 +64,8 @@ export class RealtimeSubscriptionManager {
    * 接收AI自主行动、环境变化、其他玩家行动
    */
   subscribeToScene(sceneId: string): void {
+    console.log('📡 重新启用实时订阅 - 场景事件');
+    
     if (!this.isRealtimeEnabled) {
       console.warn('⚠️ 实时功能已禁用，跳过场景订阅');
       return;
@@ -110,6 +112,8 @@ export class RealtimeSubscriptionManager {
    * 接收认知失调触发、信念更新、回响之室邀请等
    */
   subscribeToPlayer(playerId: string): void {
+    console.log('📡 重新启用实时订阅 - 玩家事件');
+    
     const channelName = `player_status:${playerId}`;
     
     if (this.channels.has(channelName)) {
@@ -151,6 +155,8 @@ export class RealtimeSubscriptionManager {
    * 接收AI角色的内在状态变化（能量、情绪等）
    */
   subscribeToCharacterStates(): void {
+    console.log('📡 重新启用实时订阅 - 角色状态');
+    
     const channelName = 'character_states:all';
     
     if (this.channels.has(channelName)) {

@@ -129,6 +129,8 @@ class PassiveObserverManager {
    * 获取角色状态描述
    */
   private async getCharacterStatus(characterId: string): Promise<string> {
+    console.log('📊 重新启用角色状态查询');
+    
     try {
       const { data, error } = await supabase
         .from('character_states')
@@ -199,6 +201,7 @@ class PassiveObserverManager {
 
   /**
    * 根据角色ID获取角色名称
+   * 根据用户反馈，动态角色应显示职能而不是个人姓名
    */
   private getCharacterName(characterId: string): string {
     const nameMap: Record<string, string> = {
@@ -211,7 +214,8 @@ class PassiveObserverManager {
     // 检查是否是动态角色
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
-      return dynamicChar.name;
+      // 用户要求显示职能而不是姓名（如"服务员"而不是"阿若"）
+      return dynamicChar.role;
     }
 
     return nameMap[characterId] || characterId;

@@ -33,6 +33,7 @@ class ZepClient {
 
   constructor() {
     this.apiKey = process.env.ZEP_API_KEY!;
+    // 使用正确的Zep Cloud端点
     this.endpoint = process.env.ZEP_ENDPOINT || 'https://api.getzep.com';
   }
 
@@ -58,86 +59,106 @@ class ZepClient {
   }
 
   /**
-   * 创建新的对话会话（v3中是thread）
+   * 创建新的对话会话（使用最新的API结构）
    */
   async createSession(sessionId: string, userId: string, metadata?: any) {
     try {
-      // v3: 先创建用户（如果不存在）
-      await this.makeRequest('/api/v3/users', {
+      // 尝试v2 API结构
+      return await this.makeRequest('/api/v2/sessions', {
         method: 'POST',
         body: JSON.stringify({
-          user_id: userId,
-          metadata: metadata || {}
-        }),
-      }).catch(() => {
-        // 用户可能已存在，忽略错误
-      });
-
-      // v3: 创建thread
-      return await this.makeRequest('/api/v3/threads', {
-        method: 'POST',
-        body: JSON.stringify({
-          thread_id: sessionId,
+          session_id: sessionId,
           user_id: userId,
           metadata: metadata || {}
         }),
       });
     } catch (error) {
       console.error('创建Zep会话失败:', error);
-      return null;
+      // 如果v2失败，尝试v1
+      try {
+        return await this.makeRequest('/api/v1/sessions', {
+          method: 'POST',
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_id: userId,
+            metadata: metadata || {}
+          }),
+        });
+      } catch (v1Error) {
+        console.error('v1也失败:', v1Error);
+        return null;
+      }
     }
   }
 
   /**
-   * 添加消息到会话（v3中是thread）
+   * 添加消息到会话
    */
   async addMessage(sessionId: string, message: ZepMessage) {
     try {
-      // v3: 使用新的消息格式
-      const v3Message = {
-        name: message.metadata?.character_id === 'player' 
-          ? message.metadata?.player_name || 'Player'
-          : message.metadata?.character_id || 'Assistant',
-        content: message.content,
-        role: message.role,
-        metadata: message.metadata
-      };
-
-      return await this.makeRequest(`/api/v3/threads/${sessionId}/messages`, {
+      // 尝试v2格式
+      return await this.makeRequest(`/api/v2/sessions/${sessionId}/memory`, {
         method: 'POST',
         body: JSON.stringify({
-          messages: [v3Message]
+          messages: [message]
         }),
       });
     } catch (error) {
-      console.error('添加Zep消息失败:', error);
-      return null;
+      console.error('v2添加消息失败:', error);
+      // 回退到v1格式
+      try {
+        return await this.makeRequest(`/api/v1/sessions/${sessionId}/memory`, {
+          method: 'POST',
+          body: JSON.stringify({
+            messages: [message]
+          }),
+        });
+      } catch (v1Error) {
+        console.error('v1添加消息也失败:', v1Error);
+        return null;
+      }
     }
   }
 
   /**
-   * 获取会话的对话历史（v3中是thread）
+   * 获取会话的对话历史
    */
   async getSessionHistory(sessionId: string, limit = 10) {
     try {
-      const response = await this.makeRequest(`/api/v3/threads/${sessionId}/messages?limit=${limit}`);
+      // 尝试v2 API
+      const response = await this.makeRequest(`/api/v2/sessions/${sessionId}/memory?limit=${limit}`);
       return response.messages || [];
     } catch (error) {
-      console.error('获取Zep历史失败:', error);
-      return [];
+      console.error('v2获取历史失败:', error);
+      // 回退到v1
+      try {
+        const response = await this.makeRequest(`/api/v1/sessions/${sessionId}/memory?limit=${limit}`);
+        return response.messages || [];
+      } catch (v1Error) {
+        console.error('v1获取历史也失败:', v1Error);
+        return [];
+      }
     }
   }
 
   /**
-   * 获取会话的记忆摘要（v3中是user context）
+   * 获取会话的记忆摘要
    */
   async getSessionSummary(sessionId: string) {
     try {
-      const response = await this.makeRequest(`/api/v3/threads/${sessionId}/context?mode=summary`);
+      // 尝试v2 API
+      const response = await this.makeRequest(`/api/v2/sessions/${sessionId}/summary`);
       return response.summary || response.content || '';
     } catch (error) {
-      console.error('获取Zep摘要失败:', error);
-      return '';
+      console.error('v2获取摘要失败:', error);
+      // 回退到v1
+      try {
+        const response = await this.makeRequest(`/api/v1/sessions/${sessionId}/summary`);
+        return response.summary || response.content || '';
+      } catch (v1Error) {
+        console.error('v1获取摘要也失败:', v1Error);
+        return '';
+      }
     }
   }
 
