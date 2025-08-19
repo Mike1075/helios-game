@@ -56,12 +56,19 @@ export class RealtimeSubscriptionManager {
   private sceneEventCallbacks: Set<SceneEventCallback> = new Set();
   private playerEventCallbacks: Set<PlayerEventCallback> = new Set();
   private characterStateCallbacks: Set<CharacterStateCallback> = new Set();
+  private isRealtimeEnabled = true; // 实时功能启用状态
+  private connectionErrors = 0; // 连接错误计数
 
   /**
    * 订阅场景事件频道
    * 接收AI自主行动、环境变化、其他玩家行动
    */
   subscribeToScene(sceneId: string): void {
+    if (!this.isRealtimeEnabled) {
+      console.warn('⚠️ 实时功能已禁用，跳过场景订阅');
+      return;
+    }
+
     const channelName = `scene_events:${sceneId}`;
     
     if (this.channels.has(channelName)) {
@@ -89,6 +96,10 @@ export class RealtimeSubscriptionManager {
       )
       .subscribe((status) => {
         console.log(`📡 场景订阅状态 [${sceneId}]:`, status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`❌ 场景订阅失败 [${sceneId}]: WebSocket连接错误`);
+          this.handleConnectionError(channelName);
+        }
       });
 
     this.channels.set(channelName, channel);
@@ -126,6 +137,10 @@ export class RealtimeSubscriptionManager {
       )
       .subscribe((status) => {
         console.log(`👤 玩家订阅状态 [${playerId}]:`, status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`❌ 玩家订阅失败 [${playerId}]: WebSocket连接错误`);
+          this.handleConnectionError(channelName);
+        }
       });
 
     this.channels.set(channelName, channel);
@@ -162,9 +177,35 @@ export class RealtimeSubscriptionManager {
       )
       .subscribe((status) => {
         console.log(`🤖 角色状态订阅状态:`, status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error(`❌ 角色状态订阅失败: WebSocket连接错误`);
+          this.handleConnectionError(channelName);
+        }
       });
 
     this.channels.set(channelName, channel);
+  }
+
+  /**
+   * 处理连接错误
+   */
+  private handleConnectionError(channelName: string): void {
+    this.connectionErrors++;
+    this.channels.delete(channelName);
+    
+    // 如果错误过多，禁用实时功能
+    if (this.connectionErrors >= 3) {
+      console.warn('⚠️ 连接错误过多，禁用实时功能。游戏将在基础模式下运行。');
+      this.isRealtimeEnabled = false;
+      this.cleanup(); // 清理所有现有连接
+    }
+  }
+
+  /**
+   * 检查实时功能是否可用
+   */
+  isRealtimeAvailable(): boolean {
+    return this.isRealtimeEnabled;
   }
 
   /**

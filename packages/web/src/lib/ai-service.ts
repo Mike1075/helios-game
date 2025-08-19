@@ -31,28 +31,15 @@ class AIService {
   }
 
   /**
-   * 调用AI模型生成响应
+   * 调用AI模型生成响应 - 仅使用Vercel AI Gateway
    */
   async generateResponse(
     messages: AIMessage[],
-    model: string = 'alibaba/qwen-2.5-14b-instruct',
+    model: string = 'alibaba/qwen-3-235b',
     temperature: number = 0.8,
     maxTokens: number = 1000
   ): Promise<AIResponse> {
-    try {
-      // 方案1: 如果有Vercel AI Gateway配置，使用Gateway
-      const gatewayResponse = await this.callVercelGateway(messages, model, temperature, maxTokens);
-      if (gatewayResponse) {
-        return gatewayResponse;
-      }
-
-      // 方案2: 回退到Gemini API
-      return await this.callGeminiAPI(messages, temperature, maxTokens);
-      
-    } catch (error) {
-      console.error('AI调用失败:', error);
-      throw new Error(`AI服务不可用: ${error instanceof Error ? error.message : '未知错误'}`);
-    }
+    return await this.callVercelGateway(messages, model, temperature, maxTokens);
   }
 
   /**
@@ -63,14 +50,15 @@ class AIService {
     model: string,
     temperature: number,
     maxTokens: number
-  ): Promise<AIResponse | null> {
-    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY;
-    const gatewayUrl = process.env.VERCEL_AI_GATEWAY_URL;
+  ): Promise<AIResponse> {
+    const apiKey = process.env.AI_GATEWAY_API_KEY;
+    const gatewayUrl = 'https://ai-gateway.vercel.sh/v1';
     
-    if (!apiKey || !gatewayUrl) {
-      console.log('🔄 Vercel AI Gateway未配置，尝试其他方式...');
-      return null;
+    if (!apiKey) {
+      throw new Error('❌ Vercel AI Gateway API Key 未配置！请设置 AI_GATEWAY_API_KEY 环境变量。');
     }
+
+    console.log('🚀 调用 Vercel AI Gateway:', { model, gatewayUrl });
 
     try {
       const response = await fetch(`${gatewayUrl}/chat/completions`, {
@@ -88,19 +76,30 @@ class AIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Gateway响应错误: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Gateway响应错误:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`Gateway响应错误: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
       
+      console.log('✅ Vercel AI Gateway 调用成功:', {
+        model: data.model,
+        usage: data.usage
+      });
+
       return {
         content: data.choices[0].message.content,
         model: data.model,
         usage: data.usage
       };
     } catch (error) {
-      console.error('Vercel AI Gateway调用失败:', error);
-      return null;
+      console.error('❌ Vercel AI Gateway调用失败:', error);
+      throw error;
     }
   }
 
@@ -218,7 +217,7 @@ ${conversationHistory}
     ];
 
     try {
-      const response = await this.generateResponse(messages, 'alibaba/qwen-2.5-14b-instruct', 0.8, 500);
+      const response = await this.generateResponse(messages, 'alibaba/qwen-3-235b', 0.8, 500);
       return response.content.trim();
     } catch (error) {
       console.error(`生成${characterName}响应失败:`, error);

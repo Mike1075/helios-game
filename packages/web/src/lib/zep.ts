@@ -42,13 +42,15 @@ class ZepClient {
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
+        'Api-Key': this.apiKey,  // v3使用Api-Key而不是Bearer
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Zep API详细错误: ${response.status} ${response.statusText}`, errorText);
       throw new Error(`Zep API错误: ${response.status} ${response.statusText}`);
     }
 
@@ -56,14 +58,26 @@ class ZepClient {
   }
 
   /**
-   * 创建新的对话会话
+   * 创建新的对话会话（v3中是thread）
    */
   async createSession(sessionId: string, userId: string, metadata?: any) {
     try {
-      return await this.makeRequest('/api/v1/sessions', {
+      // v3: 先创建用户（如果不存在）
+      await this.makeRequest('/api/v3/users', {
         method: 'POST',
         body: JSON.stringify({
-          session_id: sessionId,
+          user_id: userId,
+          metadata: metadata || {}
+        }),
+      }).catch(() => {
+        // 用户可能已存在，忽略错误
+      });
+
+      // v3: 创建thread
+      return await this.makeRequest('/api/v3/threads', {
+        method: 'POST',
+        body: JSON.stringify({
+          thread_id: sessionId,
           user_id: userId,
           metadata: metadata || {}
         }),
@@ -75,14 +89,24 @@ class ZepClient {
   }
 
   /**
-   * 添加消息到会话
+   * 添加消息到会话（v3中是thread）
    */
   async addMessage(sessionId: string, message: ZepMessage) {
     try {
-      return await this.makeRequest(`/api/v1/sessions/${sessionId}/memory`, {
+      // v3: 使用新的消息格式
+      const v3Message = {
+        name: message.metadata?.character_id === 'player' 
+          ? message.metadata?.player_name || 'Player'
+          : message.metadata?.character_id || 'Assistant',
+        content: message.content,
+        role: message.role,
+        metadata: message.metadata
+      };
+
+      return await this.makeRequest(`/api/v3/threads/${sessionId}/messages`, {
         method: 'POST',
         body: JSON.stringify({
-          messages: [message]
+          messages: [v3Message]
         }),
       });
     } catch (error) {
@@ -92,11 +116,11 @@ class ZepClient {
   }
 
   /**
-   * 获取会话的对话历史
+   * 获取会话的对话历史（v3中是thread）
    */
   async getSessionHistory(sessionId: string, limit = 10) {
     try {
-      const response = await this.makeRequest(`/api/v1/sessions/${sessionId}/memory?limit=${limit}`);
+      const response = await this.makeRequest(`/api/v3/threads/${sessionId}/messages?limit=${limit}`);
       return response.messages || [];
     } catch (error) {
       console.error('获取Zep历史失败:', error);
@@ -105,12 +129,12 @@ class ZepClient {
   }
 
   /**
-   * 获取会话的记忆摘要
+   * 获取会话的记忆摘要（v3中是user context）
    */
   async getSessionSummary(sessionId: string) {
     try {
-      const response = await this.makeRequest(`/api/v1/sessions/${sessionId}/summary`);
-      return response.summary || '';
+      const response = await this.makeRequest(`/api/v3/threads/${sessionId}/context?mode=summary`);
+      return response.summary || response.content || '';
     } catch (error) {
       console.error('获取Zep摘要失败:', error);
       return '';
@@ -118,17 +142,12 @@ class ZepClient {
   }
 
   /**
-   * 搜索相关记忆
+   * 搜索相关记忆（v3可能不直接支持，暂时禁用）
    */
   async searchMemory(sessionId: string, query: string, limit = 5) {
     try {
-      return await this.makeRequest(`/api/v1/sessions/${sessionId}/search`, {
-        method: 'POST',
-        body: JSON.stringify({
-          text: query,
-          limit: limit
-        }),
-      });
+      console.warn('Zep v3暂不支持直接搜索，返回空结果');
+      return [];
     } catch (error) {
       console.error('搜索Zep记忆失败:', error);
       return [];
@@ -231,7 +250,7 @@ export async function getChatHistory(sessionId: string, limit = 10): Promise<str
 }
 
 /**
- * 初始化玩家会话
+ * 初始化玩家会话（v3中是thread）
  */
 export async function initializePlayerSession(playerName: string): Promise<string> {
   const sessionId = getPlayerSessionId(playerName);
@@ -243,10 +262,10 @@ export async function initializePlayerSession(playerName: string): Promise<strin
       created_at: new Date().toISOString()
     });
 
-    console.log('✅ Zep会话创建成功:', sessionId);
+    console.log('✅ Zep v3 Thread创建成功:', sessionId);
     return sessionId;
   } catch (error) {
-    console.error('❌ Zep会话创建失败:', error);
+    console.error('❌ Zep v3 Thread创建失败:', error);
     // 即使Zep失败，也返回sessionId用于本地存储
     return sessionId;
   }

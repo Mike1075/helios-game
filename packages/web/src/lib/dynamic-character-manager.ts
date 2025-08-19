@@ -86,6 +86,59 @@ class DynamicCharacterManager {
   }
 
   /**
+   * 智能分析并创建最合适的角色
+   */
+  async createCharacterByAnalysis(context: CharacterCreationContext): Promise<DynamicCharacter | null> {
+    try {
+      const analysisPrompt = `分析用户消息，确定在月影酒馆中最适合回应的角色类型：
+
+用户消息："${context.userMessage}"
+玩家：${context.playerName}
+场景：月影酒馆 - 一个神秘而温馨的酒馆
+现有角色：${context.existingCharacters.length > 0 ? context.existingCharacters.join(', ') : '无'}
+
+请分析用户的需求和语境，返回JSON格式：
+{
+  "characterType": "老板/酒保/服务员/厨师/当地人/过路人/神秘客人",
+  "reasoning": "选择这个角色的原因",
+  "urgency": 1-5
+}
+
+分析考虑：
+1. 用户的具体需求（如询问信息、寻求服务、闲聊等）
+2. 最能提供帮助或互动的角色类型
+3. 酒馆场景的合理性
+4. 如果是一般性问候，选择最合适的接待角色
+
+现在分析：`;
+
+      const response = await aiService.generateResponse([
+        { role: 'system', content: '你是专业的角色需求分析师，善于根据用户需求匹配最合适的NPC角色。' },
+        { role: 'user', content: analysisPrompt }
+      ]);
+
+      // 解析AI响应
+      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        // 如果AI分析失败，使用默认的酒保
+        console.warn('AI角色分析失败，使用默认酒保');
+        return await this.createCharacterForContext(context, '酒保');
+      }
+
+      const analysis = JSON.parse(jsonMatch[0]);
+      console.log('🤖 AI角色分析结果:', analysis);
+
+      // 使用分析结果创建角色
+      return await this.createCharacterForContext(context, analysis.characterType);
+
+    } catch (error) {
+      console.error('智能角色分析失败:', error);
+      // 回退到默认酒保
+      return await this.createCharacterForContext(context, '酒保');
+    }
+  }
+
+  /**
    * 根据上下文创建新角色
    */
   async createCharacterForContext(context: CharacterCreationContext, characterType: string): Promise<DynamicCharacter | null> {

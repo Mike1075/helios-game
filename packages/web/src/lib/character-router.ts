@@ -109,7 +109,24 @@ export function routeCharacterResponse(userMessage: string, playerName: string, 
     }
   }
   
-  // 4. 默认：使用智能通用AI响应
+  // 4. 检查是否需要智能创建角色（首次互动或特殊需求）
+  const shouldAnalyzeForNewCharacter = (
+    existingDynamicCharacters.length === 0 || // 没有现有动态角色
+    message.includes('找') || message.includes('需要') || message.includes('想要') // 明确表达需求
+  );
+  
+  if (shouldAnalyzeForNewCharacter) {
+    return {
+      type: 'dynamic_ai',
+      character_id: 'pending_creation', 
+      character_name: '待创建',
+      reasoning: `用户消息"${userMessage}"需要AI分析来确定合适的角色类型`,
+      needsNewCharacter: true,
+      characterType: 'ai_analyze' // 使用AI分析而不是固定类型
+    };
+  }
+  
+  // 5. 默认：使用智能通用AI响应
   return {
     type: 'general_ai',
     character_id: 'general',

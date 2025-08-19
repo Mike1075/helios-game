@@ -6,45 +6,47 @@ import { memoryManager } from '@/lib/supabase-memory';
 import { dynamicCharacterManager } from '@/lib/dynamic-character-manager';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let requestId = Math.random().toString(36).substr(2, 9);
+  
   try {
     const { userMessage, playerName, sessionId, inputType } = await request.json();
     
-    console.log(`💬 收到${inputType}消息:`, {
+    console.log(`💬 [${requestId}] 收到${inputType}消息:`, {
       playerName,
       sessionId,
-      message: userMessage
+      message: userMessage,
+      timestamp: new Date().toISOString()
     });
 
     // 检查环境变量
-    const hasAIKey = !!process.env.VERCEL_AI_GATEWAY_API_KEY;
-    const hasAIUrl = !!process.env.VERCEL_AI_GATEWAY_URL;
-    console.log('🔑 环境变量检查:', { hasAIKey, hasAIUrl });
+    const hasAIKey = !!process.env.AI_GATEWAY_API_KEY;
+    console.log('🔑 环境变量检查:', { hasAIKey });
 
-    if (!hasAIKey || !hasAIUrl) {
-      console.error('❌ AI Gateway环境变量缺失!', {
-        VERCEL_AI_GATEWAY_API_KEY: hasAIKey ? '✅存在' : '❌缺失',
-        VERCEL_AI_GATEWAY_URL: hasAIUrl ? '✅存在' : '❌缺失'
+    if (!hasAIKey) {
+      console.error('❌ Vercel AI Gateway API Key 缺失!', {
+        AI_GATEWAY_API_KEY: hasAIKey ? '✅存在' : '❌缺失'
       });
       return NextResponse.json(
         { 
-          error: 'AI Gateway环境变量未配置',
+          error: 'Vercel AI Gateway API Key 未配置',
           details: {
-            VERCEL_AI_GATEWAY_API_KEY: hasAIKey ? '已配置' : '缺失',
-            VERCEL_AI_GATEWAY_URL: hasAIUrl ? '已配置' : '缺失'
+            AI_GATEWAY_API_KEY: hasAIKey ? '已配置' : '缺失',
+            message: '请在 Vercel 仪表板中创建 AI Gateway API Key 并设置到环境变量中'
           }
         },
         { status: 500 }
       );
     }
 
-    console.log('✅ 环境变量检查通过，开始AI调用');
+    console.log(`✅ [${requestId}] 环境变量检查通过，开始AI调用`);
     
     // 1. 获取现有动态角色信息
     const existingDynamicCharacters = dynamicCharacterManager.getActiveCharacters().map(char => char.name);
     
     // 2. 智能路由分析
     const routing = routeCharacterResponse(userMessage, playerName, existingDynamicCharacters);
-    console.log('🎯 路由结果:', routing);
+    console.log(`🎯 [${requestId}] 路由结果:`, routing);
     
     // 3. 保存玩家消息到Zep
     await savePlayerMessage(sessionId, playerName, userMessage, inputType === 'action' ? 'action' : 'dialogue');
@@ -78,7 +80,7 @@ ${conversationHistory}
 请自然地回应：`;
 
       // 直接使用AI服务生成响应
-      console.log('🤖 调用AI服务，模型:', 'alibaba/qwen-2.5-14b-instruct');
+      console.log('🤖 调用AI服务，模型:', 'alibaba/qwen-3-235b');
       const aiResponse = await aiService.generateResponse([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage }
@@ -165,13 +167,25 @@ ${conversationHistory}
       // 动态角色创建和响应
       
       if (routing.needsNewCharacter && routing.characterType) {
-        // 创建新角色
-        const newCharacter = await dynamicCharacterManager.createCharacterForContext({
-          userMessage,
-          sceneId: 'moonlight_tavern',
-          existingCharacters: existingDynamicCharacters,
-          playerName
-        }, routing.characterType);
+        let newCharacter;
+        
+        if (routing.characterType === 'ai_analyze') {
+          // 使用AI智能分析来创建最合适的角色
+          newCharacter = await dynamicCharacterManager.createCharacterByAnalysis({
+            userMessage,
+            sceneId: 'moonlight_tavern',
+            existingCharacters: existingDynamicCharacters,
+            playerName
+          });
+        } else {
+          // 创建指定类型的角色
+          newCharacter = await dynamicCharacterManager.createCharacterForContext({
+            userMessage,
+            sceneId: 'moonlight_tavern',
+            existingCharacters: existingDynamicCharacters,
+            playerName
+          }, routing.characterType);
+        }
 
         if (newCharacter) {
           // 获取对话历史
@@ -222,10 +236,35 @@ ${conversationHistory}
       throw new Error(`未知的路由类型: ${routing.type}`);
     }
     
+    const endTime = Date.now();
+    console.log(`✅ [${requestId}] 聊天处理完成, 耗时: ${endTime - startTime}ms`);
+    
     return NextResponse.json(response);
     
   } catch (error) {
-    console.error('❌ 聊天处理失败:', error);
+    const endTime = Date.now();
+    console.error(`❌ [${requestId}] 聊天处理失败 (耗时: ${endTime - startTime}ms):`, error);
+    
+    // 提供优雅的fallback响应
+    const fallbackResponse = {
+      success: true,
+      character: {
+        id: 'system',
+        name: '系统'
+      },
+      routing_type: 'fallback',
+      routing_reasoning: '系统暂时不可用，提供基础回应',
+      action_package: {
+        dialogue: '抱歉，我需要一点时间整理思绪。请稍后再试，或者换个话题。',
+        action: null,
+      }
+    };
+    
+    // 如果是严重错误，返回错误状态；否则返回fallback
+    if (error instanceof Error && error.message.includes('API')) {
+      return NextResponse.json(fallbackResponse);
+    }
+    
     return NextResponse.json(
       { error: `聊天处理失败: ${error instanceof Error ? error.message : '未知错误'}` },
       { status: 500 }
