@@ -1,5 +1,3 @@
-import { openai } from '@ai-sdk/openai';
-
 // 检查OpenAI是否配置
 export function isOpenAIConfigured(): boolean {
   return !!process.env.OPENAI_API_KEY;
@@ -12,6 +10,3 @@ export function getOpenAIStatus() {
     keyLength: process.env.OPENAI_API_KEY?.length || 0,
   };
 }
-
-// 导出配置好的OpenAI provider
-export { openai };
