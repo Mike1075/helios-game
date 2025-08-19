@@ -681,8 +681,8 @@ export default function Home() {
     }
     
     // 最后备用：检查旧的characters数组
-    const character = characters.find(c => c.id === characterId);
-    return character?.name || characterId;
+    const oldCharacter = characters.find(c => c.id === characterId);
+    return oldCharacter?.name || characterId;
   };
 
   // 获取事件样式
