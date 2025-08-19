@@ -1,43 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
-import { aiGateway, isAIGatewayConfigured } from '@/lib/ai-gateway';
+import { openai, isOpenAIConfigured } from '@/lib/ai-gateway';
 
-// 模型选择和调用函数
-async function callAIWithFallback(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
-  const models = [
-    'alibaba/qwen-3-235b',      // 先尝试Qwen 235B
-    'openai/gpt-4o-mini',       // 备用OpenAI  
-    'google/gemini-2.5-flash'   // 备用Gemini Flash
-  ];
+// OpenAI调用函数
+async function callOpenAI(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
+  const result = await streamText({
+    model: openai('gpt-4o-mini'),
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ],
+    temperature: 0.8,
+  });
   
-  for (const modelName of models) {
-    try {
-      const result = await streamText({
-        model: aiGateway(modelName),
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
-        ],
-        temperature: 0.8,
-      });
-      
-      let fullResponse = '';
-      for await (const chunk of result.textStream) {
-        fullResponse += chunk;
-      }
-      
-      console.log(`${purpose} - Successfully used model:`, modelName, '- length:', fullResponse.length);
-      return fullResponse;
-    } catch (modelError) {
-      console.log(`${purpose} - Failed to use model:`, modelName, modelError);
-      if (modelName === models[models.length - 1]) {
-        throw modelError;
-      }
-    }
+  let fullResponse = '';
+  for await (const chunk of result.textStream) {
+    fullResponse += chunk;
   }
   
-  throw new Error('All models failed');
+  console.log(`${purpose} - OpenAI response length:`, fullResponse.length);
+  return fullResponse;
 }
 
 // NPC角色定义 - 与主API保持一致
@@ -220,17 +203,17 @@ ${selectedTopic}
     let initiatorResponse: string;
     
     // 使用AI生成自主对话，尝试多个模型
-    const gatewayConfigured = isAIGatewayConfigured();
-    if (gatewayConfigured) {
+    const openAIConfigured = isOpenAIConfigured();
+    if (openAIConfigured) {
       try {
-        initiatorResponse = await callAIWithFallback(
+        initiatorResponse = await callOpenAI(
           initiator.systemPrompt + conversationContext,
           '请自然地开始一个新话题',
           `NPC自主对话 (${initiatorId})`
         );
         console.log('NPC自主对话生成成功:', initiatorId);
       } catch (error) {
-        console.error('AI Gateway error for NPC chat:', error);
+        console.error('OpenAI error for NPC chat:', error);
         initiatorResponse = selectedTopic;
       }
     } else {
@@ -261,9 +244,9 @@ ${initiator.name}: ${initiatorResponse}
 - 保持朋友间轻松对话的感觉
 - 体现你的角色个性`;
 
-        if (gatewayConfigured) {
+        if (openAIConfigured) {
           try {
-            const response = await callAIWithFallback(
+            const response = await callOpenAI(
               npc.systemPrompt + responseContext,
               '请自然地回应这个话题',
               `NPC跟进回应 (${npcId})`
@@ -277,7 +260,7 @@ ${initiator.name}: ${initiatorResponse}
             
             console.log('NPC跟进回应生成成功:', npcId);
           } catch (error) {
-            console.error('AI Gateway error for follow-up:', error);
+            console.error('OpenAI error for follow-up:', error);
           }
         }
       }

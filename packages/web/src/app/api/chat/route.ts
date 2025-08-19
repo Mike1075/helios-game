@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
-import { aiGateway, isAIGatewayConfigured, getAIGatewayStatus } from '@/lib/ai-gateway';
+import { openai, isOpenAIConfigured, getOpenAIStatus } from '@/lib/ai-gateway';
 
 // Type definitions
 interface Relationship {
@@ -429,41 +429,24 @@ function generateConflictResponse(character: string, conflict: BeliefConflict, u
   return conflictTypeResponses[Math.floor(Math.random() * conflictTypeResponses.length)];
 }
 
-// 模型选择和调用函数
-async function callAIWithFallback(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
-  const models = [
-    'alibaba/qwen-3-235b',      // 先尝试Qwen 235B
-    'openai/gpt-4o-mini',       // 备用OpenAI  
-    'google/gemini-2.5-flash'   // 备用Gemini Flash
-  ];
+// OpenAI模型调用函数
+async function callOpenAI(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
+  const result = await streamText({
+    model: openai('gpt-4o-mini'),
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ],
+    temperature: 0.8,
+  });
   
-  for (const modelName of models) {
-    try {
-      const result = await streamText({
-        model: aiGateway(modelName),
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
-        ],
-        temperature: 0.8,
-      });
-      
-      let fullResponse = '';
-      for await (const chunk of result.textStream) {
-        fullResponse += chunk;
-      }
-      
-      console.log(`${purpose} - Successfully used model:`, modelName, '- length:', fullResponse.length);
-      return fullResponse;
-    } catch (modelError) {
-      console.log(`${purpose} - Failed to use model:`, modelName, modelError);
-      if (modelName === models[models.length - 1]) {
-        throw modelError;
-      }
-    }
+  let fullResponse = '';
+  for await (const chunk of result.textStream) {
+    fullResponse += chunk;
   }
   
-  throw new Error('All models failed');
+  console.log(`${purpose} - OpenAI response length:`, fullResponse.length);
+  return fullResponse;
 }
 
 // 生成有上下文感知的回应
@@ -588,19 +571,19 @@ export async function POST(req: NextRequest) {
         { role: 'user' as const, content: message }
       ];
 
-      // 使用Vercel AI Gateway生成回应
-      const gatewayConfigured = isAIGatewayConfigured();
-      const gatewayStatus = getAIGatewayStatus();
-      console.log('Single chat AI Gateway check:', {
-        ...gatewayStatus,
+      // 使用OpenAI生成回应
+      const openAIConfigured = isOpenAIConfigured();
+      const openAIStatus = getOpenAIStatus();
+      console.log('Single chat OpenAI check:', {
+        ...openAIStatus,
         character
       });
       
-      if (gatewayConfigured) {
-        console.log('Using AI Gateway for single chat:', character);
+      if (openAIConfigured) {
+        console.log('Using OpenAI for single chat:', character);
         try {
           const result = await streamText({
-            model: aiGateway('openai/gpt-4o-mini'),
+            model: openai('gpt-4o-mini'),
             messages: messages,
             temperature: 0.7,
           });
@@ -610,13 +593,13 @@ export async function POST(req: NextRequest) {
             fullResponse += chunk;
           }
           
-          console.log('AI Gateway single chat response successful for', character, '- length:', fullResponse.length);
+          console.log('✅ Real AI response successful for', character, '- length:', fullResponse.length);
           return NextResponse.json({
             response: fullResponse,
             character: character
           });
         } catch (error) {
-          console.error('AI Gateway single chat error for', character, ':', error);
+          console.error('OpenAI single chat error for', character, ':', error);
           const contextualResponse = generateContextualResponse(character, message, '');
           return NextResponse.json({
             response: contextualResponse,
@@ -624,7 +607,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        console.log('No VERCEL_AI_GATEWAY_API_KEY found, using contextual response for single chat:', character);
+        console.log('No OPENAI_API_KEY found, using contextual response for single chat:', character);
         const contextualResponse = generateContextualResponse(character, message, '');
         return NextResponse.json({
           response: contextualResponse,
@@ -678,29 +661,29 @@ ${fullConversationContext}
       let firstResponse: string;
       
       // 生成第一个回应
-      const gatewayConfigured = isAIGatewayConfigured();
-      const gatewayStatus = getAIGatewayStatus();
-      console.log('Group chat AI Gateway check:', {
-        ...gatewayStatus,
+      const openAIConfigured = isOpenAIConfigured();
+      const openAIStatus = getOpenAIStatus();
+      console.log('Group chat OpenAI check:', {
+        ...openAIStatus,
         firstResponder,
         messageLength: message.length
       });
       
-      if (gatewayConfigured) {
+      if (openAIConfigured) {
         try {
-          console.log('Using AI Gateway for group chat first responder:', firstResponder);
-          firstResponse = await callAIWithFallback(
+          console.log('Using OpenAI for group chat first responder:', firstResponder);
+          firstResponse = await callOpenAI(
             firstNPC.systemPrompt + firstGroupContext,
             `请回应: ${message}`,
             `First responder (${firstResponder})`
           );
         } catch (error) {
-          console.error('AI Gateway error for first responder:', error);
+          console.error('OpenAI error for first responder:', error);
           console.log('Falling back to mock response for first responder:', firstResponder);
           firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
         }
       } else {
-        console.log('No VERCEL_AI_GATEWAY_API_KEY found, using contextual mock response for first responder:', firstResponder);
+        console.log('No OPENAI_API_KEY found, using contextual mock response for first responder:', firstResponder);
         firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
       }
       
@@ -743,21 +726,21 @@ ${updatedContext}
 
           let response: string;
           
-          if (gatewayConfigured) {
+          if (openAIConfigured) {
             try {
-              console.log('Using AI Gateway for follow-up response:', charId);
-              response = await callAIWithFallback(
+              console.log('Using OpenAI for follow-up response:', charId);
+              response = await callOpenAI(
                 currentNPC.systemPrompt + responseContext,
                 `请自然地参与这个对话`,
                 `Follow-up (${charId})`
               );
             } catch (error) {
-              console.error('AI Gateway error for follow-up:', error);
+              console.error('OpenAI error for follow-up:', error);
               console.log('Falling back to contextual response for follow-up:', charId);
               response = generateContextualResponse(charId, message, updatedContext);
             }
           } else {
-            console.log('No VERCEL_AI_GATEWAY_API_KEY found, using contextual response for follow-up:', charId);
+            console.log('No OPENAI_API_KEY found, using contextual response for follow-up:', charId);
             response = generateContextualResponse(charId, message, updatedContext);
           }
           
