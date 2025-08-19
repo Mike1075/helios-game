@@ -585,7 +585,7 @@ export default function Helios2035MVP() {
                   <div key={character.id} className="group transition-all duration-300">
                     <div className={`flex flex-col items-center space-y-2 p-3 rounded-xl backdrop-blur-sm border transition-all ${character.bgGradient} ${character.borderColor} hover:shadow-lg`}>
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg`}>
-                        <span className="text-white font-bold">{character.name[0]}</span>
+                        <span className="text-white font-bold text-xs">{character.name}</span>
                       </div>
                       <div className="text-center">
                         <div className={`${character.accentColor} font-bold text-xs`}>{character.name}</div>
@@ -611,7 +611,7 @@ export default function Helios2035MVP() {
                 <div key={character.id} className="group transition-all duration-300">
                   <div className={`flex items-center space-x-3 px-4 py-2 rounded-xl backdrop-blur-sm border transition-all ${character.bgGradient} hover:shadow-lg ring-1 ring-white/10`}>
                     <div className={`relative w-10 h-10 rounded-xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg`}>
-                      <span className="text-white font-bold text-sm">{character.name[0]}</span>
+                      <span className="text-white font-bold text-sm">{character.name}</span>
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-900 animate-pulse"></div>
                     </div>
                     <div className="text-left">
@@ -652,7 +652,7 @@ export default function Helios2035MVP() {
                   </div>
                 ) : (
                   <div className="flex items-start space-x-4">
-                    <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
+                    <div className={`relative w-16 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
                       message.character === 'system' ? 'bg-gradient-to-br from-gray-500 to-gray-600' :
                       message.character === 'echo' ? 'bg-gradient-to-br from-violet-500 to-purple-600' :
                       message.character === 'conflict_system' ? 'bg-gradient-to-br from-red-500 to-orange-600' :
@@ -665,7 +665,7 @@ export default function Helios2035MVP() {
                          message.character === 'echo' ? '🔮' :
                          message.character === 'conflict_system' ? '🔥' :
                          message.character && characters2035[message.character as keyof typeof characters2035] 
-                           ? characters2035[message.character as keyof typeof characters2035].name[0]
+                           ? characters2035[message.character as keyof typeof characters2035].name
                            : 'AI'}
                       </span>
                     </div>
