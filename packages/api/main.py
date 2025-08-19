@@ -6,12 +6,12 @@ import os
 import json
 import time
 import asyncio
+import requests
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import create_client, Client
-# Zep相关导入暂时注释，使用简单内存存储
-# from zep_python import Memory, Message as ZepMessage, User, Session
+# Zep记忆引擎 - 使用HTTP API
 
 # 加载环境变量
 load_dotenv()
@@ -38,8 +38,9 @@ supabase: Client = create_client(
     os.getenv("SUPABASE_SERVICE_KEY")
 )
 
-# 暂时禁用Zep，使用简单的内存存储
-# zep_client = None  # 稍后实现
+# Zep API 配置
+ZEP_API_KEY = os.getenv("ZEP_API_KEY")
+ZEP_API_URL = os.getenv("ZEP_API_URL")
 
 # 数据模型
 class ChatRequest(BaseModel):
@@ -138,43 +139,159 @@ NPCS_CONFIG = {
     }
 }
 
-# 简单的内存存储，替代Zep
-conversation_store = {}
-
-# 辅助函数
+# Zep API 辅助函数
 async def ensure_user_exists(user_id: str):
-    """确保用户存在（简化版）"""
-    # 简化实现，只是确保用户在我们的内存store中
-    pass
-
-async def get_conversation_history(session_id: str, limit: int = 10):
-    """从内存获取对话历史"""
+    """确保Zep中存在用户"""
+    if not ZEP_API_KEY or not ZEP_API_URL:
+        print("Zep API配置缺失，跳过用户创建")
+        return
+    
     try:
-        if session_id in conversation_store:
-            history = conversation_store[session_id][-limit:]
-            return history
-        return []
-    except Exception as e:
-        print(f"获取对话历史失败: {e}")
-        return []
-
-async def save_conversation_to_memory(session_id: str, user_message: str, assistant_message: str):
-    """保存对话到内存"""
-    try:
-        if session_id not in conversation_store:
-            conversation_store[session_id] = []
+        # Zep Cloud API 使用 Api-Key 认证格式（当密钥以 z_ 开头时）
+        headers = {
+            "Authorization": f"Api-Key {ZEP_API_KEY}",
+            "Content-Type": "application/json"
+        }
         
-        conversation_store[session_id].extend([
-            {"role": "user", "content": user_message},
-            {"role": "assistant", "content": assistant_message}
-        ])
+        user_data = {
+            "user_id": user_id,
+            "email": f"{user_id}@helios.game",
+            "first_name": f"Player_{user_id[:8]}",
+            "last_name": "Helios"
+        }
         
-        # 保持最近20条记录
-        if len(conversation_store[session_id]) > 20:
-            conversation_store[session_id] = conversation_store[session_id][-20:]
+        response = requests.post(
+            f"{ZEP_API_URL}/api/v2/users",
+            headers=headers,
+            json=user_data,
+            timeout=10
+        )
+        
+        if response.status_code in [200, 201, 409]:  # 409表示用户已存在
+            print(f"Zep用户 {user_id} 已确保存在")
+        else:
+            print(f"创建Zep用户失败: {response.status_code} - {response.text}")
             
     except Exception as e:
-        print(f"保存对话失败: {e}")
+        print(f"确保Zep用户存在失败: {e}")
+
+async def get_conversation_history(session_id: str, limit: int = 10):
+    """从Zep获取对话历史"""
+    if not ZEP_API_KEY or not ZEP_API_URL:
+        print("Zep API配置缺失，返回空历史")
+        return []
+        
+    try:
+        # Zep Cloud API 使用 Api-Key 认证格式
+        headers = {
+            "Authorization": f"Api-Key {ZEP_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            f"{ZEP_API_URL}/api/v2/threads/{session_id}/messages",
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            messages = []
+            
+            # 解析Zep返回的消息格式
+            if "messages" in data:
+                for msg in data["messages"][-limit:]:  # 获取最近的消息
+                    messages.append({
+                        "role": msg.get("role", "user"),
+                        "content": msg.get("content", "")
+                    })
+            
+            print(f"从Zep获取到 {len(messages)} 条历史消息")
+            return messages
+        else:
+            print(f"获取Zep对话历史失败: {response.status_code}")
+            return []
+            
+    except Exception as e:
+        print(f"获取Zep对话历史失败: {e}")
+        return []
+
+async def ensure_thread_exists(thread_id: str, user_id: str):
+    """确保Zep中存在会话线程"""
+    if not ZEP_API_KEY or not ZEP_API_URL:
+        return
+        
+    try:
+        # Zep Cloud API 使用 Api-Key 认证格式
+        headers = {
+            "Authorization": f"Api-Key {ZEP_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        thread_data = {
+            "thread_id": thread_id,
+            "user_id": user_id
+        }
+        
+        response = requests.post(
+            f"{ZEP_API_URL}/api/v2/threads",
+            headers=headers,
+            json=thread_data,
+            timeout=10
+        )
+        
+        if response.status_code in [200, 201, 409]:
+            print(f"Zep线程 {thread_id} 已确保存在")
+        else:
+            print(f"创建Zep线程失败: {response.status_code} - {response.text}")
+            
+    except Exception as e:
+        print(f"确保Zep线程存在失败: {e}")
+
+async def save_conversation_to_memory(session_id: str, user_message: str, assistant_message: str):
+    """保存对话到Zep"""
+    if not ZEP_API_KEY or not ZEP_API_URL:
+        print("Zep API配置缺失，跳过保存")
+        return
+        
+    try:
+        # Zep Cloud API 使用 Api-Key 认证格式
+        headers = {
+            "Authorization": f"Api-Key {ZEP_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        # 构建消息数据
+        messages = [
+            {
+                "role": "user",
+                "content": user_message
+            },
+            {
+                "role": "assistant", 
+                "content": assistant_message
+            }
+        ]
+        
+        message_data = {
+            "thread_id": session_id,
+            "messages": messages
+        }
+        
+        response = requests.post(
+            f"{ZEP_API_URL}/api/v2/threads/{session_id}/messages",
+            headers=headers,
+            json=message_data,
+            timeout=10
+        )
+        
+        if response.status_code in [200, 201]:
+            print(f"成功保存对话到Zep线程 {session_id}")
+        else:
+            print(f"保存到Zep失败: {response.status_code} - {response.text}")
+            
+    except Exception as e:
+        print(f"保存对话到Zep失败: {e}")
 
 async def save_to_supabase(table: str, data: Dict):
     """保存数据到Supabase"""
@@ -406,8 +523,9 @@ async def chat_with_npc(request: ChatRequest):
         npc = NPCS_CONFIG[request.npc_id]
         session_id = f"{request.player_id}_{request.npc_id}"
         
-        # 2. 确保用户在Zep中存在
+        # 2. 确保用户和线程在Zep中存在
         await ensure_user_exists(request.player_id)
+        await ensure_thread_exists(session_id, request.player_id)
         
         # 3. 获取对话历史
         conversation_history = await get_conversation_history(session_id)
