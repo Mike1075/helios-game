@@ -253,7 +253,8 @@ async def chat_with_npc(request: ChatRequest):
             "action_type": "dialogue",
             "input": request.message,
             "output": response_text,
-            "session_id": session_id
+            "session_id": session_id,
+            "belief_influenced": True
         }
         
         # 尝试保存到Supabase
