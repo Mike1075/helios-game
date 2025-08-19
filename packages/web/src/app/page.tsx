@@ -20,6 +20,12 @@ interface NPC {
 
 const NPCS: NPC[] = [
   {
+    id: 'auto',
+    name: '🎯 智能选择',
+    role: '自动模式',
+    description: 'AI会根据你的话题自动选择最合适的NPC来回应'
+  },
+  {
     id: 'guard_alvin',
     name: '艾尔文',
     role: '城卫兵',
@@ -49,7 +55,7 @@ export default function Home() {
     }
   ])
   const [input, setInput] = useState('')
-  const [selectedNpc, setSelectedNpc] = useState<string>('guard_alvin')
+  const [selectedNpc, setSelectedNpc] = useState<string>('auto')
   const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`)
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -86,7 +92,7 @@ export default function Home() {
         body: JSON.stringify({
           player_id: playerId,
           message: input,
-          npc_id: selectedNpc,
+          npc_id: selectedNpc === 'auto' ? 'auto' : selectedNpc,
           scene_id: 'tavern'
         })
       })
@@ -262,7 +268,7 @@ export default function Home() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={`对${NPCS.find(n => n.id === selectedNpc)?.name}说些什么...`}
+                  placeholder={selectedNpc === 'auto' ? '说些什么，AI会帮你找到最合适的聊天对象...' : `对${NPCS.find(n => n.id === selectedNpc)?.name}说些什么...`}
                   className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   disabled={isLoading}
                 />

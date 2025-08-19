@@ -45,7 +45,7 @@ supabase: Client = create_client(
 class ChatRequest(BaseModel):
     player_id: str
     message: str
-    npc_id: Optional[str] = None
+    npc_id: Optional[str] = "auto"  # 默认为auto，自动选择NPC
     scene_id: str = "tavern"
 
 class EchoRequest(BaseModel):
@@ -192,6 +192,47 @@ async def call_tongyi_llm(system_prompt: str, user_message: str, model: str = "q
         # 返回fallback响应
         return f"*系统繁忙，请稍后再试* (错误: {str(e)})"
 
+async def select_responding_npc(user_message: str, available_npcs: list) -> str:
+    """基于用户消息内容智能选择最合适的NPC来响应"""
+    try:
+        # 构建NPC选择提示词
+        npc_descriptions = []
+        for npc_id, npc_data in available_npcs:
+            npc_descriptions.append(f"- {npc_id}: {npc_data['name']}({npc_data['role']}) - {npc_data['core_motivation']}")
+        
+        selection_prompt = f"""
+你是一个智能对话路由器，负责分析用户消息并选择最合适的NPC来响应。
+
+可选的NPC角色：
+{chr(10).join(npc_descriptions)}
+
+用户消息："{user_message}"
+
+请基于以下原则选择最合适的NPC：
+1. 消息内容与NPC的角色职责最相关
+2. NPC的性格特点最适合回应这类话题
+3. NPC的核心动机与消息主题最匹配
+
+请只返回NPC的ID（如：guard_alvin），不要包含其他内容。
+"""
+        
+        selected_npc = await call_tongyi_llm(selection_prompt, user_message)
+        selected_npc = selected_npc.strip()
+        
+        # 验证选择是否有效
+        valid_npc_ids = [npc_id for npc_id, _ in available_npcs]
+        if selected_npc in valid_npc_ids:
+            return selected_npc
+        else:
+            # 如果AI返回无效选择，默认选择第一个NPC
+            print(f"AI选择了无效的NPC: {selected_npc}，使用默认选择")
+            return valid_npc_ids[0]
+            
+    except Exception as e:
+        print(f"NPC选择失败: {e}")
+        # 出错时返回第一个可用的NPC
+        return available_npcs[0][0]
+
 @app.get("/")
 async def root():
     return {"message": "Helios Agent Core is running", "version": "0.1.0"}
@@ -204,7 +245,14 @@ async def health_check():
 async def chat_with_npc(request: ChatRequest):
     """Agent Core - 处理玩家与NPC的对话"""
     try:
-        # 1. 验证NPC存在
+        # 1. 如果没有指定NPC或指定了auto，则自动选择
+        if not request.npc_id or request.npc_id == "auto":
+            available_npcs = [(npc_id, npc_data) for npc_id, npc_data in NPCS_CONFIG.items()]
+            selected_npc_id = await select_responding_npc(request.message, available_npcs)
+            request.npc_id = selected_npc_id
+            print(f"🎯 AI选择了NPC: {selected_npc_id}")
+        
+        # 2. 验证NPC存在
         if request.npc_id not in NPCS_CONFIG:
             request.npc_id = "guard_alvin"
         
