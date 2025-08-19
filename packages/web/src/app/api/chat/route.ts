@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { generateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
 // Type definitions
 interface Relationship {
@@ -480,23 +482,34 @@ export async function POST(req: NextRequest) {
         { role: 'user' as const, content: message }
       ];
 
-      // 在本地开发环境中使用模拟响应
-      if (!process.env.VERCEL_AI_GATEWAY_URL) {
+      // 使用真实的AI模型生成回应
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const { text } = await generateText({
+            model: openai('gpt-4o-mini'),
+            messages: messages,
+            temperature: 0.7,
+          });
+          
+          return NextResponse.json({
+            response: text,
+            character: character
+          });
+        } catch (error) {
+          console.error('AI API error:', error);
+          const mockResponse = mockLLMCall(npc.systemPrompt, message);
+          return NextResponse.json({
+            response: mockResponse,
+            character: character
+          });
+        }
+      } else {
         const mockResponse = mockLLMCall(npc.systemPrompt, message);
         return NextResponse.json({
           response: mockResponse,
           character: character
         });
       }
-
-      // TODO: 集成 Vercel AI Gateway
-      // const response = await callVercelAIGateway(messages);
-      
-      const mockResponse = mockLLMCall(npc.systemPrompt, message);
-      return NextResponse.json({
-        response: mockResponse,
-        character: character
-      });
     }
     
     // 群聊模式
@@ -536,11 +549,24 @@ export async function POST(req: NextRequest) {
           const groupContext = `\n\n你正在参与一个三人群聊，其他两位是${responseOrder.filter(c => c !== charId).map(c => characters[c as keyof typeof characters].name).join('和')}。请用你独特的视角回应，但保持与群聊的连贯性。话题类型：${topicType}`;
           const contextualPrompt = npc.systemPrompt + groupContext;
 
-          // 在本地开发环境中使用模拟响应
-          if (!process.env.VERCEL_AI_GATEWAY_URL) {
-            response = mockLLMCall(contextualPrompt, message);
+          // 使用真实的AI模型生成回应
+          if (process.env.OPENAI_API_KEY) {
+            try {
+              const { text } = await generateText({
+                model: openai('gpt-4o-mini'),
+                messages: [
+                  { role: 'system', content: contextualPrompt },
+                  { role: 'user', content: message }
+                ],
+                temperature: 0.7,
+              });
+              
+              response = text;
+            } catch (error) {
+              console.error('AI API error:', error);
+              response = mockLLMCall(contextualPrompt, message);
+            }
           } else {
-            // TODO: 集成 Vercel AI Gateway
             response = mockLLMCall(contextualPrompt, message);
           }
         }

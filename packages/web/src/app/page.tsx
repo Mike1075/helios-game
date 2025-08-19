@@ -573,7 +573,7 @@ export default function Helios2035MVP() {
         </header>
 
         {/* 2035年AI意识体状态栏 */}
-        <div className="p-6 border-b border-gray-700/30 bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
+        <div className="p-4 border-b border-gray-700/30 bg-gradient-to-r from-gray-900/50 to-gray-800/50 backdrop-blur-sm">
           {!groupChatActive ? (
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-300 mb-4">港口酒馆·意识共振场</h2>
@@ -606,18 +606,17 @@ export default function Helios2035MVP() {
               <p className="text-gray-500 text-sm mt-3">开始与三位AI进行深度哲学对话</p>
             </div>
           ) : (
-            <div className="flex justify-center space-x-4">
+            <div className="flex justify-center space-x-3">
               {Object.values(characters2035).map((character) => (
                 <div key={character.id} className="group transition-all duration-300">
-                  <div className={`flex flex-col items-center space-y-3 p-4 rounded-2xl backdrop-blur-sm border transition-all ${character.bgGradient} hover:shadow-lg ring-2 ring-white/20`}>
-                    <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg`}>
-                      <span className="text-white font-bold text-lg">{character.name[0]}</span>
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-gray-900 animate-pulse"></div>
+                  <div className={`flex items-center space-x-3 px-4 py-2 rounded-xl backdrop-blur-sm border transition-all ${character.bgGradient} hover:shadow-lg ring-1 ring-white/10`}>
+                    <div className={`relative w-10 h-10 rounded-xl bg-gradient-to-br from-${character.color}-400 via-${character.color}-500 to-${character.color}-600 flex items-center justify-center shadow-lg`}>
+                      <span className="text-white font-bold text-sm">{character.name[0]}</span>
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-900 animate-pulse"></div>
                     </div>
-                    <div className="text-center space-y-1">
+                    <div className="text-left">
                       <div className={`${character.accentColor} font-bold text-sm`}>{character.name}</div>
-                      <div className="text-gray-400 text-xs">{character.subtitle}</div>
-                      <div className="text-green-400 text-xs">● 已连接</div>
+                      <div className="text-green-400 text-xs">● 在线</div>
                     </div>
                   </div>
                 </div>
