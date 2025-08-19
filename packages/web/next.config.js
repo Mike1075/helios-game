@@ -10,6 +10,14 @@ const nextConfig = {
       },
     ]
   },
+  // 增加服务器端超时时间
+  serverRuntimeConfig: {
+    timeout: 30000, // 30秒超时
+  },
+  // 增加API路由超时
+  experimental: {
+    proxyTimeout: 30000, // 30秒代理超时
+  },
 }
 
 module.exports = nextConfig

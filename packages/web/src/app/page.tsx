@@ -58,6 +58,7 @@ export default function Home() {
   const [selectedNpc, setSelectedNpc] = useState<string>('auto')
   const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`)
   const [isLoading, setIsLoading] = useState(false)
+  const [isEchoLoading, setIsEchoLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -133,7 +134,14 @@ export default function Home() {
   }
 
   const triggerEcho = async () => {
+    if (isEchoLoading) return // 防止重复点击
+    
+    setIsEchoLoading(true)
     try {
+      // 设置更长的超时时间，因为回响之室需要深度AI分析
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒超时
+      
       const response = await fetch('/api/echo', {
         method: 'POST',
         headers: {
@@ -142,8 +150,11 @@ export default function Home() {
         body: JSON.stringify({
           player_id: playerId,
           event_id: 'latest'
-        })
+        }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
         throw new Error('Network response was not ok')
@@ -161,13 +172,23 @@ export default function Home() {
       setMessages(prev => [...prev, echoMessage])
     } catch (error) {
       console.error('Error triggering echo:', error)
+      let errorMessage = '回响之室分析失败'
+      
+      if (error.name === 'AbortError') {
+        errorMessage = '回响之室分析超时，请稍后再试'
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'API连接失败，请检查网络连接'
+      }
+      
       const fallbackEcho: Message = {
         id: Date.now().toString() + '_echo_fallback',
         sender: 'npc',
-        content: '🪞 **回响之室** 🪞\n\n*镜子中的影像模糊不清...* (API连接失败)',
+        content: `🪞 **回响之室** 🪞\n\n*镜子中的影像模糊不清...* \n\n${errorMessage}`,
         timestamp: Date.now()
       }
       setMessages(prev => [...prev, fallbackEcho])
+    } finally {
+      setIsEchoLoading(false)
     }
   }
 
@@ -215,9 +236,21 @@ export default function Home() {
               
               <button
                 onClick={triggerEcho}
-                className="w-full mt-4 p-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg font-medium hover:from-pink-600 hover:to-purple-700 transition-all"
+                disabled={isEchoLoading}
+                className={`w-full mt-4 p-3 rounded-lg font-medium transition-all ${
+                  isEchoLoading 
+                    ? 'bg-gray-500 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'
+                }`}
               >
-                🪞 进入回响之室
+                {isEchoLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <span>深度分析中...</span>
+                  </div>
+                ) : (
+                  '🪞 进入回响之室'
+                )}
               </button>
             </div>
           </div>
