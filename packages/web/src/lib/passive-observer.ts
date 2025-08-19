@@ -214,7 +214,10 @@ class PassiveObserverManager {
     // 检查是否是动态角色
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
-      // 显示更友好的名称：职能+姓名
+      // 如果角色名称是生成的ID，只显示职能
+      if (dynamicChar.name.includes('dynamic_') || dynamicChar.name.length > 15) {
+        return dynamicChar.role;
+      }
       return `${dynamicChar.role} ${dynamicChar.name}`;
     }
 

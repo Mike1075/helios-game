@@ -307,11 +307,13 @@ export class WorldEngine {
   }
 
   /**
-   * 处理AI自主行为 - 使用Supabase Edge Function
+   * 处理AI自主行为 - 使用Supabase Edge Function with robust fallback
    */
   private async processAIAutonomousBehavior(now: number): Promise<void> {
+    let edgeFunctionSuccess = false;
+    
     try {
-      // 调用ai-autonomous-behavior边缘函数
+      // 尝试调用ai-autonomous-behavior边缘函数
       const { triggerAutonomousBehavior } = await import('../lib/supabase');
       const result = await triggerAutonomousBehavior();
       
@@ -319,33 +321,49 @@ export class WorldEngine {
         console.log(`🤖 边缘函数触发了 ${result.actions_generated} 个自主行为`);
         
         // 边缘函数已经处理了数据库更新和事件发布
-        // 这里我们只需要记录到本地状态
         result.actions.forEach((action: any) => {
           console.log(`✨ ${action.character_id} 执行自主行为: ${action.action.content}`);
         });
+        edgeFunctionSuccess = true;
+      } else if (result && result.success && result.actions_generated === 0) {
+        console.log('🔄 边缘函数运行成功但没有生成行为');
+        edgeFunctionSuccess = true;
       }
     } catch (error) {
-      console.error('❌ 边缘函数调用失败，使用本地备用逻辑:', error);
+      console.warn('⚠️ 边缘函数调用失败，使用本地备用逻辑:', error);
+    }
+    
+    // 如果边缘函数失败或没有生成行为，使用本地逻辑作为补充
+    if (!edgeFunctionSuccess) {
+      console.log('🔄 启用本地AI自主行为逻辑...');
+      await this.processLocalAutonomousBehavior(now);
+    }
+  }
+
+  /**
+   * 本地AI自主行为处理逻辑
+   */
+  private async processLocalAutonomousBehavior(now: number): Promise<void> {
+    const aiCharacters = Array.from(this.worldState.characters.values())
+      .filter(char => char.type === 'ai_npc');
+    
+    for (const character of aiCharacters) {
+      const state = this.worldState.internal_states.get(character.id);
+      if (!state) {
+        console.warn(`⚠️ ${character.name} 没有内在状态数据`);
+        continue;
+      }
       
-      // 备用：使用本地逻辑
-      const aiCharacters = Array.from(this.worldState.characters.values())
-        .filter(char => char.type === 'ai_npc');
-      
-      for (const character of aiCharacters) {
-        const state = this.worldState.internal_states.get(character.id);
-        if (!state) continue;
+      if (this.shouldAIAct(character, state, now)) {
+        console.log(`🤖 ${character.name} 开始本地自主决策...`);
         
-        if (this.shouldAIAct(character, state, now)) {
-          console.log(`🤖 ${character.name} 开始本地自主决策...`);
-          
-          try {
-            const actionPackage = await this.generateAIAction(character, state);
-            if (actionPackage) {
-              await this.executeAIAction(character, actionPackage, now);
-            }
-          } catch (error) {
-            console.error(`❌ ${character.name} 自主行为错误:`, error);
+        try {
+          const actionPackage = await this.generateAIAction(character, state);
+          if (actionPackage) {
+            await this.executeAIAction(character, actionPackage, now);
           }
+        } catch (error) {
+          console.error(`❌ ${character.name} 本地自主行为错误:`, error);
         }
       }
     }
@@ -355,8 +373,8 @@ export class WorldEngine {
    * 判断AI是否应该行动
    */
   private shouldAIAct(character: Character, state: InternalState, now: number): boolean {
-    // 冷却时间检查：防止频繁自主行动 (最少3分钟间隔)
-    const COOLDOWN_MINUTES = 3;
+    // 冷却时间检查：防止频繁自主行动 (最少1分钟间隔)
+    const COOLDOWN_MINUTES = 1;
     const timeSinceLastAction = now - state.last_autonomous_action;
     const cooldownMs = COOLDOWN_MINUTES * 60 * 1000;
     
@@ -367,13 +385,13 @@ export class WorldEngine {
     }
     
     // 无聊值驱动（主要驱动力）
-    if (state.boredom > 75) {
+    if (state.boredom > 50) {
       console.log(`😴 ${character.name} 极度无聊，必须行动`);
       return true;
     }
     
-    if (state.boredom > 60 && Math.random() < 0.6) {
-      console.log(`😴 ${character.name} 很无聊，60%概率行动`);
+    if (state.boredom > 35 && Math.random() < 0.7) {
+      console.log(`😴 ${character.name} 很无聊，70%概率行动`);
       return true;
     }
     

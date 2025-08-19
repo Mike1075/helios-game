@@ -397,9 +397,13 @@ export default function Home() {
     const universalRole = universalAIRoles[characterId];
     if (universalRole) return universalRole.name;
     
-    // 检查是否是动态角色
+    // 检查是否是动态角色 - 优先显示职能，避免显示丑陋的ID
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
+      // 如果角色名称是生成的ID，只显示职能
+      if (dynamicChar.name.includes('dynamic_') || dynamicChar.name.length > 15) {
+        return dynamicChar.role;
+      }
       return `${dynamicChar.role} ${dynamicChar.name}`;
     }
     

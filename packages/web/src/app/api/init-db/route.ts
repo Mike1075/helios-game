@@ -1,0 +1,192 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+
+/**
+ * 数据库初始化API
+ * 手动触发数据库表创建和初始数据设置
+ */
+export async function POST(request: NextRequest) {
+  try {
+    console.log('🗄️ 开始初始化数据库...');
+
+    // 1. 检查和初始化角色状态表
+    const { data: existingStates, error: statesError } = await supabase
+      .from('character_states')
+      .select('character_id')
+      .in('character_id', ['linxi', 'chenhao']);
+
+    if (statesError) {
+      console.warn('角色状态表查询失败，可能需要创建表:', statesError.message);
+    }
+
+    // 初始化或更新核心角色状态
+    const coreCharacterStates = [
+      {
+        character_id: 'linxi',
+        energy: 75.0,
+        focus: 80.0,
+        curiosity: 70.0,
+        boredom: 20.0,
+        anxiety: 30.0,
+        suspicion: 60.0,
+        last_autonomous_action: 0,
+        last_updated: Date.now()
+      },
+      {
+        character_id: 'chenhao',
+        energy: 60.0,
+        focus: 50.0,
+        curiosity: 80.0,
+        boredom: 40.0,
+        anxiety: 70.0,
+        suspicion: 25.0,
+        last_autonomous_action: 0,
+        last_updated: Date.now()
+      }
+    ];
+
+    for (const state of coreCharacterStates) {
+      const { error: upsertError } = await supabase
+        .from('character_states')
+        .upsert(state, { 
+          onConflict: 'character_id',
+          ignoreDuplicates: false 
+        });
+
+      if (upsertError) {
+        console.error(`初始化${state.character_id}状态失败:`, upsertError);
+      } else {
+        console.log(`✅ ${state.character_id}状态初始化成功`);
+      }
+    }
+
+    // 2. 初始化信念系统
+    const beliefSystems = [
+      {
+        character_id: 'linxi',
+        worldview: [
+          { belief: "世界充满隐藏的真相", strength: 0.9 },
+          { belief: "调查是揭示真相的唯一方式", strength: 0.8 }
+        ],
+        selfview: [
+          { belief: "我是一个专业的调查员", strength: 0.9 },
+          { belief: "我有责任保护无辜的人", strength: 0.7 }
+        ],
+        values: [
+          { belief: "真相比和谐更重要", strength: 0.8 },
+          { belief: "正义必须得到伸张", strength: 0.9 }
+        ],
+        last_updated: Date.now(),
+        based_on_logs_count: 0,
+        confidence_score: 0.8
+      },
+      {
+        character_id: 'chenhao',
+        worldview: [
+          { belief: "世界基本上是安全的", strength: 0.6 },
+          { belief: "大多数人都是善良的", strength: 0.7 }
+        ],
+        selfview: [
+          { belief: "我还年轻，有很多要学习", strength: 0.8 },
+          { belief: "我容易相信别人", strength: 0.6 }
+        ],
+        values: [
+          { belief: "友谊比真相更重要", strength: 0.7 },
+          { belief: "应该避免冲突", strength: 0.8 }
+        ],
+        last_updated: Date.now(),
+        based_on_logs_count: 0,
+        confidence_score: 0.7
+      }
+    ];
+
+    for (const belief of beliefSystems) {
+      const { error: beliefError } = await supabase
+        .from('belief_systems')
+        .upsert(belief, { 
+          onConflict: 'character_id',
+          ignoreDuplicates: false 
+        });
+
+      if (beliefError) {
+        console.error(`初始化${belief.character_id}信念系统失败:`, beliefError);
+      } else {
+        console.log(`✅ ${belief.character_id}信念系统初始化成功`);
+      }
+    }
+
+    // 3. 清理旧的事件（可选）
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    const { error: cleanupError } = await supabase
+      .from('scene_events')
+      .delete()
+      .lt('timestamp', oneHourAgo);
+
+    if (cleanupError) {
+      console.warn('清理旧事件失败:', cleanupError.message);
+    } else {
+      console.log('✅ 旧事件清理完成');
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: '数据库初始化完成',
+      initialized: {
+        character_states: coreCharacterStates.length,
+        belief_systems: beliefSystems.length,
+        cleanup_completed: !cleanupError
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 数据库初始化失败:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: `数据库初始化失败: ${error instanceof Error ? error.message : '未知错误'}` 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * 获取数据库状态信息
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // 检查各个表的状态
+    const checks = await Promise.allSettled([
+      supabase.from('character_states').select('character_id', { count: 'exact' }),
+      supabase.from('scene_events').select('id', { count: 'exact' }),
+      supabase.from('belief_systems').select('character_id', { count: 'exact' }),
+    ]);
+
+    const results = {
+      character_states: checks[0].status === 'fulfilled' 
+        ? { count: checks[0].value.count, error: null }
+        : { count: 0, error: (checks[0] as any).reason.message },
+      scene_events: checks[1].status === 'fulfilled'
+        ? { count: checks[1].value.count, error: null }
+        : { count: 0, error: (checks[1] as any).reason.message },
+      belief_systems: checks[2].status === 'fulfilled'
+        ? { count: checks[2].value.count, error: null }
+        : { count: 0, error: (checks[2] as any).reason.message }
+    };
+
+    return NextResponse.json({
+      success: true,
+      database_status: results,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: `状态检查失败: ${error instanceof Error ? error.message : '未知错误'}` 
+      },
+      { status: 500 }
+    );
+  }
+}
