@@ -232,15 +232,16 @@ export class WorldEngine {
     
     console.log(`\n💓 世界心跳 - ${new Date(now).toLocaleTimeString()}`);
     
-    // 发布心跳事件到前端UI
-    this.publishEvent({
-      id: `heartbeat_${now}`,
-      type: 'system',
-      character_id: 'system',
-      content: `💓 世界心跳 #${Math.floor(now/45000)} - ${new Date(now).toLocaleTimeString()}`,
-      timestamp: now,
-      scene_id: 'moonlight_tavern'
-    });
+    // 发布心跳事件到前端UI（隐藏技术细节）
+    // 注释掉技术心跳信息，保持沉浸感
+    // this.publishEvent({
+    //   id: `heartbeat_${now}`,
+    //   type: 'system',
+    //   character_id: 'system',
+    //   content: `💓 世界心跳 #${Math.floor(now/45000)} - ${new Date(now).toLocaleTimeString()}`,
+    //   timestamp: now,
+    //   scene_id: 'moonlight_tavern'
+    // });
     
     try {
       // 1. 更新所有AI的内在状态
@@ -371,15 +372,16 @@ export class WorldEngine {
       if (this.shouldAIAct(character, state, now)) {
         console.log(`🤖 ${character.name} 开始本地自主决策...`);
         
-        // 发布AI开始行动的事件
-        this.publishEvent({
-          id: `ai_action_start_${now}_${character.id}`,
-          type: 'system',
-          character_id: 'system',
-          content: `🤖 ${character.name} 开始自主思考... (无聊值: ${state.boredom.toFixed(1)})`,
-          timestamp: now,
-          scene_id: 'moonlight_tavern'
-        });
+        // 隐藏AI技术细节，保持沉浸感
+        // 不发布技术性的"开始思考"事件
+        // this.publishEvent({
+        //   id: `ai_action_start_${now}_${character.id}`,
+        //   type: 'system',
+        //   character_id: 'system',
+        //   content: `🤖 ${character.name} 开始自主思考... (无聊值: ${state.boredom.toFixed(1)})`,
+        //   timestamp: now,
+        //   scene_id: 'moonlight_tavern'
+        // });
         
         try {
           const actionPackage = await this.generateAIAction(character, state);
@@ -389,18 +391,19 @@ export class WorldEngine {
         } catch (error) {
           console.error(`❌ ${character.name} 本地自主行为错误:`, error);
           
-          // 发布错误事件
-          this.publishEvent({
-            id: `ai_action_error_${now}_${character.id}`,
-            type: 'system',
-            character_id: 'system', 
-            content: `❌ ${character.name} 自主行为出错: ${error instanceof Error ? error.message : '未知错误'}`,
-            timestamp: now,
-            scene_id: 'moonlight_tavern'
-          });
+          // 隐藏错误信息，保持沉浸感
+          // 不向玩家显示技术错误
+          // this.publishEvent({
+          //   id: `ai_action_error_${now}_${character.id}`,
+          //   type: 'system',
+          //   character_id: 'system', 
+          //   content: `❌ ${character.name} 自主行为出错: ${error instanceof Error ? error.message : '未知错误'}`,
+          //   timestamp: now,
+          //   scene_id: 'moonlight_tavern'
+          // });
         }
       } else {
-        // 发布AI不行动的原因
+        // 隐藏AI不行动的技术原因，只保留控制台日志用于调试
         const timeSinceLastAction = now - state.last_autonomous_action;
         const cooldownMinutes = Math.round((60000 - timeSinceLastAction) / 60000 * 10) / 10;
         const reason = timeSinceLastAction < 60000 
