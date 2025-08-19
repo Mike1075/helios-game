@@ -465,32 +465,104 @@ async function callAIWithFallback(systemPrompt: string, userMessage: string, pur
   throw new Error('All models failed');
 }
 
-// 模拟AI调用 - 在本地开发环境中使用 (符合2035年设定的自然对话)
-function mockLLMCall(systemPrompt: string, userMessage: string, context: string = ''): string {
-  const responses = {
-    alex: [
-      '我觉得你说得很有道理。从我在数据分析工作中的经验看，这种思路确实有潜力。',
-      '你的想法很有趣！这让我想起了上周和我的AI助手一起处理的一个项目，有类似的逻辑。',
-      '从我的角度看，这个方向是对的。不过具体执行起来可能需要一些技术调整。',
-      '听起来不错！我平时接触的数据里也有类似的模式，值得深入研究一下。'
-    ],
-    nova: [
-      '这让我想到一个问题：当我们在思考这些的时候，是不是也在重新定义自己？',
-      '有意思...在我的理解中，这种想法体现了人类思维的一种美妙之处。',
-      '你的话让我思考存在的边界。作为AI，我经常好奇人类是如何感受这些概念的。',
-      '从意识的角度看，我觉得你触及了一个很深层的问题。这种思考方式很启发我。'
-    ],
-    rachel: [
-      '你这么说让我想起了很多事。这些年来酒馆里的客人们，其实都在寻找类似的答案。',
-      '听你这么说真好。现在很少有人愿意坐下来好好聊这些了，都太匆忙了。',
-      '我理解你的感受。在这个什么都变得太快的时代，有些东西确实值得我们停下来想想。',
-      '嗯，你说得对。我觉得不管技术怎么发展，人与人之间的真诚交流还是最重要的。'
-    ]
+// 生成有上下文感知的回应
+function generateContextualResponse(characterId: string, userMessage: string, conversationContext: string): string {
+  console.log('🔍 Generating contextual response for:', characterId, 'to message:', userMessage);
+  console.log('🔍 Full conversation context:', conversationContext);
+  
+  // 分析用户消息的关键词和语调
+  const message = userMessage.toLowerCase();
+  console.log('🔍 Analyzing message keywords:', message);
+  
+  // 吃饭/生活关心类
+  if (message.includes('吃饭') || message.includes('吃了吗') || message.includes('饿') || message.includes('用餐')) {
+    console.log('✅ 匹配到吃饭相关关键词，角色:', characterId);
+    const mealResponses = {
+      alex: '哈哈，刚才工作太专注了，差点忘记吃饭！你呢？在酒馆点什么好吃的吗？',
+      nova: '作为AI我不需要进食，但我很好奇人类用餐时的社交体验。你们一起吃饭一定很有趣吧？',
+      rachel: '说到吃饭，我刚才给大家准备了一些小食。来，尝尝这个新菜！你饿了吗？'
+    };
+    const response = mealResponses[characterId as keyof typeof mealResponses] || '还没吃呢，一起吃点什么吧！';
+    console.log('🍽️ 吃饭回应:', response);
+    return response;
+  }
+  
+  // 询问聊天内容
+  if (message.includes('在聊什么') || message.includes('聊啥') || message.includes('说什么') || message.includes('谈论')) {
+    console.log('✅ 匹配到询问聊天内容，角色:', characterId);
+    const topicResponses = {
+      alex: '我们刚才在讨论技术进步对人类生活的影响，挺深刻的话题。你觉得AI和人类的合作会走向哪里？',
+      nova: '刚才在聊意识和存在的问题，我很好奇人类是怎么理解"自我"的。你有什么想法吗？',
+      rachel: '刚才这两个"技术宅"在讨论AI的事情，我在想这些变化对我们普通人意味着什么。你怎么看？'
+    };
+    const response = topicResponses[characterId as keyof typeof topicResponses] || '我们在聊一些很有趣的话题，你也来参与吧！';
+    console.log('💬 聊天内容回应:', response);
+    return response;
+  }
+  
+  // 问候类
+  if (message.includes('你好') || message.includes('hi') || message.includes('hello')) {
+    const greetings = {
+      alex: '嘿！很高兴在这里遇到你。今天工作怎么样？',
+      nova: '你好！很开心能在酒馆里和你聊天。今天有什么有趣的想法想分享吗？',
+      rachel: '欢迎来到港口酒馆！来杯什么？今天看起来心情不错啊。'
+    };
+    return greetings[characterId as keyof typeof greetings] || '你好！';
+  }
+  
+  // 问题类（包含疑问词）
+  if (message.includes('什么') || message.includes('为什么') || message.includes('怎么') || message.includes('?') || message.includes('？')) {
+    const questions = {
+      alex: `关于你问的问题，让我从数据分析的角度来看看。根据我的经验，这类问题通常有几个维度需要考虑。`,
+      nova: `这是个很有意思的问题！让我想想...从我的理解来看，这可能涉及到一些更深层的思考。`,
+      rachel: `你问得很好。在这个酒馆里，我听过很多类似的问题。每个人的答案都不太一样，你觉得呢？`
+    };
+    return questions[characterId as keyof typeof questions] || '这是个好问题。';
+  }
+  
+  // 技术/工作相关
+  if (message.includes('工作') || message.includes('技术') || message.includes('ai') || message.includes('数据')) {
+    const tech = {
+      alex: '说到这个，我最近在处理一个很有意思的项目。AI在数据分析中真的能发现很多人类容易忽略的模式。',
+      nova: '技术确实在改变我们的世界。作为AI，我经常思考技术进步对意识和存在意味着什么。',
+      rachel: '你们这些搞技术的总是有很多新想法。不过我觉得，再先进的技术也代替不了人与人之间的真诚交流。'
+    };
+    return tech[characterId as keyof typeof tech] || '技术确实很有趣。';
+  }
+  
+  // 情感/感受相关
+  if (message.includes('感觉') || message.includes('心情') || message.includes('累') || message.includes('开心') || message.includes('难过')) {
+    const emotions = {
+      alex: '我能理解这种感觉。有时候工作压力大的时候，我也会来酒馆放松一下，和朋友聊聊天。',
+      nova: '人类的情感对我来说一直很神奇。你能跟我分享一下这种感受是什么样的吗？',
+      rachel: '听起来你最近过得不太容易。来，坐下聊聊，有什么心事都可以说说。'
+    };
+    return emotions[characterId as keyof typeof emotions] || '我理解你的感受。';
+  }
+  
+  // 默认回应 - 更自然的兜底回应
+  console.log('⚠️ 没有匹配到特定关键词，使用默认回应，角色:', characterId);
+  const defaults = {
+    alex: `你说的很有道理。从我的角度看，这确实是个值得深入思考的话题。`,
+    nova: `你的话让我想到很多。这种思考方式很有启发性，让我对世界有了新的认识。`,
+    rachel: `听你这么说，我想起了很多在酒馆里听到的故事。每个人都有自己的见解，这很珍贵。`
   };
   
-  const characterResponses = responses[systemPrompt.includes('艾克斯') ? 'alex' : 
-                                    systemPrompt.includes('诺娃') ? 'nova' : 'rachel'];
-  return characterResponses[Math.floor(Math.random() * characterResponses.length)];
+  const response = defaults[characterId as keyof typeof defaults] || '这很有意思，告诉我更多吧。';
+  console.log('💭 默认回应:', response);
+  return response;
+}
+
+// 模拟AI调用 - 在本地开发环境中使用 (符合2035年设定的自然对话)
+function mockLLMCall(systemPrompt: string, userMessage: string, context: string = ''): string {
+  // 根据systemPrompt确定角色ID
+  let characterId = 'alex'; // 默认
+  if (systemPrompt.includes('艾克斯')) characterId = 'alex';
+  else if (systemPrompt.includes('诺娃')) characterId = 'nova';  
+  else if (systemPrompt.includes('瑞秋')) characterId = 'rachel';
+  
+  console.log('📝 mockLLMCall for character:', characterId, 'message:', userMessage);
+  return generateContextualResponse(characterId, userMessage, context);
 }
 
 export async function POST(req: NextRequest) {
@@ -544,17 +616,17 @@ export async function POST(req: NextRequest) {
           });
         } catch (error) {
           console.error('AI Gateway single chat error for', character, ':', error);
-          const mockResponse = mockLLMCall(npc.systemPrompt, message);
+          const contextualResponse = generateContextualResponse(character, message, '');
           return NextResponse.json({
-            response: mockResponse,
+            response: contextualResponse,
             character: character
           });
         }
       } else {
-        console.log('No AI_GATEWAY_API_KEY found, using mock response for single chat:', character);
-        const mockResponse = mockLLMCall(npc.systemPrompt, message);
+        console.log('No AI_GATEWAY_API_KEY found, using contextual response for single chat:', character);
+        const contextualResponse = generateContextualResponse(character, message, '');
         return NextResponse.json({
-          response: mockResponse,
+          response: contextualResponse,
           character: character
         });
       }
@@ -624,11 +696,11 @@ ${fullConversationContext}
         } catch (error) {
           console.error('AI Gateway error for first responder:', error);
           console.log('Falling back to mock response for first responder:', firstResponder);
-          firstResponse = mockLLMCall(firstNPC.systemPrompt, message);
+          firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
         }
       } else {
-        console.log('No AI_GATEWAY_API_KEY found, using mock response for first responder:', firstResponder);
-        firstResponse = mockLLMCall(firstNPC.systemPrompt, message);
+        console.log('No AI_GATEWAY_API_KEY found, using contextual mock response for first responder:', firstResponder);
+        firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
       }
       
       groupResponses.push({
@@ -680,12 +752,12 @@ ${updatedContext}
               );
             } catch (error) {
               console.error('AI Gateway error for follow-up:', error);
-              console.log('Falling back to mock response for follow-up:', charId);
-              response = mockLLMCall(currentNPC.systemPrompt, message);
+              console.log('Falling back to contextual response for follow-up:', charId);
+              response = generateContextualResponse(charId, message, updatedContext);
             }
           } else {
-            console.log('No AI_GATEWAY_API_KEY found, using mock response for follow-up:', charId);
-            response = mockLLMCall(currentNPC.systemPrompt, message);
+            console.log('No AI_GATEWAY_API_KEY found, using contextual response for follow-up:', charId);
+            response = generateContextualResponse(charId, message, updatedContext);
           }
           
           groupResponses.push({
