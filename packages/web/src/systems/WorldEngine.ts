@@ -264,11 +264,9 @@ export class WorldEngine {
   }
 
   /**
-   * 更新AI内在状态 - 同步到数据库以供边缘函数使用
+   * 更新AI内在状态 - 本地计算，不直接操作数据库
    */
-  private async updateInternalStates(now: number): Promise<void> {
-    const { updateCharacterState } = await import('../lib/supabase');
-    
+  private async updateInternalStates(now: number): Promise<void> {    
     for (const [characterId, state] of this.worldState.internal_states) {
       const character = this.worldState.characters.get(characterId);
       if (!character || character.type === 'human_player') continue;
@@ -307,56 +305,53 @@ export class WorldEngine {
       
       console.log(`🧠 ${character.name} 状态更新: 无聊=${newState.boredom.toFixed(1)}, 能量=${newState.energy.toFixed(1)}`);
       
-      // 同步到数据库
-      try {
-        await updateCharacterState({
-          character_id: characterId,
-          energy: newState.energy,
-          focus: newState.focus,
-          curiosity: newState.curiosity,
-          boredom: newState.boredom,
-          anxiety: newState.anxiety || 0,
-          suspicion: newState.suspicion || 0,
-          last_updated: Date.now()
-        });
-      } catch (error) {
-        console.warn(`⚠️ 同步${characterId}状态到数据库失败:`, error);
-      }
+      // 注意：数据库同步将由API调用处理，不在前端WorldEngine中进行
     }
   }
 
   /**
-   * 处理AI自主行为 - 使用Supabase Edge Function with robust fallback
+   * 处理AI自主行为 - 通过API调用而不是直接访问数据库
    */
   private async processAIAutonomousBehavior(now: number): Promise<void> {
-    let edgeFunctionSuccess = false;
-    
     try {
-      // 尝试调用ai-autonomous-behavior边缘函数
-      const { triggerAutonomousBehavior } = await import('../lib/supabase');
-      const result = await triggerAutonomousBehavior();
-      
-      if (result && result.success && result.actions_generated > 0) {
-        console.log(`🤖 边缘函数触发了 ${result.actions_generated} 个自主行为`);
+      // 调用后端API检查AI自主行为
+      const response = await fetch('/api/ai-behavior-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: now,
+          trigger_source: 'world_heartbeat'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
         
-        // 边缘函数已经处理了数据库更新和事件发布
-        result.actions.forEach((action: any) => {
-          console.log(`✨ ${action.character_id} 执行自主行为: ${action.action.content}`);
-        });
-        edgeFunctionSuccess = true;
-      } else if (result && result.success && result.actions_generated === 0) {
-        console.log('🔄 边缘函数运行成功但没有生成行为');
-        edgeFunctionSuccess = true;
+        if (result.success && result.actions_generated > 0) {
+          console.log(`🤖 API触发了 ${result.actions_generated} 个自主行为`);
+          
+          // 将后端生成的事件发布到前端
+          result.events?.forEach((event: any) => {
+            this.publishEvent({
+              ...event,
+              timestamp: now
+            });
+          });
+          
+          return; // API成功处理，无需本地逻辑
+        } else {
+          console.log('🔄 API运行成功但没有生成行为');
+        }
+      } else {
+        console.warn('⚠️ AI行为检查API调用失败，使用本地备用逻辑');
       }
     } catch (error) {
-      console.warn('⚠️ 边缘函数调用失败，使用本地备用逻辑:', error);
+      console.warn('⚠️ AI行为检查API异常，使用本地备用逻辑:', error);
     }
     
-    // 如果边缘函数失败或没有生成行为，使用本地逻辑作为补充
-    if (!edgeFunctionSuccess) {
-      console.log('🔄 启用本地AI自主行为逻辑...');
-      await this.processLocalAutonomousBehavior(now);
-    }
+    // 如果API失败，使用简化的本地逻辑
+    console.log('🔄 启用本地AI自主行为逻辑...');
+    await this.processLocalAutonomousBehavior(now);
   }
 
   /**
