@@ -102,7 +102,16 @@ export class WorldEngine {
    * 将初始角色状态同步到数据库
    */
   private async syncInitialStatesToDatabase(): Promise<void> {
-    const { updateCharacterState } = await import('../lib/supabase');
+    const { updateCharacterState, checkDatabaseStatus } = await import('../lib/supabase');
+    
+    // 首先检查数据库状态
+    console.log('🔍 检查数据库状态...');
+    const dbStatus = await checkDatabaseStatus();
+    
+    if (!dbStatus.character_states) {
+      console.error('❌ character_states表不可访问，请运行数据库初始化');
+      return;
+    }
     
     for (const [characterId, state] of this.worldState.internal_states) {
       const character = this.worldState.characters.get(characterId);

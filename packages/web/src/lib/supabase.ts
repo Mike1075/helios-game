@@ -53,7 +53,7 @@ export interface CharacterState {
 export async function saveGameEvent(event: Omit<GameEvent, 'id'>) {
   try {
     const { data, error } = await supabase
-      .from('game_events')
+      .from('scene_events')
       .insert([{
         ...event,
         id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -79,7 +79,7 @@ export async function saveGameEvent(event: Omit<GameEvent, 'id'>) {
 export async function getCharacterHistory(characterId: string, limit = 10) {
   try {
     const { data, error } = await supabase
-      .from('game_events')
+      .from('scene_events')
       .select('*')
       .or(`character_id.eq.${characterId},character_id.eq.player`)
       .order('timestamp', { ascending: false })
@@ -153,13 +153,16 @@ export async function getBeliefSystem(characterId: string) {
  */
 export async function updateCharacterState(state: Omit<CharacterState, 'id'>) {
   try {
+    // 使用onConflict确保更新而不是创建新记录
     const { data, error } = await supabase
       .from('character_states')
       .upsert([{
         ...state,
-        id: `state_${state.character_id}_${Date.now()}`,
         last_updated: Date.now()
-      }])
+      }], { 
+        onConflict: 'character_id',
+        ignoreDuplicates: false 
+      })
       .select()
       .single();
 
@@ -247,4 +250,44 @@ export async function triggerAutonomousBehavior() {
     console.error('边缘函数调用错误:', error);
     return null;
   }
+}
+
+/**
+ * 检查数据库表是否存在和可访问
+ */
+export async function checkDatabaseStatus() {
+  const checks = {
+    character_states: false,
+    scene_events: false,
+    belief_systems: false
+  };
+
+  try {
+    // 检查character_states表
+    const { error: statesError } = await supabase
+      .from('character_states')
+      .select('character_id', { count: 'exact', head: true });
+    checks.character_states = !statesError;
+    if (statesError) console.warn('character_states表访问失败:', statesError.message);
+
+    // 检查scene_events表  
+    const { error: eventsError } = await supabase
+      .from('scene_events')
+      .select('id', { count: 'exact', head: true });
+    checks.scene_events = !eventsError;
+    if (eventsError) console.warn('scene_events表访问失败:', eventsError.message);
+
+    // 检查belief_systems表
+    const { error: beliefsError } = await supabase
+      .from('belief_systems')
+      .select('character_id', { count: 'exact', head: true });
+    checks.belief_systems = !beliefsError;
+    if (beliefsError) console.warn('belief_systems表访问失败:', beliefsError.message);
+
+  } catch (error) {
+    console.error('数据库状态检查失败:', error);
+  }
+
+  console.log('📊 数据库状态检查结果:', checks);
+  return checks;
 }
