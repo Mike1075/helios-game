@@ -54,9 +54,10 @@ export default function Home() {
       // 异步初始化世界引擎和被动观察
       const initializeGame = async () => {
         try {
+          console.log('🚀 [DEBUG v2.0] 开始初始化世界引擎...');
           // 1. 初始化世界引擎
           await worldEngine.initializeWorld();
-          console.log('✅ 世界引擎初始化完成');
+          console.log('✅ [DEBUG v2.0] 世界引擎初始化完成');
           
           // 2. 设置被动观察体验
           passiveObserverCleanup = await passiveObserver.setupPassiveObservation(
@@ -591,7 +592,7 @@ export default function Home() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm text-gray-400">世界状态</div>
+              <div className="text-sm text-gray-400">世界状态 v2.0 🔧</div>
               <div className="text-green-400 text-sm">
                 💓 心跳运行中 • {events.length} 个事件
               </div>
