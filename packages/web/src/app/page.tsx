@@ -50,6 +50,12 @@ export default function Home() {
   const [activeCharacters, setActiveCharacters] = useState<any[]>([]);
   const [ambientActivity, setAmbientActivity] = useState<string[]>([]);
   
+  // 统一的角色管理：包括固定角色和动态角色
+  const [allCharacters, setAllCharacters] = useState<any[]>([
+    { id: 'linxi', name: '林溪', role: '神秘调查员', type: 'core_npc' },
+    { id: 'chenhao', name: '陈浩', role: '温和酒保', type: 'core_npc' }
+  ]);
+  
   // 回响之室状态  
   const [chamberOpen, setChamberOpen] = useState(false);
   const [chamberEventId, setChamberEventId] = useState<string>('');
@@ -177,15 +183,18 @@ export default function Home() {
             id: event.metadata.created_character,
             name: event.metadata.character_data.name,
             role: event.metadata.character_data.role,
-            appearance: event.metadata.character_data.appearance
+            appearance: event.metadata.character_data.appearance,
+            type: 'dynamic_npc'
           };
           
           console.log('🆕 检测到新角色创建:', newChar);
-          setActiveCharacters(prev => {
-            // 避免重复添加
-            if (prev.find(char => char.id === newChar.id)) {
+          setAllCharacters(prev => {
+            // 智能去重：检查ID和名称
+            if (prev.find(char => char.id === newChar.id || char.name === newChar.name)) {
+              console.log(`⚠️ 角色已存在，跳过添加: ${newChar.name}`);
               return prev;
             }
+            console.log(`✨ 添加新角色: ${newChar.name} (${newChar.role})`);
             return [...prev, newChar];
           });
         }
@@ -543,33 +552,107 @@ export default function Home() {
     }
   };
 
+  // 内容过滤：只显示玩家应该看到的内容
+  const filterContentForPlayer = (event: GameEvent): { shouldShow: boolean; displayContent: string } => {
+    // 完全隐藏的事件类型
+    const hiddenEventTypes = ['thought', 'cognitive_dissonance'];
+    if (hiddenEventTypes.includes(event.type)) {
+      return { shouldShow: false, displayContent: '' };
+    }
+
+    // 过滤技术性内容
+    let content = event.content;
+    
+    // 隐藏技术细节的关键词
+    const techKeywords = [
+      '无聊值', '能量', '专注', '好奇心', '焦虑', '怀疑',
+      '状态更新', '心跳', '自主行为', '内在状态', '信念系统',
+      'AI调用', 'API', '数据库', '触发', '检测到', '分析',
+      '思考', '决策', '判断', '评估', '算法'
+    ];
+    
+    // 如果内容包含技术关键词，过滤或隐藏
+    const hasTechContent = techKeywords.some(keyword => content.includes(keyword));
+    if (hasTechContent && event.character_id === 'system') {
+      return { shouldShow: false, displayContent: '' };
+    }
+    
+    // 修复自我指涉错误（如"陈浩观察陈浩"）
+    if (event.character_id !== 'system' && event.character_id !== 'player') {
+      const characterName = getCharacterDisplayName(event.character_id);
+      // 检查是否包含自我指涉
+      if (content.includes(`${characterName}观察${characterName}`) || 
+          content.includes(`${characterName}看着${characterName}`)) {
+        // 修复为合理的行为
+        content = content.replace(
+          new RegExp(`${characterName}观察${characterName}`, 'g'), 
+          `${characterName}若有所思地环视四周`
+        ).replace(
+          new RegExp(`${characterName}看着${characterName}`, 'g'),
+          `${characterName}陷入了沉思`
+        );
+      }
+    }
+    
+    return { shouldShow: true, displayContent: content };
+  };
+
+  // 获取角色显示名称
+  const getCharacterDisplayName = (characterId: string): string => {
+    const char = allCharacters.find(c => c.id === characterId);
+    return char ? char.name : characterId;
+  };
+
   // 触发认知失调测试
   const triggerCognitiveDissonance = async () => {
     console.log('🧠 手动触发认知失调测试...');
+    console.log('🎮 当前状态:', { gameStarted, playerName });
+    
+    // 检查游戏是否已开始
+    if (!gameStarted || !playerName.trim()) {
+      console.warn('⚠️ 游戏未开始或玩家名称为空');
+      alert('请先输入玩家名称并开始游戏！');
+      return;
+    }
     
     try {
+      const requestData = {
+        playerId: 'player',
+        playerName: playerName,
+        triggerContext: '你在月影酒馆中的种种经历，让你感到内心深处某种微妙的冲突正在觉醒...',
+        triggerType: 'test'
+      };
+      
+      console.log('📤 发送请求:', requestData);
+      
       const response = await fetch('/api/trigger-dissonance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: 'player',
-          playerName: playerName,
-          triggerContext: '你在月影酒馆中的种种经历，让你感到内心深处某种微妙的冲突正在觉醒...',
-          triggerType: 'test'
-        })
+        body: JSON.stringify(requestData)
       });
+
+      console.log('📥 API响应状态:', response.status);
 
       if (response.ok) {
         const result = await response.json();
         console.log('✨ 认知失调触发成功:', result);
         
-        // 认知失调事件会通过实时订阅自动触发回响之室
-        // 不需要手动设置 setChamberOpen(true)
+        // 检查是否需要手动触发回响之室（作为备用）
+        if (result.chamber_invitation) {
+          console.log('🔮 准备打开回响之室...');
+          // 延迟一下，让数据库事件先处理
+          setTimeout(() => {
+            setChamberOpen(true);
+          }, 1000);
+        }
       } else {
-        console.error('❌ 认知失调触发失败:', response.status);
+        const errorText = await response.text();
+        console.error('❌ 认知失调触发失败:', response.status, errorText);
+        alert(`认知失调触发失败: ${response.status}`);
       }
     } catch (error) {
       console.error('❌ 认知失调触发异常:', error);
+      alert(`网络错误: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
@@ -858,12 +941,12 @@ export default function Home() {
             ${sidebarOpen ? 'block absolute md:relative z-10 bg-gray-900/95 md:bg-transparent h-full' : 'hidden'} 
             md:block md:relative md:z-auto md:bg-transparent
           `}>
-            {/* 活跃角色（来自被动观察） */}
-            {activeCharacters.length > 0 && (
+            {/* 统一角色列表 */}
+            {allCharacters.length > 0 && (
               <div className="bg-gray-800/70 rounded-lg p-4 mb-4">
-                <h3 className="text-lg font-bold text-cyan-400 mb-3">🎭 当前活跃角色</h3>
+                <h3 className="text-lg font-bold text-cyan-400 mb-3">🎭 酒馆中的人物</h3>
                 <div className="space-y-2">
-                  {activeCharacters.map(char => (
+                  {allCharacters.map(char => (
                     <div key={char.id} className="bg-gray-700/50 p-2 rounded-lg border border-gray-600/30">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
@@ -874,10 +957,10 @@ export default function Home() {
                           </div>
                         </div>
                         <div className="text-xs text-right">
-                          <div className={`px-2 py-1 rounded text-xs ${char.isCore ? 'bg-green-600/30 text-green-300' : 'bg-blue-600/30 text-blue-300'}`}>
-                            {char.isCore ? '核心' : '临时'}
+                          <div className={`px-2 py-1 rounded text-xs ${char.type === 'core_npc' ? 'bg-green-600/30 text-green-300' : 'bg-purple-600/30 text-purple-300'}`}>
+                            {char.type === 'core_npc' ? '常驻' : '新客'}
                           </div>
-                          <div className="text-gray-400 mt-1">{char.status}</div>
+                          {char.appearance && <div className="text-gray-400 mt-1">👤 {char.appearance}</div>}
                         </div>
                       </div>
                     </div>
@@ -993,9 +1076,12 @@ export default function Home() {
               </div>
             </div>
             
-            {/* 事件流 - 优化渲染性能 */}
+            {/* 事件流 - 应用内容过滤 */}
             <div className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1">
-              {events.slice(-50).map((event, index) => (
+              {events.slice(-50)
+                .map(event => ({ ...event, ...filterContentForPlayer(event) }))
+                .filter(event => event.shouldShow)
+                .map((event, index) => (
                 <div 
                   key={event.id} 
                   className={`p-3 rounded-lg border ${getEventStyle(event)} transition-all duration-300 ease-in-out hover:scale-[1.01]`}
@@ -1019,13 +1105,9 @@ export default function Home() {
                            event.type === 'action' ? '🎭' : 
                            event.type === 'environment' ? '🌍' : '⚙️'}
                         </span>
-                        {event.is_autonomous && (
-                          <span className="text-xs px-1.5 py-0.5 bg-purple-600/30 border border-purple-500/30 rounded text-purple-300">
-                            自主
-                          </span>
-                        )}
+                        {/* 移除自主标签以减少技术信息 */}
                       </div>
-                      <p className="text-gray-200 text-sm leading-relaxed break-words">{event.content}</p>
+                      <p className="text-gray-200 text-sm leading-relaxed break-words">{event.displayContent}</p>
                     </div>
                   </div>
                 </div>
@@ -1038,27 +1120,19 @@ export default function Home() {
               {/* 快捷指令和模式切换 */}
               <div className="flex flex-wrap justify-between items-center gap-2">
                 <div className="flex flex-wrap space-x-1 md:space-x-2">
-                  {/* 核心AI角色 */}
-                  <button
-                    onClick={() => setInputMessage(prev => prev + '@林溪 ')}
-                    className="px-2 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded text-xs transition-colors"
-                  >
-                    @林溪
-                  </button>
-                  <button
-                    onClick={() => setInputMessage(prev => prev + '@陈浩 ')}
-                    className="px-2 py-1 bg-blue-600/50 hover:bg-blue-600 text-white rounded text-xs transition-colors"
-                  >
-                    @陈浩
-                  </button>
-                  
-                  {/* 动态角色按钮 */}
-                  {activeCharacters.map(char => (
+                  {/* 统一的角色对话按钮 */}
+                  {allCharacters.map(char => (
                     <button
                       key={char.id}
                       onClick={() => setInputMessage(prev => prev + `@${char.name} `)}
-                      className="px-2 py-1 bg-green-600/50 hover:bg-green-600 text-white rounded text-xs transition-colors"
-                      title={`${char.role} - ${char.name}`}
+                      className={`px-2 py-1 text-white rounded text-xs transition-colors ${
+                        char.type === 'core_npc' 
+                          ? char.id === 'linxi' 
+                            ? 'bg-purple-600/50 hover:bg-purple-600' 
+                            : 'bg-blue-600/50 hover:bg-blue-600'
+                          : 'bg-green-600/50 hover:bg-green-600'
+                      }`}
+                      title={`与${char.name}对话 - ${char.role}`}
                     >
                       @{char.name}
                     </button>
