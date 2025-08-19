@@ -22,6 +22,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
   
+  // 会话控制状态
+  const [sessionStats, setSessionStats] = useState({
+    remainingTime: 180000, // 3分钟
+    remainingCalls: 300,
+    aiCallCount: 0,
+    totalCost: 0,
+    warning: null as string | null,
+    sessionActive: true
+  });
+  
   // 世界状态
   const [characters, setCharacters] = useState<Character[]>([]);
   const [events, setEvents] = useState<GameEvent[]>([]);
@@ -52,6 +62,9 @@ export default function Home() {
   // 界面状态
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // 会话监控定时器引用
+  const sessionMonitorRef = useRef<NodeJS.Timeout | null>(null);
 
   // 初始化世界引擎和被动观察体验
   useEffect(() => {
@@ -240,6 +253,107 @@ export default function Home() {
     }
   }, [events]);
 
+  // 会话状态监控
+  const startSessionMonitoring = (sessionId: string) => {
+    console.log('⏱️ 开始会话状态监控:', sessionId);
+    
+    // 清除之前的定时器
+    if (sessionMonitorRef.current) {
+      clearInterval(sessionMonitorRef.current);
+    }
+    
+    // 每5秒检查一次会话状态
+    sessionMonitorRef.current = setInterval(async () => {
+      try {
+        const response = await fetch('/api/session-control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'check',
+            sessionId
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          setSessionStats({
+            remainingTime: data.remainingTime,
+            remainingCalls: data.remainingCalls,
+            aiCallCount: data.currentStats.aiCallCount,
+            totalCost: data.currentStats.totalCost,
+            warning: data.warning,
+            sessionActive: data.sessionActive
+          });
+          
+          // 显示警告
+          if (data.warning) {
+            console.warn('⚠️ 会话警告:', data.warning);
+            // 可以在这里添加 toast 通知
+          }
+          
+          // 检查是否需要强制停止
+          if (data.shouldStop && data.sessionActive) {
+            console.log('🛑 会话已达到限制，强制停止');
+            await stopSession();
+          }
+        }
+      } catch (error) {
+        console.error('会话状态检查失败:', error);
+      }
+    }, 5000); // 每5秒检查一次
+  };
+
+  // 停止会话
+  const stopSession = async () => {
+    try {
+      if (sessionId) {
+        await fetch('/api/session-control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'stop',
+            sessionId
+          })
+        });
+      }
+      
+      // 清理定时器
+      if (sessionMonitorRef.current) {
+        clearInterval(sessionMonitorRef.current);
+        sessionMonitorRef.current = null;
+      }
+      
+      // 停止世界引擎
+      worldEngine.stopHeartbeat();
+      
+      // 重置游戏状态
+      setGameStarted(false);
+      setEvents([]);
+      setSessionStats({
+        remainingTime: 180000,
+        remainingCalls: 300,
+        aiCallCount: 0,
+        totalCost: 0,
+        warning: null,
+        sessionActive: false
+      });
+      
+      console.log('🏁 会话已结束');
+    } catch (error) {
+      console.error('停止会话失败:', error);
+    }
+  };
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      if (sessionMonitorRef.current) {
+        clearInterval(sessionMonitorRef.current);
+      }
+    };
+  }, []);
+
   // 开始游戏
   const startGame = async () => {
     console.log('🎮 [DEBUG] startGame被调用，playerName:', playerName);
@@ -247,24 +361,47 @@ export default function Home() {
     
     setLoading(true);
     try {
+      // 启动会话控制
+      console.log('⏱️ 启动会话控制...');
+      const sessionResponse = await fetch('/api/session-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'start', 
+          playerName 
+        })
+      });
+      
+      if (!sessionResponse.ok) {
+        throw new Error('会话控制启动失败');
+      }
+      
+      const sessionData = await sessionResponse.json();
+      const newSessionId = sessionData.sessionId;
+      setSessionId(newSessionId);
+      console.log('⏱️ 会话控制启动成功:', newSessionId);
+      
       // 通过API路由初始化游戏会话
       console.log('🔄 初始化游戏会话...');
       const initResponse = await fetch('/api/init-game', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerName })
+        body: JSON.stringify({ playerName, sessionId: newSessionId })
       });
       
       if (!initResponse.ok) {
         throw new Error('游戏初始化失败');
       }
       
-      const { sessionId: newSessionId } = await initResponse.json();
-      setSessionId(newSessionId);
-      console.log('🔄 [DEBUG] 会话ID设置完成:', newSessionId);
+      await initResponse.json();
+      console.log('🔄 游戏会话初始化完成');
       
       // 添加玩家到世界
       worldEngine.addPlayer(playerName);
+      
+      // 启动会话状态监控
+      startSessionMonitoring(newSessionId);
+      
       console.log('🎯 [DEBUG] 即将设置gameStarted为true...');
       setGameStarted(true);
       console.log('🎯 [DEBUG] gameStarted已设置为true');
@@ -326,6 +463,16 @@ export default function Home() {
       if (response.ok) {
         const result = await response.json();
         console.log('📨 API响应:', result);
+        
+        // 记录AI调用到会话控制
+        await fetch('/api/session-control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'recordCall',
+            sessionId: sessionId
+          })
+        });
         
         if (result.success && result.action_package) {
           const characterId = result.character?.id || 'ai';
@@ -618,10 +765,33 @@ export default function Home() {
                 📊
               </button>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-cyan-400">📍 🌙 月影酒馆</h2>
+                <div className="flex justify-between items-start mb-2">
+                  <h2 className="text-xl font-bold text-cyan-400">📍 🌙 月影酒馆</h2>
+                  
+                  {/* 会话状态栏 */}
+                  <div className="text-xs bg-gray-800/70 rounded-lg px-3 py-1 space-y-1">
+                    <div className="text-yellow-400">
+                      ⏱️ {Math.floor(sessionStats.remainingTime / 60000)}:{String(Math.floor((sessionStats.remainingTime % 60000) / 1000)).padStart(2, '0')}
+                    </div>
+                    <div className="text-blue-400">
+                      🔄 {sessionStats.aiCallCount}/300
+                    </div>
+                    <div className="text-green-400">
+                      💰 ${sessionStats.totalCost.toFixed(4)}
+                    </div>
+                  </div>
+                </div>
+                
                 <p className="text-gray-300 text-sm leading-relaxed">
                   {sceneDescription || '昏暗的灯光下，木质桌椅散发着岁月的痕迹。空气中弥漫着酒精和烟草的味道。'}
                 </p>
+                
+                {/* 会话警告 */}
+                {sessionStats.warning && (
+                  <div className="mt-2 p-2 bg-yellow-900/50 border border-yellow-500/50 rounded text-yellow-300 text-sm">
+                    {sessionStats.warning}
+                  </div>
+                )}
                 {ambientActivity.length > 0 && (
                   <div className="mt-2 text-xs text-gray-400">
                     <span className="text-yellow-400">🎭 周围环境：</span>
