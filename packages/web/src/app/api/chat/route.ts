@@ -586,8 +586,16 @@ ${fullConversationContext}
       
       // 生成第一个回应
       const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
+      console.log('Group chat AI Gateway check:', {
+        hasKey: !!aiGatewayKey,
+        keyLength: aiGatewayKey ? aiGatewayKey.length : 0,
+        firstResponder,
+        messageLength: message.length
+      });
+      
       if (aiGatewayKey) {
         try {
+          console.log('Using AI Gateway for group chat first responder:', firstResponder);
           const result = await streamText({
             model: 'openai/gpt-4o-mini',
             messages: [
@@ -602,12 +610,14 @@ ${fullConversationContext}
             fullResponse += chunk;
           }
           firstResponse = fullResponse;
-          console.log('First group response generated for', firstResponder);
+          console.log('AI Gateway response successful for', firstResponder, '- length:', fullResponse.length);
         } catch (error) {
           console.error('AI Gateway error for first responder:', error);
+          console.log('Falling back to mock response for first responder:', firstResponder);
           firstResponse = mockLLMCall(firstNPC.systemPrompt, message);
         }
       } else {
+        console.log('No AI_GATEWAY_API_KEY found, using mock response for first responder:', firstResponder);
         firstResponse = mockLLMCall(firstNPC.systemPrompt, message);
       }
       
@@ -629,7 +639,7 @@ ${fullConversationContext}
         const currentNPC = characters[charId as keyof typeof characters];
         
         // 决定是否回应（基于关系、话题和随机性）
-        const shouldRespond = Math.random() < 0.7; // 70%概率回应
+        const shouldRespond = Math.random() < 0.8; // 80%概率回应，增加互动性
         
         if (shouldRespond) {
           // 构建回应上下文，包含刚才的对话
@@ -652,6 +662,7 @@ ${updatedContext}
           
           if (aiGatewayKey) {
             try {
+              console.log('Using AI Gateway for follow-up response:', charId);
               const result = await streamText({
                 model: 'openai/gpt-4o-mini',
                 messages: [
@@ -666,12 +677,14 @@ ${updatedContext}
                 fullResponse += chunk;
               }
               response = fullResponse;
-              console.log('Follow-up response generated for', charId);
+              console.log('AI Gateway follow-up response successful for', charId, '- length:', fullResponse.length);
             } catch (error) {
               console.error('AI Gateway error for follow-up:', error);
+              console.log('Falling back to mock response for follow-up:', charId);
               response = mockLLMCall(currentNPC.systemPrompt, message);
             }
           } else {
+            console.log('No AI_GATEWAY_API_KEY found, using mock response for follow-up:', charId);
             response = mockLLMCall(currentNPC.systemPrompt, message);
           }
           

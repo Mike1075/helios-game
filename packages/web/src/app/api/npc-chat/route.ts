@@ -137,11 +137,21 @@ export async function POST(req: NextRequest) {
     const { conversationHistory, timeOfDay, barActivity } = NPCChatSchema.parse(body);
     
     // 分析最近的对话沉默时长（模拟）
-    const shouldStartConversation = Math.random() < 0.3; // 30%概率自主开始对话
+    const shouldStartConversation = Math.random() < 0.8; // 80%概率自主开始对话，增加测试成功率
+    
+    console.log('NPC auto chat decision:', {
+      shouldStartConversation,
+      historyLength: conversationHistory.length,
+      timeOfDay,
+      barActivity
+    });
     
     if (!shouldStartConversation) {
+      console.log('NPC auto chat decided not to start conversation');
       return NextResponse.json({ hasConversation: false });
     }
+    
+    console.log('NPC auto chat will start conversation');
     
     // 随机选择一个NPC开始对话
     const npcIds = ['alex', 'nova', 'rachel'];
@@ -220,7 +230,7 @@ ${selectedTopic}
     const otherNPCs = npcIds.filter(id => id !== initiatorId);
     
     for (const npcId of otherNPCs) {
-      const shouldRespond = Math.random() < 0.4; // 40%概率立即回应
+      const shouldRespond = Math.random() < 0.7; // 70%概率立即回应，增加互动
       
       if (shouldRespond) {
         const npc = characters[npcId as keyof typeof characters];
