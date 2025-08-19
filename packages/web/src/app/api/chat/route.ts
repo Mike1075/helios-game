@@ -48,13 +48,14 @@ export async function POST(request: NextRequest) {
     const routing = routeCharacterResponse(userMessage, playerName, existingDynamicCharacters);
     console.log(`🎯 [${requestId}] 路由结果:`, routing);
     
-    // 3. 保存玩家消息到Zep
-    await savePlayerMessage(sessionId, playerName, userMessage, inputType === 'action' ? 'action' : 'dialogue');
+    // 3. 保存玩家消息到Zep (异步，不阻塞主流程)
+    savePlayerMessage(sessionId, playerName, userMessage, inputType === 'action' ? 'action' : 'dialogue')
+      .catch(error => console.warn('Zep保存玩家消息失败，但不影响聊天:', error.message));
     
     // 通用AI处理函数
     async function handleGeneralAI() {
-      // 获取对话历史
-      const conversationHistory = await getChatHistory(sessionId, 10);
+      // 获取对话历史（允许失败）
+      const conversationHistory = await getChatHistory(sessionId, 10).catch(() => '对话刚刚开始...');
       
       // 使用智能通用AI系统提示词
       const systemPrompt = `你是月影酒馆的智能环境，能够根据客人的需求和情况，智能地以合适的身份回应。
@@ -88,8 +89,9 @@ ${conversationHistory}
       ]);
       console.log('✅ AI调用成功，响应长度:', aiResponse.content.length);
 
-      // 保存AI响应到Zep
-      await saveAIResponse(sessionId, 'general', aiResponse.content);
+      // 保存AI响应到Zep (异步，不阻塞)
+      saveAIResponse(sessionId, 'general', aiResponse.content)
+        .catch(error => console.warn('Zep保存AI响应失败:', error.message));
       
       return {
         success: true,
@@ -132,8 +134,8 @@ ${conversationHistory}
         throw new Error(`未找到核心角色: ${routing.character_id}`);
       }
 
-      // 获取对话历史
-      const conversationHistory = await getChatHistory(sessionId, 10);
+      // 获取对话历史（允许失败）
+      const conversationHistory = await getChatHistory(sessionId, 10).catch(() => '对话刚刚开始...');
       
       // 生成AI响应
       console.log(`🤖 调用核心AI角色: ${coreCharacter.name}`);
@@ -148,8 +150,9 @@ ${conversationHistory}
       );
       console.log(`✅ ${coreCharacter.name}响应成功，长度:`, aiResponse.length);
 
-      // 保存AI响应到Zep
-      await saveAIResponse(sessionId, routing.character_id, aiResponse);
+      // 保存AI响应到Zep (异步，不阻塞)
+      saveAIResponse(sessionId, routing.character_id, aiResponse)
+        .catch(error => console.warn('Zep保存AI响应失败:', error.message));
       
       response = {
         success: true,
@@ -189,8 +192,8 @@ ${conversationHistory}
         }
 
         if (newCharacter) {
-          // 获取对话历史
-          const conversationHistory = await getChatHistory(sessionId, 10);
+          // 获取对话历史（允许失败）
+          const conversationHistory = await getChatHistory(sessionId, 10).catch(() => '对话刚刚开始...');
           
           // 生成新角色的响应
           const aiResponse = await dynamicCharacterManager.generateCharacterResponse(
@@ -199,8 +202,9 @@ ${conversationHistory}
             userMessage
           );
 
-          // 保存AI响应到Zep（使用角色专属会话）
-          await saveAIResponse(newCharacter.supabase_session_id, newCharacter.id, aiResponse);
+          // 保存AI响应到Zep（使用角色专属会话，异步不阻塞）
+          saveAIResponse(newCharacter.supabase_session_id, newCharacter.id, aiResponse)
+            .catch(error => console.warn('Zep保存新角色响应失败:', error.message));
           
           // 发送新角色创建事件到客户端
           console.log('📢 发送新角色创建广播事件');

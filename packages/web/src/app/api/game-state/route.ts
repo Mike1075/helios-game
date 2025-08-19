@@ -310,6 +310,10 @@ export async function POST(request: NextRequest) {
     console.log('🎮 游戏状态API调用:', { action, payload: Object.keys(payload || {}) });
 
     switch (action) {
+      case 'init_game':
+        const initResult = await gameStateManager.initializeGame(payload.playerName);
+        return NextResponse.json(initResult);
+
       case 'chat':
         const chatResult = await gameStateManager.handleChat(
           payload.playerName,
@@ -348,6 +352,13 @@ export async function POST(request: NextRequest) {
           payload.triggerContext
         );
         return NextResponse.json(chamberResult);
+
+      case 'trigger_autonomous_behavior':
+        const autonomousResult = await gameStateManager.triggerAutonomousBehavior(
+          payload.sessionId,
+          payload.playerName
+        );
+        return NextResponse.json(autonomousResult);
 
       default:
         return NextResponse.json(
