@@ -210,7 +210,7 @@ class GameStateManager {
   /**
    * 生成角色响应
    */
-  private async generateCharacterResponse(character: any, playerName: string, userMessage: string, sessionId: string) {
+  private async generateCharacterResponse(character: any, playerName: string, userMessage: string, sessionId: string): Promise<string> {
     try {
       const conversationHistory = await getChatHistory(sessionId, 10);
       
@@ -225,7 +225,15 @@ class GameStateManager {
           conversationHistory,
           'moonlight_tavern'
         );
-        return response;
+        
+        // 确保返回字符串
+        if (typeof response === 'string') {
+          return response;
+        } else if (typeof response === 'object' && response.content) {
+          return response.content;
+        }
+        return `${character.name}沉思了一下...`;
+        
       } else {
         // 动态角色使用简单响应
         const systemPrompt = `你是月影酒馆的${character.role}${character.name}。你${character.personality}。请简短自然地回应客人${playerName}的话。`;
@@ -238,8 +246,10 @@ class GameStateManager {
         // 处理AI服务的响应格式
         if (typeof response === 'object' && response.content) {
           return response.content;
+        } else if (typeof response === 'string') {
+          return response;
         }
-        return response;
+        return `${character.name}友好地点了点头。`;
       }
     } catch (error) {
       console.error('AI响应生成失败:', error);
