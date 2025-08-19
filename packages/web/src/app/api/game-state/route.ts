@@ -215,7 +215,7 @@ class GameStateManager {
       const conversationHistory = await getChatHistory(sessionId, 10);
       
       if (character.type === 'core_npc') {
-        // 核心NPC使用专业AI服务
+        // 核心NPC使用专业AI服务 - generateCharacterResponse 已经返回字符串
         const response = await aiService.generateCharacterResponse(
           character.name,
           `${character.role}，${character.personality}`,
@@ -226,13 +226,7 @@ class GameStateManager {
           'moonlight_tavern'
         );
         
-        // 确保返回字符串
-        if (typeof response === 'string') {
-          return response;
-        } else if (typeof response === 'object' && response.content) {
-          return response.content;
-        }
-        return `${character.name}沉思了一下...`;
+        return response; // generateCharacterResponse 已经返回 Promise<string>
         
       } else {
         // 动态角色使用简单响应
