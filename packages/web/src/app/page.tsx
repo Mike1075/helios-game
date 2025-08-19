@@ -20,12 +20,6 @@ interface NPC {
 
 const NPCS: NPC[] = [
   {
-    id: 'auto',
-    name: '🎯 智能选择',
-    role: '自动模式',
-    description: 'AI会根据你的话题自动选择最合适的NPC来回应'
-  },
-  {
     id: 'guard_alvin',
     name: '艾尔文',
     role: '城卫兵',
@@ -55,15 +49,12 @@ export default function Home() {
     }
   ])
   const [input, setInput] = useState('')
-  const [selectedNpc, setSelectedNpc] = useState<string>('auto')
+  const [selectedNpc, setSelectedNpc] = useState<string>('guard_alvin')
   const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`)
   const [isLoading, setIsLoading] = useState(false)
-  const [isEchoLoading, setIsEchoLoading] = useState(false)
-  const [npcDialogueTimer, setNpcDialogueTimer] = useState<NodeJS.Timeout | null>(null)
-  const [isNpcDialogueActive, setIsNpcDialogueActive] = useState(false)
-  const [inputFocused, setInputFocused] = useState(false)
+  const [isAutoMode, setIsAutoMode] = useState(false) // 自动对话模式
+  const [autoInterval, setAutoInterval] = useState<NodeJS.Timeout | null>(null) // 自动对话定时器
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const npcDialogueIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -73,82 +64,37 @@ export default function Home() {
     scrollToBottom()
   }, [messages])
 
-  // 管理NPC连续对话
-  useEffect(() => {
-    if (isNpcDialogueActive && !inputFocused) {
-      console.log('启动NPC连续对话模式')
-      startContinuousDialogue()
-    } else {
-      console.log('停止NPC连续对话模式')
-      stopContinuousDialogue()
-    }
-    
-    return () => {
-      stopContinuousDialogue()
-    }
-  }, [isNpcDialogueActive, inputFocused])
+  // 发送玩家消息
+  const sendMessage = async (userMessage?: string) => {
+    const messageToSend = userMessage || input
+    if (!messageToSend.trim() || isLoading) return
 
-  // 管理NPC自主对话计时器
-  useEffect(() => {
-    // 清理现有计时器
-    if (npcDialogueTimer) {
-      clearTimeout(npcDialogueTimer)
-    }
-    
-    // 如果用户正在输入，不启动新的计时器
-    if (inputFocused) {
-      return
-    }
-    
-    // 设置新的30秒计时器启动NPC对话
-    const newTimer = setTimeout(() => {
-      if (!inputFocused) { // 再次确认用户没有在输入
-        console.log('30秒计时器触发 - 启动NPC对话')
-        setIsNpcDialogueActive(true)
-        triggerNpcDialogue()
+    // 只有在不是自动模式或者是用户主动发送时才添加玩家消息
+    if (!userMessage) {
+      const playerMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'player',
+        content: messageToSend,
+        timestamp: Date.now()
       }
-    }, 30000) // 30秒后开始NPC对话
+      setMessages(prev => [...prev, playerMessage])
+      setInput('')
+    }
     
-    setNpcDialogueTimer(newTimer)
-    
-    // 清理函数
-    return () => {
-      clearTimeout(newTimer)
-    }
-  }, [messages.filter(msg => msg.sender === 'player').length, inputFocused]) // 当玩家消息数量变化或焦点状态变化时重置
-
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return
-
-    // 停止NPC对话
-    setIsNpcDialogueActive(false)
-    if (npcDialogueTimer) {
-      clearTimeout(npcDialogueTimer)
-      setNpcDialogueTimer(null)
-    }
-
-    const playerMessage: Message = {
-      id: Date.now().toString(),
-      sender: 'player',
-      content: input,
-      timestamp: Date.now()
-    }
-
-    setMessages(prev => [...prev, playerMessage])
-    setInput('')
     setIsLoading(true)
 
     try {
       // 调用后端API
-      const response = await fetch('/api/chat', {
+      const apiUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8000/api/chat' : '/api/chat'
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           player_id: playerId,
-          message: input,
-          npc_id: selectedNpc === 'auto' ? 'auto' : selectedNpc,
+          message: messageToSend,
+          npc_id: selectedNpc,
           scene_id: 'tavern'
         })
       })
@@ -188,16 +134,19 @@ export default function Home() {
     }
   }
 
-  const triggerEcho = async () => {
-    if (isEchoLoading) return // 防止重复点击
+  // 触发NPC自主对话
+  const triggerNpcDialogue = async () => {
+    if (isLoading) return
     
-    setIsEchoLoading(true)
+    // 让NPC基于当前对话继续说话
+    const contextPrompt = "请基于之前的对话继续你的想法，或者提出新的话题。不需要等待玩家回应，继续表达你角色的观点和感受。"
+    await sendMessage(contextPrompt)
+  }
+
+  const triggerEcho = async () => {
     try {
-      // 设置更长的超时时间，因为回响之室需要深度AI分析
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒超时
-      
-      const response = await fetch('/api/echo', {
+      const apiUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8000/api/echo' : '/api/echo'
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -205,11 +154,8 @@ export default function Home() {
         body: JSON.stringify({
           player_id: playerId,
           event_id: 'latest'
-        }),
-        signal: controller.signal
+        })
       })
-      
-      clearTimeout(timeoutId)
 
       if (!response.ok) {
         throw new Error('Network response was not ok')
@@ -227,171 +173,43 @@ export default function Home() {
       setMessages(prev => [...prev, echoMessage])
     } catch (error) {
       console.error('Error triggering echo:', error)
-      let errorMessage = '回响之室分析失败'
-      
-      if (error.name === 'AbortError') {
-        errorMessage = '回响之室分析超时，请稍后再试'
-      } else if (error.message.includes('Network')) {
-        errorMessage = 'API连接失败，请检查网络连接'
-      }
-      
       const fallbackEcho: Message = {
         id: Date.now().toString() + '_echo_fallback',
         sender: 'npc',
-        content: `🪞 **回响之室** 🪞\n\n*镜子中的影像模糊不清...* \n\n${errorMessage}`,
+        content: '🪞 **回响之室** 🪞\n\n*镜子中的影像模糊不清...* (API连接失败)',
         timestamp: Date.now()
       }
       setMessages(prev => [...prev, fallbackEcho])
-    } finally {
-      setIsEchoLoading(false)
     }
   }
 
-  const startContinuousDialogue = () => {
-    // 清理现有的间隔
-    if (npcDialogueIntervalRef.current) {
-      clearInterval(npcDialogueIntervalRef.current)
-    }
-    
-    // 立即开始第一轮对话
-    triggerNpcDialogue()
-    
-    // 设置定时器每20秒执行一次对话（给LLM足够时间响应）
-    npcDialogueIntervalRef.current = setInterval(() => {
-      if (isNpcDialogueActive && !inputFocused) {
-        console.log('定时器触发下一轮NPC对话')
+  // 开启/关闭自动对话模式
+  const toggleAutoMode = () => {
+    if (isAutoMode) {
+      // 关闭自动模式
+      if (autoInterval) {
+        clearInterval(autoInterval)
+        setAutoInterval(null)
+      }
+      setIsAutoMode(false)
+    } else {
+      // 开启自动模式
+      setIsAutoMode(true)
+      const interval = setInterval(() => {
         triggerNpcDialogue()
-      } else {
-        console.log('定时器检测到状态变化，停止对话')
-        stopContinuousDialogue()
-      }
-    }, 20000)
-  }
-
-  const stopContinuousDialogue = () => {
-    if (npcDialogueIntervalRef.current) {
-      console.log('清理NPC对话定时器')
-      clearInterval(npcDialogueIntervalRef.current)
-      npcDialogueIntervalRef.current = null
+      }, 3000) // 每3秒触发一次NPC对话
+      setAutoInterval(interval)
     }
   }
 
-  const triggerDirectorEngine = async () => {
-    try {
-      const response = await fetch('/api/director', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          player_id: playerId
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('导演引擎响应:', data)
-        
-        const directorMessage: Message = {
-          id: Date.now().toString() + '_director',
-          sender: 'npc',
-          content: `🎬 **导演引擎** 🎬\n\n${data.message}\n\n*系统已检查你的最近行为，寻找可能的认知失调...*`,
-          timestamp: data.timestamp
-        }
-        setMessages(prev => [...prev, directorMessage])
-      } else {
-        console.error('导演引擎触发失败')
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (autoInterval) {
+        clearInterval(autoInterval)
       }
-    } catch (error) {
-      console.error('Error triggering director engine:', error)
-      const errorMessage: Message = {
-        id: Date.now().toString() + '_director_error',
-        sender: 'npc',
-        content: `🎬 **导演引擎** 🎬\n\n*导演似乎在忙其他事情...* (本地开发模式下无法访问导演引擎)`,
-        timestamp: Date.now()
-      }
-      setMessages(prev => [...prev, errorMessage])
     }
-  }
-
-  const triggerNpcDialogue = async () => {
-    console.log('triggerNpcDialogue 被调用')
-    
-    try {
-      // 设置30秒超时
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000)
-      
-      const response = await fetch('/api/npc-dialogue', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scene_id: 'tavern',
-          player_id: playerId
-        }),
-        signal: controller.signal
-      })
-      
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        throw new Error(`Server response: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      // 找到对应的NPC名称
-      const speakerName = NPCS.find(npc => npc.id === data.npc_speaker)?.name || data.npc_speaker
-      const listenerName = NPCS.find(npc => npc.id === data.npc_listener)?.name || data.npc_listener
-
-      // 添加说话者的消息
-      const speakerMessage: Message = {
-        id: Date.now().toString() + '_npc_speaker',
-        sender: 'npc',
-        content: data.message,
-        npcId: data.npc_speaker,
-        npcName: speakerName,
-        timestamp: data.timestamp
-      }
-
-      // 添加回应者的消息
-      const listenerMessage: Message = {
-        id: Date.now().toString() + '_npc_listener',
-        sender: 'npc',
-        content: data.response,
-        npcId: data.npc_listener,
-        npcName: listenerName,
-        timestamp: data.timestamp + 1000
-      }
-
-      // 依次添加消息
-      setMessages(prev => [...prev, speakerMessage])
-      
-      // 延迟添加回应消息，模拟真实对话节奏
-      setTimeout(() => {
-        setMessages(prev => [...prev, listenerMessage])
-        console.log('添加了一轮NPC对话')
-      }, 2000)
-
-    } catch (error) {
-      console.error('Error triggering NPC dialogue:', error)
-      
-      // 添加错误消息显示
-      const errorMessage: Message = {
-        id: Date.now().toString() + '_error',
-        sender: 'npc',
-        content: `*酒馆里突然安静下来...* (NPC对话暂时中断，将在下次循环中重试)`,
-        timestamp: Date.now()
-      }
-      setMessages(prev => [...prev, errorMessage])
-      
-      // 不立即停止对话，让定时器在下次尝试时重新连接
-      console.log('NPC对话出错，等待下次重试...')
-    }
-  }
-
+  }, [autoInterval])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -437,48 +255,32 @@ export default function Home() {
               
               <button
                 onClick={triggerEcho}
-                disabled={isEchoLoading}
-                className={`w-full mt-4 p-3 rounded-lg font-medium transition-all ${
-                  isEchoLoading 
-                    ? 'bg-gray-500 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'
-                }`}
+                className="w-full mt-4 p-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-lg font-medium hover:from-pink-600 hover:to-purple-700 transition-all"
               >
-                {isEchoLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    <span>深度分析中...</span>
-                  </div>
-                ) : (
-                  '🪞 进入回响之室'
-                )}
+                🪞 进入回响之室
               </button>
               
-              <button
-                onClick={() => {
-                  if (isNpcDialogueActive) {
-                    console.log('手动停止NPC对话')
-                    setIsNpcDialogueActive(false)
-                  } else {
-                    console.log('手动开始NPC对话')
-                    setIsNpcDialogueActive(true)
-                  }
-                }}
-                className={`w-full mt-2 p-3 rounded-lg font-medium transition-all ${
-                  isNpcDialogueActive
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {isNpcDialogueActive ? '🛑 停止NPC对话' : '💬 开始NPC对话'}
-              </button>
-
-              <button
-                onClick={triggerDirectorEngine}
-                className="w-full mt-2 p-3 rounded-lg font-medium transition-all bg-orange-600 hover:bg-orange-700"
-              >
-                🎬 触发导演引擎
-              </button>
+              {/* 自动对话控制 */}
+              <div className="mt-4 space-y-2">
+                <button
+                  onClick={toggleAutoMode}
+                  className={`w-full p-3 rounded-lg font-medium transition-all ${
+                    isAutoMode 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {isAutoMode ? '🛑 停止自动对话' : '🤖 开启自动对话'}
+                </button>
+                
+                <button
+                  onClick={triggerNpcDialogue}
+                  disabled={isLoading}
+                  className="w-full p-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-all"
+                >
+                  💬 手动触发对话
+                </button>
+              </div>
             </div>
           </div>
 
@@ -528,16 +330,7 @@ export default function Home() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  onFocus={() => {
-                    console.log('用户开始输入 - 停止NPC对话')
-                    setInputFocused(true)
-                    setIsNpcDialogueActive(false) // 用户开始输入时停止NPC对话
-                  }}
-                  onBlur={() => {
-                    console.log('用户停止输入')
-                    setInputFocused(false)
-                  }}
-                  placeholder={selectedNpc === 'auto' ? '说些什么，AI会帮你找到最合适的聊天对象...' : `对${NPCS.find(n => n.id === selectedNpc)?.name}说些什么...`}
+                  placeholder={`对${NPCS.find(n => n.id === selectedNpc)?.name}说些什么...`}
                   className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   disabled={isLoading}
                 />

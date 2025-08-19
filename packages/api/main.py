@@ -6,13 +6,12 @@ import os
 import json
 import time
 import asyncio
-import requests
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import create_client, Client
-# Zep记忆引擎 - 使用HTTP API
-from director import run_director_cycle, monitor_agent_logs
+# Zep相关导入暂时注释，使用简单内存存储
+# from zep_python import Memory, Message as ZepMessage, User, Session
 
 # 加载环境变量
 load_dotenv()
@@ -39,15 +38,14 @@ supabase: Client = create_client(
     os.getenv("SUPABASE_SERVICE_KEY")
 )
 
-# Zep API 配置
-ZEP_API_KEY = os.getenv("ZEP_API_KEY")
-ZEP_API_URL = os.getenv("ZEP_API_URL")
+# 暂时禁用Zep，使用简单的内存存储
+# zep_client = None  # 稍后实现
 
 # 数据模型
 class ChatRequest(BaseModel):
     player_id: str
     message: str
-    npc_id: Optional[str] = "auto"  # 默认为auto，自动选择NPC
+    npc_id: Optional[str] = None
     scene_id: str = "tavern"
 
 class EchoRequest(BaseModel):
@@ -63,17 +61,6 @@ class ChatResponse(BaseModel):
 class EchoResponse(BaseModel):
     attribution: str
     memory_evidence: List[str]
-    timestamp: float
-
-class NPCDialogueRequest(BaseModel):
-    scene_id: str = "tavern"
-    player_id: Optional[str] = None  # 用于获取上下文
-
-class NPCDialogueResponse(BaseModel):
-    npc_speaker: str
-    npc_listener: str
-    message: str
-    response: str
     timestamp: float
 
 # NPC配置数据
@@ -140,159 +127,43 @@ NPCS_CONFIG = {
     }
 }
 
-# Zep API 辅助函数
+# 简单的内存存储，替代Zep
+conversation_store = {}
+
+# 辅助函数
 async def ensure_user_exists(user_id: str):
-    """确保Zep中存在用户"""
-    if not ZEP_API_KEY or not ZEP_API_URL:
-        print("Zep API配置缺失，跳过用户创建")
-        return
-    
-    try:
-        # Zep Cloud API 使用 Api-Key 认证格式（当密钥以 z_ 开头时）
-        headers = {
-            "Authorization": f"Api-Key {ZEP_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        user_data = {
-            "user_id": user_id,
-            "email": f"{user_id}@helios.game",
-            "first_name": f"Player_{user_id[:8]}",
-            "last_name": "Helios"
-        }
-        
-        response = requests.post(
-            f"{ZEP_API_URL}/api/v2/users",
-            headers=headers,
-            json=user_data,
-            timeout=10
-        )
-        
-        if response.status_code in [200, 201, 409]:  # 409表示用户已存在
-            print(f"Zep用户 {user_id} 已确保存在")
-        else:
-            print(f"创建Zep用户失败: {response.status_code} - {response.text}")
-            
-    except Exception as e:
-        print(f"确保Zep用户存在失败: {e}")
+    """确保用户存在（简化版）"""
+    # 简化实现，只是确保用户在我们的内存store中
+    pass
 
 async def get_conversation_history(session_id: str, limit: int = 10):
-    """从Zep获取对话历史"""
-    if not ZEP_API_KEY or not ZEP_API_URL:
-        print("Zep API配置缺失，返回空历史")
-        return []
-        
+    """从内存获取对话历史"""
     try:
-        # Zep Cloud API 使用 Api-Key 认证格式
-        headers = {
-            "Authorization": f"Api-Key {ZEP_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        response = requests.get(
-            f"{ZEP_API_URL}/api/v2/threads/{session_id}/messages",
-            headers=headers,
-            timeout=10
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            messages = []
-            
-            # 解析Zep返回的消息格式
-            if "messages" in data:
-                for msg in data["messages"][-limit:]:  # 获取最近的消息
-                    messages.append({
-                        "role": msg.get("role", "user"),
-                        "content": msg.get("content", "")
-                    })
-            
-            print(f"从Zep获取到 {len(messages)} 条历史消息")
-            return messages
-        else:
-            print(f"获取Zep对话历史失败: {response.status_code}")
-            return []
-            
-    except Exception as e:
-        print(f"获取Zep对话历史失败: {e}")
+        if session_id in conversation_store:
+            history = conversation_store[session_id][-limit:]
+            return history
         return []
-
-async def ensure_thread_exists(thread_id: str, user_id: str):
-    """确保Zep中存在会话线程"""
-    if not ZEP_API_KEY or not ZEP_API_URL:
-        return
-        
-    try:
-        # Zep Cloud API 使用 Api-Key 认证格式
-        headers = {
-            "Authorization": f"Api-Key {ZEP_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        thread_data = {
-            "thread_id": thread_id,
-            "user_id": user_id
-        }
-        
-        response = requests.post(
-            f"{ZEP_API_URL}/api/v2/threads",
-            headers=headers,
-            json=thread_data,
-            timeout=10
-        )
-        
-        if response.status_code in [200, 201, 409]:
-            print(f"Zep线程 {thread_id} 已确保存在")
-        else:
-            print(f"创建Zep线程失败: {response.status_code} - {response.text}")
-            
     except Exception as e:
-        print(f"确保Zep线程存在失败: {e}")
+        print(f"获取对话历史失败: {e}")
+        return []
 
 async def save_conversation_to_memory(session_id: str, user_message: str, assistant_message: str):
-    """保存对话到Zep"""
-    if not ZEP_API_KEY or not ZEP_API_URL:
-        print("Zep API配置缺失，跳过保存")
-        return
-        
+    """保存对话到内存"""
     try:
-        # Zep Cloud API 使用 Api-Key 认证格式
-        headers = {
-            "Authorization": f"Api-Key {ZEP_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        if session_id not in conversation_store:
+            conversation_store[session_id] = []
         
-        # 构建消息数据
-        messages = [
-            {
-                "role": "user",
-                "content": user_message
-            },
-            {
-                "role": "assistant", 
-                "content": assistant_message
-            }
-        ]
+        conversation_store[session_id].extend([
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": assistant_message}
+        ])
         
-        message_data = {
-            "thread_id": session_id,
-            "messages": messages
-        }
-        
-        response = requests.post(
-            f"{ZEP_API_URL}/api/v2/threads/{session_id}/messages",
-            headers=headers,
-            json=message_data,
-            timeout=10
-        )
-        
-        if response.status_code in [200, 201]:
-            print(f"成功保存对话到Zep线程 {session_id}")
-        else:
-            print(f"保存到Zep失败: {response.status_code} - {response.text}")
+        # 保持最近20条记录
+        if len(conversation_store[session_id]) > 20:
+            conversation_store[session_id] = conversation_store[session_id][-20:]
             
     except Exception as e:
-        print(f"保存对话到Zep失败: {e}")
+        print(f"保存对话失败: {e}")
 
 async def save_to_supabase(table: str, data: Dict):
     """保存数据到Supabase"""
@@ -321,183 +192,6 @@ async def call_tongyi_llm(system_prompt: str, user_message: str, model: str = "q
         # 返回fallback响应
         return f"*系统繁忙，请稍后再试* (错误: {str(e)})"
 
-async def select_responding_npc(user_message: str, available_npcs: list) -> str:
-    """基于用户消息内容智能选择最合适的NPC来响应"""
-    try:
-        # 构建NPC选择提示词
-        npc_descriptions = []
-        for npc_id, npc_data in available_npcs:
-            npc_descriptions.append(f"- {npc_id}: {npc_data['name']}({npc_data['role']}) - {npc_data['core_motivation']}")
-        
-        selection_prompt = f"""
-你是一个智能对话路由器，负责分析用户消息并选择最合适的NPC来响应。
-
-可选的NPC角色：
-{chr(10).join(npc_descriptions)}
-
-用户消息："{user_message}"
-
-请基于以下原则选择最合适的NPC：
-1. 消息内容与NPC的角色职责最相关
-2. NPC的性格特点最适合回应这类话题
-3. NPC的核心动机与消息主题最匹配
-
-请只返回NPC的ID（如：guard_alvin），不要包含其他内容。
-"""
-        
-        selected_npc = await call_tongyi_llm(selection_prompt, user_message)
-        selected_npc = selected_npc.strip()
-        
-        # 验证选择是否有效
-        valid_npc_ids = [npc_id for npc_id, _ in available_npcs]
-        if selected_npc in valid_npc_ids:
-            return selected_npc
-        else:
-            # 如果AI返回无效选择，默认选择第一个NPC
-            print(f"AI选择了无效的NPC: {selected_npc}，使用默认选择")
-            return valid_npc_ids[0]
-            
-    except Exception as e:
-        print(f"NPC选择失败: {e}")
-        # 出错时返回第一个可用的NPC
-        return available_npcs[0][0]
-
-async def generate_npc_dialogue(scene_id: str, player_id: Optional[str] = None, continue_conversation: bool = False):
-    """生成NPC之间的自主对话"""
-    try:
-        # 1. 获取最近的NPC对话历史
-        recent_npc_dialogue = []
-        current_topic = ""
-        current_speakers = None
-        
-        try:
-            # 获取最近的NPC对话记录
-            recent_logs = supabase.table("agent_logs").select("*").eq("action_type", "npc_dialogue").order("timestamp", desc=True).limit(10).execute()
-            if recent_logs.data:
-                recent_npc_dialogue = recent_logs.data
-                
-                # 如果要继续对话，使用最近的对话者
-                if continue_conversation and len(recent_npc_dialogue) >= 2:
-                    last_speaker = recent_npc_dialogue[0].get('character_id')
-                    second_last_speaker = recent_npc_dialogue[1].get('character_id')
-                    
-                    if last_speaker and second_last_speaker and last_speaker != second_last_speaker:
-                        # 继续使用相同的对话者，但交换角色
-                        current_speakers = (second_last_speaker, last_speaker)
-                        
-                        # 分析最近对话的主题
-                        recent_messages = [log.get('output', '') for log in recent_npc_dialogue[:3]]
-                        current_topic = f"继续刚才关于：{recent_messages[0][:20]}... 的话题"
-        except Exception as e:
-            print(f"获取NPC对话历史失败: {e}")
-        
-        # 2. 选择对话者
-        if not current_speakers:
-            # 如果没有继续对话，随机选择两个NPC
-            available_npcs = list(NPCS_CONFIG.keys())
-            if len(available_npcs) < 2:
-                return None
-                
-            import random
-            speaker_id, listener_id = random.sample(available_npcs, 2)
-        else:
-            speaker_id, listener_id = current_speakers
-            
-        speaker = NPCS_CONFIG[speaker_id]
-        listener = NPCS_CONFIG[listener_id]
-        
-        # 3. 构建对话上下文
-        dialogue_context = ""
-        if recent_npc_dialogue:
-            recent_exchanges = []
-            for log in recent_npc_dialogue[:4]:  # 获取最近4轮对话
-                char_name = NPCS_CONFIG.get(log.get('character_id', ''), {}).get('name', '某人')
-                recent_exchanges.append(f"{char_name}: {log.get('output', '')}")
-            dialogue_context = f"\n\n最近的对话内容：\n" + "\n".join(recent_exchanges)
-        
-        # 4. 确定话题
-        if not current_topic:
-            if recent_npc_dialogue:
-                # 基于最近的对话生成相关话题
-                recent_content = " ".join([log.get('output', '') for log in recent_npc_dialogue[:2]])
-                current_topic = "延续刚才的话题并深入讨论"
-            else:
-                # 新话题
-                topic_prompts = [
-                    "港口最近发生的奇怪事件",
-                    "古老传说中的神秘力量", 
-                    "这座城市隐藏的秘密",
-                    "流传在酒馆中的神秘故事",
-                    "外来者带来的不寻常消息",
-                    "港口深处的未解之谜"
-                ]
-                import random
-                current_topic = random.choice(topic_prompts)
-        
-        # 5. 生成连贯的对话
-        dialogue_prompt = f"""
-你需要生成港口酒馆中两个NPC的连贯对话。
-
-角色设定：
-- 说话者：{speaker['name']}（{speaker['role']}) - 性格：{speaker['personality']}
-- 听话者：{listener['name']}（{listener['role']}) - 性格：{listener['personality']}
-
-当前话题：{current_topic}
-
-{dialogue_context}
-
-要求：
-1. 如果有对话历史，请延续之前的话题，让对话更加深入
-2. {speaker['name']}应该基于之前的内容提出新的观点或问题
-3. {listener['name']}需要给出有建设性的回应，推进话题发展
-4. 保持角色性格一致性
-5. 让对话自然深入，避免重复
-
-请生成格式：
-说话者：[{speaker['name']}的话]
-听话者：[{listener['name']}的回应]
-"""
-
-        # 6. 生成对话
-        full_dialogue = await call_tongyi_llm(dialogue_prompt, f"围绕{current_topic}生成深入的对话")
-        
-        # 7. 解析对话内容
-        lines = full_dialogue.strip().split('\n')
-        speaker_message = ""
-        listener_response = ""
-        
-        for line in lines:
-            if line.startswith('说话者：') or line.startswith(speaker['name']):
-                speaker_message = line.split('：', 1)[1] if '：' in line else line
-            elif line.startswith('听话者：') or line.startswith(listener['name']):
-                listener_response = line.split('：', 1)[1] if '：' in line else line
-        
-        # 如果解析失败，生成基于上下文的默认消息
-        if not speaker_message:
-            if recent_npc_dialogue:
-                speaker_message = f"*{speaker['name']}继续刚才的话题* 我还想补充一点..."
-            else:
-                speaker_message = f"*{speaker['name']}看向{listener['name']}* 关于{current_topic}，你怎么看？"
-        if not listener_response:
-            if recent_npc_dialogue:
-                listener_response = f"*{listener['name']}若有所思* 确实，这让我想到..."
-            else:
-                listener_response = f"*{listener['name']}思考了一下* 这个话题很值得深入讨论..."
-        
-        return {
-            "speaker_id": speaker_id,
-            "listener_id": listener_id,
-            "speaker_name": speaker['name'],
-            "listener_name": listener['name'],
-            "message": speaker_message,
-            "response": listener_response,
-            "timestamp": time.time()
-        }
-        
-    except Exception as e:
-        print(f"生成NPC对话失败: {e}")
-        return None
-
 @app.get("/")
 async def root():
     return {"message": "Helios Agent Core is running", "version": "0.1.0"}
@@ -510,35 +204,45 @@ async def health_check():
 async def chat_with_npc(request: ChatRequest):
     """Agent Core - 处理玩家与NPC的对话"""
     try:
-        # 1. 如果没有指定NPC或指定了auto，则自动选择
-        if not request.npc_id or request.npc_id == "auto":
-            available_npcs = [(npc_id, npc_data) for npc_id, npc_data in NPCS_CONFIG.items()]
-            selected_npc_id = await select_responding_npc(request.message, available_npcs)
-            request.npc_id = selected_npc_id
-            print(f"🎯 AI选择了NPC: {selected_npc_id}")
-        
-        # 2. 验证NPC存在
+        # 1. 验证NPC存在
         if request.npc_id not in NPCS_CONFIG:
             request.npc_id = "guard_alvin"
         
         npc = NPCS_CONFIG[request.npc_id]
         session_id = f"{request.player_id}_{request.npc_id}"
         
-        # 2. 确保用户和线程在Zep中存在
+        # 2. 确保用户在Zep中存在
         await ensure_user_exists(request.player_id)
-        await ensure_thread_exists(session_id, request.player_id)
         
-        # 3. 获取对话历史 - 包括与该NPC的直接对话和观察到的NPC对话
+        # 3. 获取对话历史
         conversation_history = await get_conversation_history(session_id)
         
-        # 如果直接对话历史较少，补充NPC环境对话记忆
-        if len(conversation_history) < 5:
-            npc_dialogue_session = f"{request.player_id}_npc_dialogue"
-            npc_conversation_history = await get_conversation_history(npc_dialogue_session, limit=3)
-            conversation_history.extend(npc_conversation_history)
-        
         # 4. 构建系统提示词
-        system_prompt = f"""
+        # 检查是否是自主对话请求
+        is_autonomous = "请基于之前的对话继续你的想法" in request.message
+        
+        if is_autonomous:
+            system_prompt = f"""
+你是{npc['name']}，{npc['role']}。你的核心动机是：{npc['core_motivation']}
+你的性格特点：{npc['personality']}
+
+你的信念系统：
+{npc['belief_system']}
+
+你现在要主动继续对话。请基于之前的对话内容，自然地：
+1. 继续表达你的观点和想法
+2. 提出新的话题或问题
+3. 分享相关的个人经历或见解
+4. 表现出你角色的性格特征和信念
+
+不要等待对方回应，要主动推进对话。保持角色一致性，使用第一人称。
+
+场景：港口酒馆，这里聚集着各色人物。
+
+回应格式：直接的角色对话，可以包含动作描述（用*包围）。要表现得自然、生动，就像你真的在这个场景中一样。
+"""
+        else:
+            system_prompt = f"""
 你是{npc['name']}，{npc['role']}。你的核心动机是：{npc['core_motivation']}
 你的性格特点：{npc['personality']}
 
@@ -573,8 +277,7 @@ async def chat_with_npc(request: ChatRequest):
             "action_type": "dialogue",
             "input": request.message,
             "output": response_text,
-            "session_id": session_id,
-            "belief_influenced": True
+            "session_id": session_id
         }
         
         # 尝试保存到Supabase
@@ -675,112 +378,6 @@ async def chamber_of_echoes(request: EchoRequest):
             memory_evidence=fallback_evidence,
             timestamp=time.time()
         )
-
-@app.post("/api/npc-dialogue", response_model=NPCDialogueResponse)
-async def generate_npc_to_npc_dialogue(request: NPCDialogueRequest):
-    """生成NPC之间的自主对话"""
-    try:
-        # 检查是否有最近的NPC对话来判断是否继续对话
-        recent_npc_logs = supabase.table("agent_logs").select("timestamp").eq("action_type", "npc_dialogue").order("timestamp", desc=True).limit(1).execute()
-        
-        continue_conversation = False
-        if recent_npc_logs.data:
-            # 如果最近5分钟内有NPC对话，则继续对话
-            last_npc_time = recent_npc_logs.data[0]['timestamp']
-            current_time = time.time()
-            if current_time - last_npc_time < 300:  # 5分钟内
-                continue_conversation = True
-        
-        dialogue_data = await generate_npc_dialogue(request.scene_id, request.player_id, continue_conversation)
-        
-        if not dialogue_data:
-            raise HTTPException(status_code=500, detail="Failed to generate NPC dialogue")
-        
-        # 如果有玩家ID，则将NPC对话也保存到该玩家的Zep记忆中
-        if request.player_id:
-            npc_session_id = f"{request.player_id}_npc_dialogue"
-            # 确保用户和线程存在
-            await ensure_user_exists(request.player_id)
-            await ensure_thread_exists(npc_session_id, request.player_id)
-            
-            # 保存NPC对话到Zep（作为环境对话被玩家"听到"）
-            npc_conversation = f"[{dialogue_data['speaker_name']}对{dialogue_data['listener_name']}说]: {dialogue_data['message']}\n[{dialogue_data['listener_name']}回应]: {dialogue_data['response']}"
-            await save_conversation_to_memory(npc_session_id, "观察NPC之间的对话", npc_conversation)
-        
-        # 记录NPC对话到数据库
-        npc_log_speaker = {
-            "timestamp": dialogue_data["timestamp"],
-            "player_id": request.player_id or "system",
-            "character_id": dialogue_data["speaker_id"],
-            "scene_id": request.scene_id,
-            "action_type": "npc_dialogue",
-            "input": f"与{dialogue_data['listener_name']}的对话",
-            "output": dialogue_data["message"],
-            "session_id": f"npc_{dialogue_data['speaker_id']}_{dialogue_data['listener_id']}",
-            "belief_influenced": True
-        }
-        
-        npc_log_listener = {
-            "timestamp": dialogue_data["timestamp"] + 0.1,
-            "player_id": request.player_id or "system", 
-            "character_id": dialogue_data["listener_id"],
-            "scene_id": request.scene_id,
-            "action_type": "npc_dialogue",
-            "input": dialogue_data["message"],
-            "output": dialogue_data["response"],
-            "session_id": f"npc_{dialogue_data['speaker_id']}_{dialogue_data['listener_id']}",
-            "belief_influenced": True
-        }
-        
-        # 保存双方对话记录
-        await save_to_supabase("agent_logs", npc_log_speaker)
-        await save_to_supabase("agent_logs", npc_log_listener)
-        
-        return NPCDialogueResponse(
-            npc_speaker=dialogue_data["speaker_id"],
-            npc_listener=dialogue_data["listener_id"],
-            message=dialogue_data["message"],
-            response=dialogue_data["response"],
-            timestamp=dialogue_data["timestamp"]
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"NPC dialogue generation failed: {str(e)}")
-
-# Director Engine API
-class DirectorRequest(BaseModel):
-    player_id: Optional[str] = None
-    force_check: Optional[bool] = False
-
-class DirectorResponse(BaseModel):
-    status: str
-    message: str
-    events_created: int
-    timestamp: float
-
-@app.post("/api/director", response_model=DirectorResponse)
-async def trigger_director_engine(request: DirectorRequest):
-    """手动触发导演引擎，检测认知失调并创建回响事件"""
-    try:
-        print(f"🎬 API触发导演引擎 - 玩家ID: {request.player_id}")
-        
-        if request.player_id:
-            # 针对特定玩家进行检测
-            monitor_agent_logs(request.player_id)
-        else:
-            # 全局检测
-            run_director_cycle()
-        
-        return DirectorResponse(
-            status="success", 
-            message="导演引擎执行完成",
-            events_created=0,  # TODO: 实际计算创建的事件数
-            timestamp=time.time()
-        )
-        
-    except Exception as e:
-        print(f"❌ 导演引擎执行失败: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Director engine failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
