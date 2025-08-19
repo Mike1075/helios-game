@@ -10,26 +10,30 @@
 import { useState } from 'react';
 
 interface EchoContent {
-  attribution: string;
-  evidence: string[];
-  insight: string;
+  subjective_explanation: string;
+  supporting_memories: string[];
+  belief_connection: string;
+  emotional_resonance: string;
+  wisdom_insight: string;
+  action_suggestions: string[];
   generated_at: number;
+  belief_alignment_score: number;
 }
 
 interface ChamberOfEchoesProps {
   isOpen: boolean;
   playerId: string;
-  eventId: string;
+  playerName: string;
+  triggerContext?: string;
   onClose: () => void;
-  currentBeliefs?: any;
 }
 
 export default function ChamberOfEchoes({ 
   isOpen, 
   playerId, 
-  eventId, 
-  onClose, 
-  currentBeliefs 
+  playerName,
+  triggerContext = "你感到了某种内心的冲突和疑惑...",
+  onClose
 }: ChamberOfEchoesProps) {
   const [echoContent, setEchoContent] = useState<EchoContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +44,7 @@ export default function ChamberOfEchoes({
     setError('');
 
     try {
-      console.log('🪞 进入回响之室...', { playerId, eventId });
+      console.log('🪞 进入回响之室...', { playerId, playerName, triggerContext });
 
       const response = await fetch('/api/echo', {
         method: 'POST',
@@ -49,8 +53,8 @@ export default function ChamberOfEchoes({
         },
         body: JSON.stringify({
           player_id: playerId,
-          event_id: eventId,
-          current_beliefs: currentBeliefs
+          player_name: playerName,
+          trigger_context: triggerContext
         }),
       });
 
@@ -151,30 +155,34 @@ export default function ChamberOfEchoes({
           {echoContent && (
             <div className="space-y-6">
               
-              {/* 主观归因 */}
-              <div className="bg-purple-800/30 rounded-xl p-5 border border-purple-500/20">
+              {/* 触发情境 */}
+              <div className="bg-purple-900/30 rounded-xl p-4 border border-purple-500/20">
+                <h3 className="text-sm font-medium text-purple-300 mb-2">认知触发</h3>
+                <p className="text-purple-100 italic">"{triggerContext}"</p>
+              </div>
+
+              {/* 主观解释 */}
+              <div className="bg-slate-800/50 rounded-xl p-5 border border-purple-500/20">
                 <h3 className="text-lg font-semibold text-purple-200 mb-3 flex items-center gap-2">
-                  💭 内心的声音
+                  💭 内在理解
                 </h3>
-                <div className="text-white leading-relaxed whitespace-pre-wrap">
-                  {echoContent.attribution}
+                <div className="text-white leading-relaxed">
+                  {echoContent.subjective_explanation}
                 </div>
               </div>
 
-              {/* 记忆证据 */}
-              {echoContent.evidence && echoContent.evidence.length > 0 && (
-                <div className="bg-blue-800/30 rounded-xl p-5 border border-blue-500/20">
-                  <h3 className="text-lg font-semibold text-blue-200 mb-3 flex items-center gap-2">
-                    📚 记忆的回声
+              {/* 支持记忆 */}
+              {echoContent.supporting_memories && echoContent.supporting_memories.length > 0 && (
+                <div className="bg-indigo-900/30 rounded-xl p-5 border border-indigo-500/20">
+                  <h3 className="text-lg font-semibold text-indigo-200 mb-3 flex items-center gap-2">
+                    🧠 支持记忆
                   </h3>
                   <div className="space-y-3">
-                    {echoContent.evidence.map((evidence, index) => (
+                    {echoContent.supporting_memories.map((memory, index) => (
                       <div key={index} className="flex items-start gap-3">
-                        <span className="text-blue-400 text-sm mt-1">
-                          {index + 1}.
-                        </span>
-                        <span className="text-blue-100 text-sm leading-relaxed">
-                          {evidence}
+                        <span className="text-indigo-400 text-sm mt-1">•</span>
+                        <span className="text-indigo-100 text-sm leading-relaxed italic">
+                          {memory}
                         </span>
                       </div>
                     ))}
@@ -182,14 +190,69 @@ export default function ChamberOfEchoes({
                 </div>
               )}
 
-              {/* 核心洞察 */}
-              {echoContent.insight && (
-                <div className="bg-indigo-800/30 rounded-xl p-5 border border-indigo-500/20">
-                  <h3 className="text-lg font-semibold text-indigo-200 mb-3 flex items-center gap-2">
-                    ✨ 深层洞察
+              {/* 信念连接 */}
+              <div className="bg-amber-900/20 rounded-xl p-5 border border-amber-500/20">
+                <h3 className="text-lg font-semibold text-amber-200 mb-3 flex items-center gap-2">
+                  ⚡ 信念共鸣
+                </h3>
+                <div className="text-amber-100 leading-relaxed">
+                  {echoContent.belief_connection}
+                </div>
+              </div>
+
+              {/* 情感共鸣 */}
+              <div className="bg-rose-900/20 rounded-xl p-5 border border-rose-500/20">
+                <h3 className="text-lg font-semibold text-rose-200 mb-3 flex items-center gap-2">
+                  💖 情感觉醒
+                </h3>
+                <div className="text-rose-100 leading-relaxed">
+                  {echoContent.emotional_resonance}
+                </div>
+              </div>
+
+              {/* 智慧洞察 */}
+              <div className="bg-green-900/20 rounded-xl p-5 border border-green-500/20">
+                <h3 className="text-lg font-semibold text-green-200 mb-3 flex items-center gap-2">
+                  🌟 智慧洞察
+                </h3>
+                <div className="text-green-100 leading-relaxed font-medium">
+                  {echoContent.wisdom_insight}
+                </div>
+              </div>
+
+              {/* 行动建议 */}
+              {echoContent.action_suggestions && echoContent.action_suggestions.length > 0 && (
+                <div className="bg-blue-900/20 rounded-xl p-5 border border-blue-500/20">
+                  <h3 className="text-lg font-semibold text-blue-200 mb-3 flex items-center gap-2">
+                    🎯 内在指引
                   </h3>
-                  <div className="text-indigo-100 leading-relaxed italic">
-                    "{echoContent.insight}"
+                  <div className="space-y-3">
+                    {echoContent.action_suggestions.map((suggestion, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <span className="text-blue-400 text-sm mt-1">→</span>
+                        <span className="text-blue-100 text-sm leading-relaxed">
+                          {suggestion}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 信念强度指示 */}
+              {echoContent.belief_alignment_score !== undefined && (
+                <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/20">
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-purple-300">信念系统强度</span>
+                    <span className="text-purple-200">
+                      {(echoContent.belief_alignment_score * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-purple-900/40 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-purple-500 to-purple-300 h-2 rounded-full transition-all duration-1000"
+                      style={{ width: `${echoContent.belief_alignment_score * 100}%` }}
+                    ></div>
                   </div>
                 </div>
               )}
@@ -203,9 +266,9 @@ export default function ChamberOfEchoes({
               <div className="text-center pt-4">
                 <button
                   onClick={onClose}
-                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-8 py-3 rounded-lg font-medium transition-all"
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-8 py-3 rounded-lg font-medium transition-all shadow-lg"
                 >
-                  离开回响之室
+                  带着这份理解离开回响之室
                 </button>
               </div>
             </div>

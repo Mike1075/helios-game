@@ -543,6 +543,36 @@ export default function Home() {
     }
   };
 
+  // 触发认知失调测试
+  const triggerCognitiveDissonance = async () => {
+    console.log('🧠 手动触发认知失调测试...');
+    
+    try {
+      const response = await fetch('/api/trigger-dissonance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: 'player',
+          playerName: playerName,
+          triggerContext: '你在月影酒馆中的种种经历，让你感到内心深处某种微妙的冲突正在觉醒...',
+          triggerType: 'test'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✨ 认知失调触发成功:', result);
+        
+        // 认知失调事件会通过实时订阅自动触发回响之室
+        // 不需要手动设置 setChamberOpen(true)
+      } else {
+        console.error('❌ 认知失调触发失败:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ 认知失调触发异常:', error);
+    }
+  };
+
   // 万能AI角色映射
   const universalAIRoles: Record<string, { name: string; avatar: string }> = {
     'tavern_keeper': { name: '老板', avatar: '👨‍💼' },
@@ -1043,11 +1073,11 @@ export default function Home() {
                     💬测试
                   </button>
                   <button
-                    onClick={() => setChamberOpen(true)}
+                    onClick={triggerCognitiveDissonance}
                     className="px-2 py-1 bg-purple-600/50 hover:bg-purple-600 text-white rounded text-xs transition-colors"
-                    title="测试回响之室"
+                    title="触发认知失调，测试回响之室"
                   >
-                    🪞回响
+                    🧠失调
                   </button>
                   
                   <button
@@ -1124,9 +1154,9 @@ export default function Home() {
       <ChamberOfEchoes
         isOpen={chamberOpen}
         playerId="player"
-        eventId={chamberEventId}
+        playerName={playerName}
+        triggerContext="你感到了某种内心的冲突和疑惑..."
         onClose={() => setChamberOpen(false)}
-        currentBeliefs={playerBeliefs}
       />
     </div>
   );
