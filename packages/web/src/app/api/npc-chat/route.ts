@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
-import { isOpenAIConfigured } from '@/lib/ai-gateway';
+import { openai, isAIGatewayConfigured } from '@/lib/ai-gateway';
 
-// OpenAI调用函数 - 使用官方模型字符串
-async function callOpenAI(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
+// AI Gateway调用函数 - 按照规范使用
+async function callAIGateway(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
   const result = await streamText({
-    model: 'openai/gpt-4o-mini',
+    model: openai('openai/gpt-4o-mini'),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }
@@ -19,7 +19,7 @@ async function callOpenAI(systemPrompt: string, userMessage: string, purpose: st
     fullResponse += chunk;
   }
   
-  console.log(`${purpose} - OpenAI response length:`, fullResponse.length);
+  console.log(`${purpose} - AI Gateway response length:`, fullResponse.length);
   return fullResponse;
 }
 
@@ -203,17 +203,17 @@ ${selectedTopic}
     let initiatorResponse: string;
     
     // 使用AI生成自主对话，尝试多个模型
-    const openAIConfigured = isOpenAIConfigured();
-    if (openAIConfigured) {
+    const aiGatewayConfigured = isAIGatewayConfigured();
+    if (aiGatewayConfigured) {
       try {
-        initiatorResponse = await callOpenAI(
+        initiatorResponse = await callAIGateway(
           initiator.systemPrompt + conversationContext,
           '请自然地开始一个新话题',
           `NPC自主对话 (${initiatorId})`
         );
         console.log('NPC自主对话生成成功:', initiatorId);
       } catch (error) {
-        console.error('OpenAI error for NPC chat:', error);
+        console.error('AI Gateway error for NPC chat:', error);
         initiatorResponse = selectedTopic;
       }
     } else {
@@ -244,9 +244,9 @@ ${initiator.name}: ${initiatorResponse}
 - 保持朋友间轻松对话的感觉
 - 体现你的角色个性`;
 
-        if (openAIConfigured) {
+        if (aiGatewayConfigured) {
           try {
-            const response = await callOpenAI(
+            const response = await callAIGateway(
               npc.systemPrompt + responseContext,
               '请自然地回应这个话题',
               `NPC跟进回应 (${npcId})`
@@ -260,7 +260,7 @@ ${initiator.name}: ${initiatorResponse}
             
             console.log('NPC跟进回应生成成功:', npcId);
           } catch (error) {
-            console.error('OpenAI error for follow-up:', error);
+            console.error('AI Gateway error for follow-up:', error);
           }
         }
       }

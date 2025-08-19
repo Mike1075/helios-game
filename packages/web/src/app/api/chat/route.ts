@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
-import { isOpenAIConfigured, getOpenAIStatus } from '@/lib/ai-gateway';
+import { openai, isAIGatewayConfigured, getAIGatewayStatus } from '@/lib/ai-gateway';
 
 // Type definitions
 interface Relationship {
@@ -429,10 +429,10 @@ function generateConflictResponse(character: string, conflict: BeliefConflict, u
   return conflictTypeResponses[Math.floor(Math.random() * conflictTypeResponses.length)];
 }
 
-// OpenAI模型调用函数 - 使用官方模型字符串
-async function callOpenAI(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
+// AI Gateway模型调用函数 - 按照规范使用
+async function callAIGateway(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
   const result = await streamText({
-    model: 'openai/gpt-4o-mini',
+    model: openai('openai/gpt-4o-mini'),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }
@@ -445,7 +445,7 @@ async function callOpenAI(systemPrompt: string, userMessage: string, purpose: st
     fullResponse += chunk;
   }
   
-  console.log(`${purpose} - OpenAI response length:`, fullResponse.length);
+  console.log(`${purpose} - AI Gateway response length:`, fullResponse.length);
   return fullResponse;
 }
 
@@ -571,19 +571,19 @@ export async function POST(req: NextRequest) {
         { role: 'user' as const, content: message }
       ];
 
-      // 使用OpenAI生成回应
-      const openAIConfigured = isOpenAIConfigured();
-      const openAIStatus = getOpenAIStatus();
-      console.log('Single chat OpenAI check:', {
-        ...openAIStatus,
+      // 使用AI Gateway生成回应
+      const aiGatewayConfigured = isAIGatewayConfigured();
+      const aiGatewayStatus = getAIGatewayStatus();
+      console.log('Single chat AI Gateway check:', {
+        ...aiGatewayStatus,
         character
       });
       
-      if (openAIConfigured) {
-        console.log('Using OpenAI for single chat:', character);
+      if (aiGatewayConfigured) {
+        console.log('Using AI Gateway for single chat:', character);
         try {
           const result = await streamText({
-            model: 'openai/gpt-4o-mini',
+            model: openai('openai/gpt-4o-mini'),
             messages: messages,
             temperature: 0.7,
           });
@@ -599,7 +599,7 @@ export async function POST(req: NextRequest) {
             character: character
           });
         } catch (error) {
-          console.error('OpenAI single chat error for', character, ':', error);
+          console.error('AI Gateway single chat error for', character, ':', error);
           const contextualResponse = generateContextualResponse(character, message, '');
           return NextResponse.json({
             response: contextualResponse,
@@ -607,7 +607,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        console.log('No OPENAI_API_KEY found, using contextual response for single chat:', character);
+        console.log('No AI_GATEWAY_API_KEY found, using contextual response for single chat:', character);
         const contextualResponse = generateContextualResponse(character, message, '');
         return NextResponse.json({
           response: contextualResponse,
@@ -661,29 +661,29 @@ ${fullConversationContext}
       let firstResponse: string;
       
       // 生成第一个回应
-      const openAIConfigured = isOpenAIConfigured();
-      const openAIStatus = getOpenAIStatus();
-      console.log('Group chat OpenAI check:', {
-        ...openAIStatus,
+      const aiGatewayConfigured = isAIGatewayConfigured();
+      const aiGatewayStatus = getAIGatewayStatus();
+      console.log('Group chat AI Gateway check:', {
+        ...aiGatewayStatus,
         firstResponder,
         messageLength: message.length
       });
       
-      if (openAIConfigured) {
+      if (aiGatewayConfigured) {
         try {
-          console.log('Using OpenAI for group chat first responder:', firstResponder);
-          firstResponse = await callOpenAI(
+          console.log('Using AI Gateway for group chat first responder:', firstResponder);
+          firstResponse = await callAIGateway(
             firstNPC.systemPrompt + firstGroupContext,
             `请回应: ${message}`,
             `First responder (${firstResponder})`
           );
         } catch (error) {
-          console.error('OpenAI error for first responder:', error);
+          console.error('AI Gateway error for first responder:', error);
           console.log('Falling back to mock response for first responder:', firstResponder);
           firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
         }
       } else {
-        console.log('No OPENAI_API_KEY found, using contextual mock response for first responder:', firstResponder);
+        console.log('No AI_GATEWAY_API_KEY found, using contextual mock response for first responder:', firstResponder);
         firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
       }
       
@@ -726,21 +726,21 @@ ${updatedContext}
 
           let response: string;
           
-          if (openAIConfigured) {
+          if (aiGatewayConfigured) {
             try {
-              console.log('Using OpenAI for follow-up response:', charId);
-              response = await callOpenAI(
+              console.log('Using AI Gateway for follow-up response:', charId);
+              response = await callAIGateway(
                 currentNPC.systemPrompt + responseContext,
                 `请自然地参与这个对话`,
                 `Follow-up (${charId})`
               );
             } catch (error) {
-              console.error('OpenAI error for follow-up:', error);
+              console.error('AI Gateway error for follow-up:', error);
               console.log('Falling back to contextual response for follow-up:', charId);
               response = generateContextualResponse(charId, message, updatedContext);
             }
           } else {
-            console.log('No OPENAI_API_KEY found, using contextual response for follow-up:', charId);
+            console.log('No AI_GATEWAY_API_KEY found, using contextual response for follow-up:', charId);
             response = generateContextualResponse(charId, message, updatedContext);
           }
           
