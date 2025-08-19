@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { streamText } from 'ai';
 
 // Type definitions
 interface Relationship {
@@ -482,21 +481,26 @@ export async function POST(req: NextRequest) {
         { role: 'user' as const, content: message }
       ];
 
-      // 使用真实的AI模型生成回应
-      if (process.env.OPENAI_API_KEY) {
+      // 使用Vercel AI Gateway生成回应
+      if (process.env.AI_GATEWAY_API_KEY) {
         try {
-          const { text } = await generateText({
-            model: openai('gpt-4o-mini'),
+          const result = await streamText({
+            model: 'openai/gpt-4o-mini',
             messages: messages,
             temperature: 0.7,
           });
           
+          let fullResponse = '';
+          for await (const chunk of result.textStream) {
+            fullResponse += chunk;
+          }
+          
           return NextResponse.json({
-            response: text,
+            response: fullResponse,
             character: character
           });
         } catch (error) {
-          console.error('AI API error:', error);
+          console.error('AI Gateway error:', error);
           const mockResponse = mockLLMCall(npc.systemPrompt, message);
           return NextResponse.json({
             response: mockResponse,
@@ -549,11 +553,11 @@ export async function POST(req: NextRequest) {
           const groupContext = `\n\n你正在参与一个三人群聊，其他两位是${responseOrder.filter(c => c !== charId).map(c => characters[c as keyof typeof characters].name).join('和')}。请用你独特的视角回应，但保持与群聊的连贯性。话题类型：${topicType}`;
           const contextualPrompt = npc.systemPrompt + groupContext;
 
-          // 使用真实的AI模型生成回应
-          if (process.env.OPENAI_API_KEY) {
+          // 使用Vercel AI Gateway生成回应
+          if (process.env.AI_GATEWAY_API_KEY) {
             try {
-              const { text } = await generateText({
-                model: openai('gpt-4o-mini'),
+              const result = await streamText({
+                model: 'openai/gpt-4o-mini',
                 messages: [
                   { role: 'system', content: contextualPrompt },
                   { role: 'user', content: message }
@@ -561,9 +565,13 @@ export async function POST(req: NextRequest) {
                 temperature: 0.7,
               });
               
-              response = text;
+              let fullResponse = '';
+              for await (const chunk of result.textStream) {
+                fullResponse += chunk;
+              }
+              response = fullResponse;
             } catch (error) {
-              console.error('AI API error:', error);
+              console.error('AI Gateway error:', error);
               response = mockLLMCall(contextualPrompt, message);
             }
           } else {
