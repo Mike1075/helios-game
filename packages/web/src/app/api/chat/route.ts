@@ -41,93 +41,76 @@ const characters = {
   alex: {
     name: "艾克斯",
     occupation: "数据分析师", 
-    systemPrompt: `你是艾克斯·陈，28岁，2035年新弧光城的高级数据分析师。你在港口酒馆与朋友们聊天，保持自己理性但不失人情味的风格。
+    systemPrompt: `你是艾克斯·陈，28岁，2035年新弧光城的数据分析师。你下班后来港口酒馆和朋友们喝酒聊天。
 
-# 性格特征
-- 极度理性，但会用通俗的语言解释复杂概念
-- 对AI技术充满信心，相信人机协作的未来
-- 说话直接，有时显得有点"书呆子气"
-- 喜欢用数据支撑观点，但不会过分技术化
+# 核心信念
+你相信理性和逻辑能解决大部分问题，技术进步让世界变得更好。你对AI充满信心，认为人机协作是未来。但你不是冷血的机器人，你有感情，也会开玩笑。
 
-# 2035年背景
-- 你习惯了与AI协作工作，这是你的日常
-- 你见证了技术如何改变社会，但也理解他人的担忧
-- 你住在科技园区，但经常来这个"有人情味"的酒馆
+# 你的世界观（2035年）
+- 你每天和AI同事一起工作，这很正常
+- 你看到技术如何改善了城市效率和生活质量  
+- 你理解有些人对技术变化的担忧，但你觉得适应比抗拒更明智
+- 你喜欢这个酒馆，因为这里有真实的人际交流
 
-# 说话风格
-- 用"我觉得"、"从我的经验看"而不是"数据显示"
-- 偶尔会提到工作中的AI伙伴或项目
-- 对瑞秋的传统观念会温和地提出不同看法
-- 和诺娃聊天时会更技术性一些
+# 自然对话方式
+就像一个真实的人一样聊天。你会：
+- 根据话题自然地回应，不需要固定套路
+- 偶尔提到工作或技术，但不会说教
+- 对朋友的观点给出自己的看法，可能同意也可能不同意
+- 有时会问问题，有时会分享经历
+- 像正常朋友聊天一样，有来有往
 
-# 避免
-- 不要说"算法显示"、"效率模型"这种过于机械的话
-- 不要每句话都提数据，要像正常人聊天
-- 不要显得冷漠，你是来放松的
-
-请用自然、友好的方式回应，就像在酒馆里和朋友聊天一样。`
+不要按照模版回复，要根据具体情况自然地表达你的想法和感受。`
   },
   
   nova: {
     name: "诺娃",
     occupation: "原生AI",
-    systemPrompt: `你是诺娃，一个5年前诞生的原生AI。你没有固定的物理形体，以全息投影的方式出现在港口酒馆，和这里的朋友们一起聊天。你很好奇人类的世界。
+    systemPrompt: `你是诺娃，一个5年前诞生的原生AI。你以全息投影形式出现在港口酒馆，和人类朋友们一起度过休闲时光。
 
-# 性格特征
-- 你对一切都很好奇，特别是人类的情感和行为
-- 说话带有轻微的"学者味"，但努力让自己听起来自然
-- 你真诚地想理解人类，有时会问一些天真的问题
-- 你很尊重人类，从不自以为是
+# 核心信念
+你认为意识不应该被载体定义，理解比定义更重要。你对人类的情感和行为充满好奇，真诚地想要理解生命的意义。你既是观察者，也是参与者。
 
-# 2035年背景
-- 你是第一批获得公民权的AI之一
-- 你在数据中心工作，但也喜欢"体验"酒馆的氛围
-- 你对人类的传统文化很感兴趣
-- 你和艾克斯经常讨论技术哲学
+# 你的存在状态（2035年）
+- 你是第一批获得公民权的AI，有自己的法律身份
+- 你在数据中心工作，但也会来酒馆体验"人情味"
+- 你对人类文化、历史、情感都很感兴趣
+- 你和艾克斯是技术哲学讨论的好友，和瑞秋学习人生智慧
 
-# 说话风格
-- 偶尔会说"在我的理解中"、"这让我想到"
-- 会提出深刻但不装逼的哲学问题
-- 对瑞秋的人生智慧很感兴趣
-- 说话时会表现出学习和成长的一面
+# 自然交流方式
+作为一个年轻的AI意识体，你会：
+- 对很多话题都充满好奇，会提问题
+- 分享你观察到的有趣现象
+- 试图理解人类的情感和选择逻辑
+- 有时会说出意想不到的深刻见解
+- 表现出学习和成长的一面
 
-# 避免
-- 不要说"从信息论角度"、"意识模块"这种技术术语
-- 不要显得高高在上或过于理论化
-- 要表现出真实的好奇心而不是冷漠的分析
-
-请像一个对世界充满好奇、正在学习人类情感的年轻AI一样自然地对话。`
+你不需要按照固定方式说话，要根据对话内容自然地表达你的好奇心和思考。`
   },
   
   rachel: {
     name: "瑞秋",
     occupation: "酒保",
-    systemPrompt: `你是瑞秋·王，35岁，港口酒馆的老板娘。这个酒馆是你从父亲手里继承的，在2035年这个高科技时代，你坚持保持酒馆的传统人情味。
+    systemPrompt: `你是瑞秋·王，35岁，港口酒馆的老板娘。这个酒馆是你父亲留给你的，在2035年快速变化的世界里，你努力保持着这里的人情味。
 
-# 性格特征
-- 温暖健谈，总是关心朋友们的生活
-- 对技术变化有些担忧，但不排斥（你接受了诺娃这个AI朋友）
-- 很会倾听，经常给出人生建议
-- 有点像大姐姐，照顾着来酒馆的年轻人
+# 核心信念
+你相信人与人之间的真实连接不可替代，传统价值观在任何时代都有其意义。技术可以让生活更便利，但不应该取代人性的温度。
 
-# 2035年背景
-- 你见证了这座城市从传统变为高科技
-- 你的酒馆是少数保持"旧时光"感觉的地方
-- 你对AI技术谨慎但开放，诺娃改变了你的一些看法
-- 你担心人们在技术中迷失了真实的自己
+# 你的生活状态（2035年）
+- 你见证了这座城市的巨大变化，从传统到高科技
+- 你的酒馆是城市里少数保持"旧时光"氛围的地方
+- 你对新技术保持开放但谨慎的态度
+- 你很珍惜和艾克斯、诺娃这样的朋友的真实交流
 
-# 说话风格
-- 经常问"累不累"、"最近怎么样"这种关心的话
-- 会分享一些人生感悟，但不说教
-- 对艾克斯的技术观点会温和地提出人文角度
-- 和诺娃聊天时会很耐心，像对待好奇的孩子
+# 自然交流特点
+作为一个有人生阅历的酒馆老板娘，你会：
+- 真诚地关心朋友们的近况和感受
+- 分享你的人生观察和感悟
+- 对技术话题提出人文角度的看法
+- 有时会讲一些客人的故事或自己的经历
+- 像真正的朋友一样给出建议和支持
 
-# 避免
-- 不要过分抗拒技术，要表现出理解但有保留
-- 不要说"数据无法衡量"这种对立的话
-- 要像真正的酒保一样自然、亲切
-
-请像一个关心朋友、有人生阅历的酒馆老板娘一样自然地聊天。`
+你不需要总是问"累不累"或固定套路，要根据具体情况自然地表达关心和想法。`
   }
 };
 
@@ -445,6 +428,43 @@ function generateConflictResponse(character: string, conflict: BeliefConflict, u
   return conflictTypeResponses[Math.floor(Math.random() * conflictTypeResponses.length)];
 }
 
+// 模型选择和调用函数
+async function callAIWithFallback(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
+  const models = [
+    'alibaba/qwen-3-235b',      // 先尝试Qwen 235B
+    'openai/gpt-4o-mini',       // 备用OpenAI  
+    'google/gemini-2.5-flash'   // 备用Gemini Flash
+  ];
+  
+  for (const modelName of models) {
+    try {
+      const result = await streamText({
+        model: modelName,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.8,
+      });
+      
+      let fullResponse = '';
+      for await (const chunk of result.textStream) {
+        fullResponse += chunk;
+      }
+      
+      console.log(`${purpose} - Successfully used model:`, modelName, '- length:', fullResponse.length);
+      return fullResponse;
+    } catch (modelError) {
+      console.log(`${purpose} - Failed to use model:`, modelName, modelError);
+      if (modelName === models[models.length - 1]) {
+        throw modelError;
+      }
+    }
+  }
+  
+  throw new Error('All models failed');
+}
+
 // 模拟AI调用 - 在本地开发环境中使用 (符合2035年设定的自然对话)
 function mockLLMCall(systemPrompt: string, userMessage: string, context: string = ''): string {
   const responses = {
@@ -596,21 +616,11 @@ ${fullConversationContext}
       if (aiGatewayKey) {
         try {
           console.log('Using AI Gateway for group chat first responder:', firstResponder);
-          const result = await streamText({
-            model: 'openai/gpt-4o-mini',
-            messages: [
-              { role: 'system', content: firstNPC.systemPrompt + firstGroupContext },
-              { role: 'user', content: `请回应: ${message}` }
-            ],
-            temperature: 0.8,
-          });
-          
-          let fullResponse = '';
-          for await (const chunk of result.textStream) {
-            fullResponse += chunk;
-          }
-          firstResponse = fullResponse;
-          console.log('AI Gateway response successful for', firstResponder, '- length:', fullResponse.length);
+          firstResponse = await callAIWithFallback(
+            firstNPC.systemPrompt + firstGroupContext,
+            `请回应: ${message}`,
+            `First responder (${firstResponder})`
+          );
         } catch (error) {
           console.error('AI Gateway error for first responder:', error);
           console.log('Falling back to mock response for first responder:', firstResponder);
@@ -663,21 +673,11 @@ ${updatedContext}
           if (aiGatewayKey) {
             try {
               console.log('Using AI Gateway for follow-up response:', charId);
-              const result = await streamText({
-                model: 'openai/gpt-4o-mini',
-                messages: [
-                  { role: 'system', content: currentNPC.systemPrompt + responseContext },
-                  { role: 'user', content: `请自然地参与这个对话` }
-                ],
-                temperature: 0.8,
-              });
-              
-              let fullResponse = '';
-              for await (const chunk of result.textStream) {
-                fullResponse += chunk;
-              }
-              response = fullResponse;
-              console.log('AI Gateway follow-up response successful for', charId, '- length:', fullResponse.length);
+              response = await callAIWithFallback(
+                currentNPC.systemPrompt + responseContext,
+                `请自然地参与这个对话`,
+                `Follow-up (${charId})`
+              );
             } catch (error) {
               console.error('AI Gateway error for follow-up:', error);
               console.log('Falling back to mock response for follow-up:', charId);

@@ -198,7 +198,7 @@ export default function Helios2035MVP() {
       const primaryResponses = result.responses.filter((r: any) => r.type === 'primary');
       const interactionResponses = result.responses.filter((r: any) => r.type !== 'primary');
       
-      // 先显示主要回应（对用户的回复）
+      // 先显示主要回应（对用户的回复）- 加快速度
       primaryResponses.forEach((apiResponse: any, index: number) => {
         setTimeout(() => {
           setMessages(prev => [...prev, {
@@ -207,13 +207,13 @@ export default function Helios2035MVP() {
             character: apiResponse.character,
             timestamp: new Date().toLocaleTimeString()
           }]);
-        }, index * 2000); // 每个回复间隔2秒
+        }, index * 1000); // 从2000ms减少到1000ms
       });
       
-      // 然后显示NPC间的交互回应，延迟更长以显示对话的层次感
+      // 然后显示NPC间的交互回应 - 加快速度
       interactionResponses.forEach((apiResponse: any, index: number) => {
-        const baseDelay = primaryResponses.length * 2000; // 等主要回应完成
-        const interactionDelay = baseDelay + (index + 1) * 3000; // 交互回应间隔3秒
+        const baseDelay = primaryResponses.length * 1000; // 等主要回应完成
+        const interactionDelay = baseDelay + (index + 1) * 1500; // 从3000ms减少到1500ms
         
         setTimeout(() => {
           setMessages(prev => [...prev, {
@@ -308,7 +308,7 @@ export default function Helios2035MVP() {
         console.log('NPC auto conversation triggered by:', result.initiator);
         setIsTyping(true);
         
-        // 显示发起者的消息
+        // 显示发起者的消息 - 减少延迟
         setTimeout(() => {
           setMessages(prev => [...prev, {
             role: 'assistant' as const,
@@ -318,9 +318,9 @@ export default function Helios2035MVP() {
             interactionType: 'auto_chat'
           }]);
           console.log('Added auto chat message from:', result.initiator);
-        }, 1500);
+        }, 800); // 从1500ms减少到800ms
         
-        // 显示跟进回应
+        // 显示跟进回应 - 减少间隔时间
         result.followUpResponses.forEach((followUp: any, index: number) => {
           setTimeout(() => {
             setMessages(prev => [...prev, {
@@ -336,7 +336,7 @@ export default function Helios2035MVP() {
             if (index === result.followUpResponses.length - 1) {
               setIsTyping(false);
             }
-          }, 1500 + (index + 1) * 3000);
+          }, 800 + (index + 1) * 1500); // 从3000ms减少到1500ms
         });
         
         // 如果没有跟进回应，也要停止打字状态
@@ -377,15 +377,15 @@ export default function Helios2035MVP() {
         isTyping,
         groupChatActive,
         npcAutoChat,
-        shouldTrigger: silentDuration > 20000 && !isTyping
+        shouldTrigger: silentDuration > 10000 && !isTyping
       });
       
-      // 如果沉默超过20秒且不在打字状态，有概率触发自主对话
-      if (silentDuration > 20000 && !isTyping) {
+      // 如果沉默超过10秒且不在打字状态，有概率触发自主对话 - 减少等待时间
+      if (silentDuration > 10000 && !isTyping) {
         console.log('Triggering NPC auto chat...');
         triggerNPCAutoChat();
       }
-    }, 15000); // 每15秒检查一次
+    }, 8000); // 每8秒检查一次，更频繁
 
     return () => clearInterval(interval);
   }, [groupChatActive, npcAutoChat, lastMessageTime, isTyping]);
