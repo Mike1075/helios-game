@@ -527,8 +527,14 @@ async def chat_with_npc(request: ChatRequest):
         await ensure_user_exists(request.player_id)
         await ensure_thread_exists(session_id, request.player_id)
         
-        # 3. 获取对话历史
+        # 3. 获取对话历史 - 包括与该NPC的直接对话和观察到的NPC对话
         conversation_history = await get_conversation_history(session_id)
+        
+        # 如果直接对话历史较少，补充NPC环境对话记忆
+        if len(conversation_history) < 5:
+            npc_dialogue_session = f"{request.player_id}_npc_dialogue"
+            npc_conversation_history = await get_conversation_history(npc_dialogue_session, limit=3)
+            conversation_history.extend(npc_conversation_history)
         
         # 4. 构建系统提示词
         system_prompt = f"""
@@ -688,6 +694,17 @@ async def generate_npc_to_npc_dialogue(request: NPCDialogueRequest):
         
         if not dialogue_data:
             raise HTTPException(status_code=500, detail="Failed to generate NPC dialogue")
+        
+        # 如果有玩家ID，则将NPC对话也保存到该玩家的Zep记忆中
+        if request.player_id:
+            npc_session_id = f"{request.player_id}_npc_dialogue"
+            # 确保用户和线程存在
+            await ensure_user_exists(request.player_id)
+            await ensure_thread_exists(npc_session_id, request.player_id)
+            
+            # 保存NPC对话到Zep（作为环境对话被玩家"听到"）
+            npc_conversation = f"[{dialogue_data['speaker_name']}对{dialogue_data['listener_name']}说]: {dialogue_data['message']}\n[{dialogue_data['listener_name']}回应]: {dialogue_data['response']}"
+            await save_conversation_to_memory(npc_session_id, "观察NPC之间的对话", npc_conversation)
         
         # 记录NPC对话到数据库
         npc_log_speaker = {
