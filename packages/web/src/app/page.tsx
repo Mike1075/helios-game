@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+
+// 立即执行的测试日志
+console.log('🚀 [CRITICAL TEST] page.tsx文件开始加载 - 时间戳:', Date.now());
 import { worldEngine } from '../systems/WorldEngine';
 import { beliefObserver } from '../systems/BeliefObserver';
 import { Character, GameEvent, InternalState, BeliefSystem } from '../types/core';
@@ -11,6 +14,8 @@ import ChamberOfEchoes from '@/components/ChamberOfEchoes';
 // 移除前端直接调用，改为通过API路由调用
 
 export default function Home() {
+  console.log('🔥 [CRITICAL TEST] Home组件开始渲染 - 时间戳:', Date.now());
+  
   // 游戏状态
   const [gameStarted, setGameStarted] = useState(false);
   const [playerName, setPlayerName] = useState('');
