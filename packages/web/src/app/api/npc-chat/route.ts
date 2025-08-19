@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
-import { openai, isAIGatewayConfigured } from '@/lib/ai-gateway';
+import { isAIGatewayConfigured } from '@/lib/ai-gateway';
 
-// AI Gateway调用函数 - 按照规范使用
+// AI Gateway调用函数 - 严格按照官方标准
 async function callAIGateway(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
   const result = await streamText({
-    model: openai('openai/gpt-4o-mini'),
+    model: 'openai/gpt-4o-mini',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }

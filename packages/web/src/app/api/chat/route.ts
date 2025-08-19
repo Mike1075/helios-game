@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
-import { openai, isAIGatewayConfigured, getAIGatewayStatus } from '@/lib/ai-gateway';
+import { isAIGatewayConfigured, getAIGatewayStatus } from '@/lib/ai-gateway';
 
 // Type definitions
 interface Relationship {
@@ -429,10 +429,10 @@ function generateConflictResponse(character: string, conflict: BeliefConflict, u
   return conflictTypeResponses[Math.floor(Math.random() * conflictTypeResponses.length)];
 }
 
-// AI Gateway模型调用函数 - 按照规范使用
+// AI Gateway模型调用函数 - 严格按照官方标准
 async function callAIGateway(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
   const result = await streamText({
-    model: openai('openai/gpt-4o-mini'),
+    model: 'openai/gpt-4o-mini',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userMessage }
@@ -583,7 +583,7 @@ export async function POST(req: NextRequest) {
         console.log('Using AI Gateway for single chat:', character);
         try {
           const result = await streamText({
-            model: openai('openai/gpt-4o-mini'),
+            model: 'openai/gpt-4o-mini',
             messages: messages,
             temperature: 0.7,
           });
