@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
+import { aiGateway, isAIGatewayConfigured } from '@/lib/ai-gateway';
 
 // 模型选择和调用函数
 async function callAIWithFallback(systemPrompt: string, userMessage: string, purpose: string = 'chat'): Promise<string> {
@@ -13,7 +14,7 @@ async function callAIWithFallback(systemPrompt: string, userMessage: string, pur
   for (const modelName of models) {
     try {
       const result = await streamText({
-        model: modelName,
+        model: aiGateway(modelName),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
@@ -219,8 +220,8 @@ ${selectedTopic}
     let initiatorResponse: string;
     
     // 使用AI生成自主对话，尝试多个模型
-    const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
-    if (aiGatewayKey) {
+    const gatewayConfigured = isAIGatewayConfigured();
+    if (gatewayConfigured) {
       try {
         initiatorResponse = await callAIWithFallback(
           initiator.systemPrompt + conversationContext,
@@ -260,7 +261,7 @@ ${initiator.name}: ${initiatorResponse}
 - 保持朋友间轻松对话的感觉
 - 体现你的角色个性`;
 
-        if (aiGatewayKey) {
+        if (gatewayConfigured) {
           try {
             const response = await callAIWithFallback(
               npc.systemPrompt + responseContext,

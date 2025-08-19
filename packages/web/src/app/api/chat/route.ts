@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { streamText } from 'ai';
+import { aiGateway, isAIGatewayConfigured, getAIGatewayStatus } from '@/lib/ai-gateway';
 
 // Type definitions
 interface Relationship {
@@ -439,7 +440,7 @@ async function callAIWithFallback(systemPrompt: string, userMessage: string, pur
   for (const modelName of models) {
     try {
       const result = await streamText({
-        model: modelName,
+        model: aiGateway(modelName),
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
@@ -588,18 +589,18 @@ export async function POST(req: NextRequest) {
       ];
 
       // 使用Vercel AI Gateway生成回应
-      const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
+      const gatewayConfigured = isAIGatewayConfigured();
+      const gatewayStatus = getAIGatewayStatus();
       console.log('Single chat AI Gateway check:', {
-        hasKey: !!aiGatewayKey,
-        keyLength: aiGatewayKey ? aiGatewayKey.length : 0,
+        ...gatewayStatus,
         character
       });
       
-      if (aiGatewayKey) {
+      if (gatewayConfigured) {
         console.log('Using AI Gateway for single chat:', character);
         try {
           const result = await streamText({
-            model: 'openai/gpt-4o-mini',
+            model: aiGateway('openai/gpt-4o-mini'),
             messages: messages,
             temperature: 0.7,
           });
@@ -623,7 +624,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        console.log('No AI_GATEWAY_API_KEY found, using contextual response for single chat:', character);
+        console.log('No VERCEL_AI_GATEWAY_API_KEY found, using contextual response for single chat:', character);
         const contextualResponse = generateContextualResponse(character, message, '');
         return NextResponse.json({
           response: contextualResponse,
@@ -677,15 +678,15 @@ ${fullConversationContext}
       let firstResponse: string;
       
       // 生成第一个回应
-      const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
+      const gatewayConfigured = isAIGatewayConfigured();
+      const gatewayStatus = getAIGatewayStatus();
       console.log('Group chat AI Gateway check:', {
-        hasKey: !!aiGatewayKey,
-        keyLength: aiGatewayKey ? aiGatewayKey.length : 0,
+        ...gatewayStatus,
         firstResponder,
         messageLength: message.length
       });
       
-      if (aiGatewayKey) {
+      if (gatewayConfigured) {
         try {
           console.log('Using AI Gateway for group chat first responder:', firstResponder);
           firstResponse = await callAIWithFallback(
@@ -699,7 +700,7 @@ ${fullConversationContext}
           firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
         }
       } else {
-        console.log('No AI_GATEWAY_API_KEY found, using contextual mock response for first responder:', firstResponder);
+        console.log('No VERCEL_AI_GATEWAY_API_KEY found, using contextual mock response for first responder:', firstResponder);
         firstResponse = generateContextualResponse(firstResponder, message, fullConversationContext);
       }
       
@@ -742,7 +743,7 @@ ${updatedContext}
 
           let response: string;
           
-          if (aiGatewayKey) {
+          if (gatewayConfigured) {
             try {
               console.log('Using AI Gateway for follow-up response:', charId);
               response = await callAIWithFallback(
@@ -756,7 +757,7 @@ ${updatedContext}
               response = generateContextualResponse(charId, message, updatedContext);
             }
           } else {
-            console.log('No AI_GATEWAY_API_KEY found, using contextual response for follow-up:', charId);
+            console.log('No VERCEL_AI_GATEWAY_API_KEY found, using contextual response for follow-up:', charId);
             response = generateContextualResponse(charId, message, updatedContext);
           }
           

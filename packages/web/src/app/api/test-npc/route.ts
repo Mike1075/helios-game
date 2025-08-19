@@ -8,8 +8,8 @@ export async function GET() {
     message: 'NPC test endpoint working',
     timestamp: new Date().toISOString(),
     env: {
-      hasAIKey: !!process.env.AI_GATEWAY_API_KEY,
-      keyLength: process.env.AI_GATEWAY_API_KEY ? process.env.AI_GATEWAY_API_KEY.length : 0
+      hasAIKey: !!process.env.VERCEL_AI_GATEWAY_API_KEY,
+      keyLength: process.env.VERCEL_AI_GATEWAY_API_KEY ? process.env.VERCEL_AI_GATEWAY_API_KEY.length : 0
     }
   });
 }
