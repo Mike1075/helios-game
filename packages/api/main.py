@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from supabase import create_client, Client
 # Zep记忆引擎 - 使用HTTP API
+from director import run_director_cycle, monitor_agent_logs
 
 # 加载环境变量
 load_dotenv()
@@ -745,6 +746,41 @@ async def generate_npc_to_npc_dialogue(request: NPCDialogueRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"NPC dialogue generation failed: {str(e)}")
+
+# Director Engine API
+class DirectorRequest(BaseModel):
+    player_id: Optional[str] = None
+    force_check: Optional[bool] = False
+
+class DirectorResponse(BaseModel):
+    status: str
+    message: str
+    events_created: int
+    timestamp: float
+
+@app.post("/api/director", response_model=DirectorResponse)
+async def trigger_director_engine(request: DirectorRequest):
+    """手动触发导演引擎，检测认知失调并创建回响事件"""
+    try:
+        print(f"🎬 API触发导演引擎 - 玩家ID: {request.player_id}")
+        
+        if request.player_id:
+            # 针对特定玩家进行检测
+            monitor_agent_logs(request.player_id)
+        else:
+            # 全局检测
+            run_director_cycle()
+        
+        return DirectorResponse(
+            status="success", 
+            message="导演引擎执行完成",
+            events_created=0,  # TODO: 实际计算创建的事件数
+            timestamp=time.time()
+        )
+        
+    except Exception as e:
+        print(f"❌ 导演引擎执行失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Director engine failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

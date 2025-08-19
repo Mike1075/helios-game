@@ -276,6 +276,44 @@ export default function Home() {
     }
   }
 
+  const triggerDirectorEngine = async () => {
+    try {
+      const response = await fetch('/api/director', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          player_id: playerId
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('导演引擎响应:', data)
+        
+        const directorMessage: Message = {
+          id: Date.now().toString() + '_director',
+          sender: 'npc',
+          content: `🎬 **导演引擎** 🎬\n\n${data.message}\n\n*系统已检查你的最近行为，寻找可能的认知失调...*`,
+          timestamp: data.timestamp
+        }
+        setMessages(prev => [...prev, directorMessage])
+      } else {
+        console.error('导演引擎触发失败')
+      }
+    } catch (error) {
+      console.error('Error triggering director engine:', error)
+      const errorMessage: Message = {
+        id: Date.now().toString() + '_director_error',
+        sender: 'npc',
+        content: `🎬 **导演引擎** 🎬\n\n*导演似乎在忙其他事情...* (本地开发模式下无法访问导演引擎)`,
+        timestamp: Date.now()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }
+  }
+
   const triggerNpcDialogue = async () => {
     console.log('triggerNpcDialogue 被调用')
     
@@ -433,6 +471,13 @@ export default function Home() {
                 }`}
               >
                 {isNpcDialogueActive ? '🛑 停止NPC对话' : '💬 开始NPC对话'}
+              </button>
+
+              <button
+                onClick={triggerDirectorEngine}
+                className="w-full mt-2 p-3 rounded-lg font-medium transition-all bg-orange-600 hover:bg-orange-700"
+              >
+                🎬 触发导演引擎
               </button>
             </div>
           </div>
