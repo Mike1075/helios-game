@@ -31,6 +31,10 @@ export default function Home() {
   // 实时订阅状态
   const [realtimeEvents, setRealtimeEvents] = useState<any[]>([]);
   
+  // 心跳监控状态
+  const [heartbeatCount, setHeartbeatCount] = useState(0);
+  const [lastHeartbeat, setLastHeartbeat] = useState<string>('');
+  
   // 初始游戏状态
   const [sceneDescription, setSceneDescription] = useState<string>('');
   const [activeCharacters, setActiveCharacters] = useState<any[]>([]);
@@ -408,14 +412,19 @@ export default function Home() {
     const universalRole = universalAIRoles[characterId];
     if (universalRole) return universalRole.name;
     
-    // 检查是否是动态角色 - 优先显示职能，避免显示丑陋的ID
+    // 检查是否是动态角色 - 显示"职能 昵称"
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
-      // 如果角色名称是生成的ID，只显示职能
-      if (dynamicChar.name.includes('dynamic_') || dynamicChar.name.length > 15) {
-        return dynamicChar.role;
-      }
+      console.log(`🎭 找到动态角色: ${characterId} -> ${dynamicChar.role} ${dynamicChar.name}`);
+      // 始终显示"职能 昵称"的格式，如"酒保 李明"
       return `${dynamicChar.role} ${dynamicChar.name}`;
+    } else {
+      // 如果是动态角色ID但找不到角色数据，尝试从ID中提取信息
+      if (characterId.startsWith('dynamic_')) {
+        console.log(`🎭 未找到动态角色数据: ${characterId}`);
+        // 显示一个默认名称，避免显示丑陋的ID
+        return '临时角色';
+      }
     }
     
     const character = characters.find(c => c.id === characterId);

@@ -232,6 +232,16 @@ export class WorldEngine {
     
     console.log(`\n💓 世界心跳 - ${new Date(now).toLocaleTimeString()}`);
     
+    // 发布心跳事件到前端UI
+    this.publishEvent({
+      id: `heartbeat_${now}`,
+      type: 'system',
+      character_id: 'system',
+      content: `💓 世界心跳 #${Math.floor(now/45000)} - ${new Date(now).toLocaleTimeString()}`,
+      timestamp: now,
+      scene_id: 'moonlight_tavern'
+    });
+    
     try {
       // 1. 更新所有AI的内在状态
       await this.updateInternalStates(now);
@@ -269,8 +279,8 @@ export class WorldEngine {
       // 自然状态变化
       const newState = { ...state };
       
-      // 无聊值增长（核心驱动力）
-      newState.boredom = Math.min(100, state.boredom + minutesPassed * 2);
+      // 无聊值增长（核心驱动力）- 加快增长速度
+      newState.boredom = Math.min(100, state.boredom + minutesPassed * 5);
       
       // 能量恢复
       if (state.energy < 70) {
@@ -366,6 +376,16 @@ export class WorldEngine {
       if (this.shouldAIAct(character, state, now)) {
         console.log(`🤖 ${character.name} 开始本地自主决策...`);
         
+        // 发布AI开始行动的事件
+        this.publishEvent({
+          id: `ai_action_start_${now}_${character.id}`,
+          type: 'system',
+          character_id: 'system',
+          content: `🤖 ${character.name} 开始自主思考... (无聊值: ${state.boredom.toFixed(1)})`,
+          timestamp: now,
+          scene_id: 'moonlight_tavern'
+        });
+        
         try {
           const actionPackage = await this.generateAIAction(character, state);
           if (actionPackage) {
@@ -373,7 +393,26 @@ export class WorldEngine {
           }
         } catch (error) {
           console.error(`❌ ${character.name} 本地自主行为错误:`, error);
+          
+          // 发布错误事件
+          this.publishEvent({
+            id: `ai_action_error_${now}_${character.id}`,
+            type: 'system',
+            character_id: 'system', 
+            content: `❌ ${character.name} 自主行为出错: ${error instanceof Error ? error.message : '未知错误'}`,
+            timestamp: now,
+            scene_id: 'moonlight_tavern'
+          });
         }
+      } else {
+        // 发布AI不行动的原因
+        const timeSinceLastAction = now - state.last_autonomous_action;
+        const cooldownMinutes = Math.round((60000 - timeSinceLastAction) / 60000 * 10) / 10;
+        const reason = timeSinceLastAction < 60000 
+          ? `冷却中(还需${cooldownMinutes}分钟)` 
+          : `无聊值不足(${state.boredom.toFixed(1)}/50)`;
+          
+        console.log(`😴 ${character.name} 不行动: ${reason}`);
       }
     }
   }
