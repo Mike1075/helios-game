@@ -202,6 +202,9 @@ ${conversationHistory}
           // 保存AI响应到Zep（使用角色专属会话）
           await saveAIResponse(newCharacter.supabase_session_id, newCharacter.id, aiResponse);
           
+          // 发送新角色创建事件到客户端
+          console.log('📢 发送新角色创建广播事件');
+          
           response = {
             success: true,
             character: {
@@ -220,6 +223,13 @@ ${conversationHistory}
               personality: newCharacter.personality,
               background: newCharacter.background,
               appearance: newCharacter.appearance
+            },
+            // 添加事件广播数据
+            character_event: {
+              id: newCharacter.id,
+              name: newCharacter.name,
+              role: newCharacter.role,
+              type: 'dynamic_npc'
             }
           };
         } else {

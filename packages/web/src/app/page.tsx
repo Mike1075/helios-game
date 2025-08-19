@@ -56,6 +56,32 @@ export default function Home() {
     { id: 'chenhao', name: '陈浩', role: '温和酒保', type: 'core_npc' }
   ]);
   
+  // 动态角色创建事件监听
+  useEffect(() => {
+    const handleNewCharacter = (characterData: any) => {
+      console.log('🎭 收到新角色创建事件:', characterData);
+      setAllCharacters(prev => {
+        // 检查角色是否已存在
+        if (prev.find(char => char.id === characterData.id)) {
+          return prev;
+        }
+        return [...prev, {
+          id: characterData.id,
+          name: characterData.name,
+          role: characterData.role,
+          type: 'dynamic_npc'
+        }];
+      });
+    };
+    
+    // 添加全局事件监听器
+    window.addEventListener('newCharacterCreated', handleNewCharacter as EventListener);
+    
+    return () => {
+      window.removeEventListener('newCharacterCreated', handleNewCharacter as EventListener);
+    };
+  }, []);
+  
   // 回响之室状态  
   const [chamberOpen, setChamberOpen] = useState(false);
   const [chamberEventId, setChamberEventId] = useState<string>('');
@@ -486,6 +512,18 @@ export default function Home() {
         if (result.success && result.action_package) {
           const characterId = result.character?.id || 'ai';
           
+          // 处理新角色创建事件
+          if (result.new_character_created && result.character_event) {
+            console.log('📢 处理新角色创建事件:', result.character_event);
+            setAllCharacters(prev => {
+              // 检查角色是否已存在
+              if (prev.find(char => char.id === result.character_event.id)) {
+                return prev;
+              }
+              return [...prev, result.character_event];
+            });
+          }
+          
           // 发布AI响应事件（排除内心想法，只显示对话和行动）
           if (result.action_package.dialogue) {
             const dialogueEvent = {
@@ -517,7 +555,8 @@ export default function Home() {
           
           console.log('✅ AI响应处理完成:', {
             character: result.character?.name,
-            routing: result.routing_type
+            routing: result.routing_type,
+            new_character: result.new_character_created || false
           });
         }
       } else {
@@ -651,13 +690,18 @@ export default function Home() {
     return '🎭';
   };
 
-  // 获取角色名称
+  // 获取角色名称（简化版本，避免冲突）
   const getCharacterName = (characterId: string) => {
     if (characterId === 'player') return playerName;
-    if (characterId === 'system') return 'system';
+    if (characterId === 'system') return '系统';
     if (characterId === 'environment') return '环境';
+    if (characterId === 'general') return '月影酒馆';
     
-    // 首先检查统一角色列表
+    // 核心角色直接映射
+    if (characterId === 'linxi') return '林溪';
+    if (characterId === 'chenhao') return '陈浩';
+    
+    // 检查统一角色列表
     const character = allCharacters.find(char => char.id === characterId);
     if (character) {
       return character.name;
@@ -670,19 +714,11 @@ export default function Home() {
     // 动态角色管理器备用
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
-      console.log(`🎭 找到动态角色: ${characterId} -> ${dynamicChar.name}`);
       return dynamicChar.name;
     }
     
-    // 如果是动态角色ID但找不到角色数据
-    if (characterId.startsWith('dynamic_')) {
-      console.log(`🎭 未找到动态角色数据: ${characterId}`);
-      return '临时角色';
-    }
-    
-    // 最后备用：检查旧的characters数组
-    const oldCharacter = characters.find(c => c.id === characterId);
-    return oldCharacter?.name || characterId;
+    // 默认显示原ID
+    return characterId;
   };
 
   // 获取事件样式

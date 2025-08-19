@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// 使用服务端key进行数据库操作
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+import { supabaseAdmin, checkSupabaseConfig } from '@/lib/supabase-admin';
 
 // Vercel AI Gateway配置
-const VERCEL_AI_GATEWAY_URL = process.env.VERCEL_AI_GATEWAY_URL!;
-const VERCEL_AI_GATEWAY_API_KEY = process.env.VERCEL_AI_GATEWAY_API_KEY!;
+const VERCEL_AI_GATEWAY_URL = process.env.VERCEL_AI_GATEWAY_URL || 'https://api.vercel.com/v1/ai';
+const VERCEL_AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY!;
 
 interface EchoRequest {
   player_id: string;
@@ -44,11 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 检查环境变量
-    if (!VERCEL_AI_GATEWAY_URL || !VERCEL_AI_GATEWAY_API_KEY) {
-      console.error('❌ 回响之室: AI Gateway环境变量缺失');
+    if (!VERCEL_AI_GATEWAY_API_KEY) {
+      console.error('❌ 回响之室: AI Gateway API Key缺失');
       return NextResponse.json({
         success: false,
-        error: '回响之室暂时无法访问 - AI服务未配置'
+        error: '回响之室暂时无法访问 - AI Gateway API Key未配置'
       }, { status: 500 });
     }
     
