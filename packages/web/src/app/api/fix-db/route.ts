@@ -10,9 +10,9 @@ export async function POST(request: NextRequest) {
     console.log('🔧 开始修复数据库表结构...');
 
     const results = {
-      character_states_fix: null,
-      belief_systems_fix: null,
-      errors: []
+      character_states_fix: null as any,
+      belief_systems_fix: null as any,
+      errors: [] as string[]
     };
 
     // 1. 修复character_states表 - 添加缺失的last_autonomous_action字段
