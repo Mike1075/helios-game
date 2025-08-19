@@ -19,14 +19,14 @@ export async function POST(request: NextRequest) {
       console.warn('角色状态表查询失败，可能需要创建表:', statesError.message);
     }
 
-    // 初始化或更新核心角色状态
+    // 初始化或更新核心角色状态 - 设置高无聊值以便立即触发AI行动
     const coreCharacterStates = [
       {
         character_id: 'linxi',
         energy: 75.0,
         focus: 80.0,
         curiosity: 70.0,
-        boredom: 20.0,
+        boredom: 60.0, // 设置为60，立即达到触发条件
         anxiety: 30.0,
         suspicion: 60.0,
         last_autonomous_action: 0,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         energy: 60.0,
         focus: 50.0,
         curiosity: 80.0,
-        boredom: 40.0,
+        boredom: 55.0, // 设置为55，立即达到触发条件
         anxiety: 70.0,
         suspicion: 25.0,
         last_autonomous_action: 0,
