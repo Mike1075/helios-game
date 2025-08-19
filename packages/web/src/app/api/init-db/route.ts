@@ -45,18 +45,28 @@ export async function POST(request: NextRequest) {
       }
     ];
 
+    const stateResults = [];
     for (const state of coreCharacterStates) {
-      const { error: upsertError } = await supabase
+      const { data: upsertData, error: upsertError } = await supabase
         .from('character_states')
         .upsert(state, { 
           onConflict: 'character_id',
           ignoreDuplicates: false 
-        });
+        })
+        .select();
+
+      const result = {
+        character_id: state.character_id,
+        success: !upsertError,
+        error: upsertError?.message || null,
+        data: upsertData
+      };
+      stateResults.push(result);
 
       if (upsertError) {
         console.error(`初始化${state.character_id}状态失败:`, upsertError);
       } else {
-        console.log(`✅ ${state.character_id}状态初始化成功`);
+        console.log(`✅ ${state.character_id}状态初始化成功:`, upsertData);
       }
     }
 
@@ -100,18 +110,28 @@ export async function POST(request: NextRequest) {
       }
     ];
 
+    const beliefResults = [];
     for (const belief of beliefSystems) {
-      const { error: beliefError } = await supabase
+      const { data: beliefData, error: beliefError } = await supabase
         .from('belief_systems')
         .upsert(belief, { 
           onConflict: 'character_id',
           ignoreDuplicates: false 
-        });
+        })
+        .select();
+
+      const result = {
+        character_id: belief.character_id,
+        success: !beliefError,
+        error: beliefError?.message || null,
+        data: beliefData
+      };
+      beliefResults.push(result);
 
       if (beliefError) {
         console.error(`初始化${belief.character_id}信念系统失败:`, beliefError);
       } else {
-        console.log(`✅ ${belief.character_id}信念系统初始化成功`);
+        console.log(`✅ ${belief.character_id}信念系统初始化成功:`, beliefData);
       }
     }
 
@@ -131,10 +151,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: '数据库初始化完成',
-      initialized: {
-        character_states: coreCharacterStates.length,
-        belief_systems: beliefSystems.length,
+      details: {
+        character_states: stateResults,
+        belief_systems: beliefResults,
         cleanup_completed: !cleanupError
+      },
+      summary: {
+        states_initialized: stateResults.filter(r => r.success).length,
+        beliefs_initialized: beliefResults.filter(r => r.success).length,
+        total_errors: [...stateResults, ...beliefResults].filter(r => !r.success).length
       }
     });
 
@@ -151,9 +176,17 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * 获取数据库状态信息
+ * 获取数据库状态信息，同时执行初始化
  */
 export async function GET(request: NextRequest) {
+  // GET请求也执行初始化逻辑
+  return POST(request);
+}
+
+/**
+ * 备用的状态检查函数
+ */
+export async function checkDatabaseStatus() {
   try {
     // 检查各个表的状态
     const checks = await Promise.allSettled([
