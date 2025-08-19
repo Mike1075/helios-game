@@ -63,8 +63,7 @@ export default function Home() {
   const [isNpcDialogueActive, setIsNpcDialogueActive] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const isNpcDialogueActiveRef = useRef(false)
-  const inputFocusedRef = useRef(false)
+  const npcDialogueIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -74,14 +73,20 @@ export default function Home() {
     scrollToBottom()
   }, [messages])
 
-  // 同步ref状态
+  // 管理NPC连续对话
   useEffect(() => {
-    isNpcDialogueActiveRef.current = isNpcDialogueActive
-  }, [isNpcDialogueActive])
-
-  useEffect(() => {
-    inputFocusedRef.current = inputFocused
-  }, [inputFocused])
+    if (isNpcDialogueActive && !inputFocused) {
+      console.log('启动NPC连续对话模式')
+      startContinuousDialogue()
+    } else {
+      console.log('停止NPC连续对话模式')
+      stopContinuousDialogue()
+    }
+    
+    return () => {
+      stopContinuousDialogue()
+    }
+  }, [isNpcDialogueActive, inputFocused])
 
   // 管理NPC自主对话计时器
   useEffect(() => {
@@ -97,12 +102,12 @@ export default function Home() {
     
     // 设置新的30秒计时器启动NPC对话
     const newTimer = setTimeout(() => {
-      if (!inputFocusedRef.current) { // 再次确认用户没有在输入
+      if (!inputFocused) { // 再次确认用户没有在输入
         console.log('30秒计时器触发 - 启动NPC对话')
         setIsNpcDialogueActive(true)
         triggerNpcDialogue()
       }
-    }, 5000) // 5秒后开始NPC对话（调试用）
+    }, 30000) // 30秒后开始NPC对话
     
     setNpcDialogueTimer(newTimer)
     
@@ -242,13 +247,43 @@ export default function Home() {
     }
   }
 
+  const startContinuousDialogue = () => {
+    // 清理现有的间隔
+    if (npcDialogueIntervalRef.current) {
+      clearInterval(npcDialogueIntervalRef.current)
+    }
+    
+    // 立即开始第一轮对话
+    triggerNpcDialogue()
+    
+    // 设置定时器每20秒执行一次对话（给LLM足够时间响应）
+    npcDialogueIntervalRef.current = setInterval(() => {
+      if (isNpcDialogueActive && !inputFocused) {
+        console.log('定时器触发下一轮NPC对话')
+        triggerNpcDialogue()
+      } else {
+        console.log('定时器检测到状态变化，停止对话')
+        stopContinuousDialogue()
+      }
+    }, 20000)
+  }
+
+  const stopContinuousDialogue = () => {
+    if (npcDialogueIntervalRef.current) {
+      console.log('清理NPC对话定时器')
+      clearInterval(npcDialogueIntervalRef.current)
+      npcDialogueIntervalRef.current = null
+    }
+  }
+
   const triggerNpcDialogue = async () => {
-    console.log('triggerNpcDialogue 被调用，当前状态:', {
-      isNpcDialogueActive: isNpcDialogueActiveRef.current,
-      inputFocused: inputFocusedRef.current
-    })
+    console.log('triggerNpcDialogue 被调用')
     
     try {
+      // 设置30秒超时
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+      
       const response = await fetch('/api/npc-dialogue', {
         method: 'POST',
         headers: {
@@ -257,11 +292,14 @@ export default function Home() {
         body: JSON.stringify({
           scene_id: 'tavern',
           player_id: playerId
-        })
+        }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
-        throw new Error('Network response was not ok')
+        throw new Error(`Server response: ${response.status}`)
       }
 
       const data = await response.json()
@@ -296,37 +334,24 @@ export default function Home() {
       // 延迟添加回应消息，模拟真实对话节奏
       setTimeout(() => {
         setMessages(prev => [...prev, listenerMessage])
-        
-        // 立即安排下一轮对话，无条件继续（除非用户干预）
-        console.log('添加回应消息完成，准备下一轮对话...')
-        scheduleNextDialogue()
+        console.log('添加了一轮NPC对话')
       }, 2000)
 
     } catch (error) {
       console.error('Error triggering NPC dialogue:', error)
-      // 出错时停止对话
-      setIsNpcDialogueActive(false)
-    }
-  }
-
-  const scheduleNextDialogue = () => {
-    setTimeout(() => {
-      console.log('检查是否继续对话:', {
-        isNpcDialogueActive: isNpcDialogueActiveRef.current,
-        inputFocused: inputFocusedRef.current
-      })
       
-      // 只要对话是活跃的且用户没有在输入，就继续
-      if (isNpcDialogueActiveRef.current && !inputFocusedRef.current) {
-        console.log('继续下一轮NPC对话')
-        triggerNpcDialogue()
-      } else {
-        console.log('停止NPC对话：', {
-          dialogueActive: isNpcDialogueActiveRef.current,
-          userTyping: inputFocusedRef.current
-        })
+      // 添加错误消息显示
+      const errorMessage: Message = {
+        id: Date.now().toString() + '_error',
+        sender: 'npc',
+        content: `*酒馆里突然安静下来...* (NPC对话暂时中断，将在下次循环中重试)`,
+        timestamp: Date.now()
       }
-    }, 2000) // 2秒后继续（调试用）
+      setMessages(prev => [...prev, errorMessage])
+      
+      // 不立即停止对话，让定时器在下次尝试时重新连接
+      console.log('NPC对话出错，等待下次重试...')
+    }
   }
 
 
@@ -399,7 +424,6 @@ export default function Home() {
                   } else {
                     console.log('手动开始NPC对话')
                     setIsNpcDialogueActive(true)
-                    triggerNpcDialogue()
                   }
                 }}
                 className={`w-full mt-2 p-3 rounded-lg font-medium transition-all ${
