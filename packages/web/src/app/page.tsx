@@ -552,59 +552,20 @@ export default function Home() {
     }
   };
 
-  // 内容过滤：只显示玩家应该看到的内容
+  // 简单的内容过滤：只隐藏纯技术事件
   const filterContentForPlayer = (event: GameEvent): { shouldShow: boolean; displayContent: string } => {
-    // 完全隐藏的事件类型
-    const hiddenEventTypes = ['thought', 'cognitive_dissonance'];
+    // 只隐藏纯技术调试事件
+    const hiddenEventTypes = ['thought']; // 只隐藏内心想法
     if (hiddenEventTypes.includes(event.type)) {
       return { shouldShow: false, displayContent: '' };
     }
-
-    // 过滤技术性内容
-    let content = event.content;
     
-    // 隐藏技术细节的关键词 - 扩展列表
-    const techKeywords = [
-      // 状态相关
-      '无聊值', '能量', '专注', '好奇心', '焦虑', '怀疑', '自信', '疲劳',
-      '状态更新', '心跳', '自主行为', '内在状态', '信念系统',
-      // 技术术语
-      'AI调用', 'API', '数据库', '触发', '检测到', '分析',
-      '思考', '决策', '判断', '评估', '算法', '计算', '处理',
-      // 调试信息
-      '调试', 'debug', '测试', '错误', '异常', '日志', '记录',
-      // 奇怪的技术词汇
-      '哈时间色', '微调', '混沌', '优化', '配置', '参数', '设定',
-      // 系统相关
-      'system', '系统', '引擎', '模块', '组件', '接口',
-      // 数值和指标
-      '数值', '指标', '评分', '权重', '概率', '统计'
-    ];
-    
-    // 如果内容包含技术关键词，过滤或隐藏
-    const hasTechContent = techKeywords.some(keyword => content.includes(keyword));
-    if (hasTechContent && event.character_id === 'system') {
+    // 隐藏明显的系统调试消息
+    if (event.character_id === 'system' && event.content.includes('💓 世界心跳')) {
       return { shouldShow: false, displayContent: '' };
     }
     
-    // 修复自我指涉错误（如"陈浩观察陈浩"）
-    if (event.character_id !== 'system' && event.character_id !== 'player') {
-      const characterName = getCharacterDisplayName(event.character_id);
-      // 检查是否包含自我指涉
-      if (content.includes(`${characterName}观察${characterName}`) || 
-          content.includes(`${characterName}看着${characterName}`)) {
-        // 修复为合理的行为
-        content = content.replace(
-          new RegExp(`${characterName}观察${characterName}`, 'g'), 
-          `${characterName}若有所思地环视四周`
-        ).replace(
-          new RegExp(`${characterName}看着${characterName}`, 'g'),
-          `${characterName}陷入了沉思`
-        );
-      }
-    }
-    
-    return { shouldShow: true, displayContent: content };
+    return { shouldShow: true, displayContent: event.content };
   };
 
   // 获取角色显示名称
@@ -693,30 +654,33 @@ export default function Home() {
   // 获取角色名称
   const getCharacterName = (characterId: string) => {
     if (characterId === 'player') return playerName;
-    if (characterId === 'linxi') return '林溪';
-    if (characterId === 'chenhao') return '陈浩';
     if (characterId === 'system') return 'system';
     if (characterId === 'environment') return '环境';
     
-    // 万能AI角色
+    // 首先检查统一角色列表
+    const character = allCharacters.find(char => char.id === characterId);
+    if (character) {
+      return character.name;
+    }
+    
+    // 万能AI角色备用
     const universalRole = universalAIRoles[characterId];
     if (universalRole) return universalRole.name;
     
-    // 检查是否是动态角色 - 显示"职能 昵称"
+    // 动态角色管理器备用
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
-      console.log(`🎭 找到动态角色: ${characterId} -> ${dynamicChar.role} ${dynamicChar.name}`);
-      // 始终显示"职能 昵称"的格式，如"酒保 李明"
-      return `${dynamicChar.role} ${dynamicChar.name}`;
-    } else {
-      // 如果是动态角色ID但找不到角色数据，尝试从ID中提取信息
-      if (characterId.startsWith('dynamic_')) {
-        console.log(`🎭 未找到动态角色数据: ${characterId}`);
-        // 显示一个默认名称，避免显示丑陋的ID
-        return '临时角色';
-      }
+      console.log(`🎭 找到动态角色: ${characterId} -> ${dynamicChar.name}`);
+      return dynamicChar.name;
     }
     
+    // 如果是动态角色ID但找不到角色数据
+    if (characterId.startsWith('dynamic_')) {
+      console.log(`🎭 未找到动态角色数据: ${characterId}`);
+      return '临时角色';
+    }
+    
+    // 最后备用：检查旧的characters数组
     const character = characters.find(c => c.id === characterId);
     return character?.name || characterId;
   };
