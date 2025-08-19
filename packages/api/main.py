@@ -5,7 +5,16 @@ from pydantic import BaseModel
 import os
 import json
 import time
-from typing import Optional, Dict, Any
+import asyncio
+from typing import Optional, Dict, Any, List
+from dotenv import load_dotenv
+from openai import OpenAI
+from supabase import create_client, Client
+# Zep相关导入暂时注释，使用简单内存存储
+# from zep_python import Memory, Message as ZepMessage, User, Session
+
+# 加载环境变量
+load_dotenv()
 
 app = FastAPI(title="Helios Agent Core", version="0.1.0")
 
@@ -17,6 +26,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 初始化服务客户端
+tongyi_client = OpenAI(
+    api_key=os.getenv("TONGYI_API_KEY"),
+    base_url=os.getenv("TONGYI_URL")
+)
+
+supabase: Client = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_SERVICE_KEY")
+)
+
+# 暂时禁用Zep，使用简单的内存存储
+# zep_client = None  # 稍后实现
 
 # 数据模型
 class ChatRequest(BaseModel):
@@ -37,30 +60,137 @@ class ChatResponse(BaseModel):
 
 class EchoResponse(BaseModel):
     attribution: str
-    memory_evidence: list
+    memory_evidence: List[str]
     timestamp: float
 
-# 模拟的NPC数据（后续将从Supabase读取）
-MOCK_NPCS = {
+# NPC配置数据
+NPCS_CONFIG = {
     "guard_alvin": {
         "name": "艾尔文",
-        "role": "城卫兵",
+        "role": "城卫兵", 
         "core_motivation": "维护港口秩序，保护市民安全",
-        "personality": "严谨、正直、略显刻板但内心善良"
+        "personality": "严谨、正直、略显刻板但内心善良",
+        "belief_system": """
+        worldview:
+          - 秩序是社会安定的基础
+          - 法律面前人人平等
+          - 外来者需要格外关注
+        selfview:
+          - 我有责任保护这里的民众
+          - 我的职责就是我的荣誉
+          - 我必须公正执法
+        values:
+          - 正义高于个人感情
+          - 职责比生命更重要
+          - 秩序胜过混乱
+        """
     },
     "wanderer_karin": {
         "name": "卡琳",
         "role": "流浪者",
         "core_motivation": "在这个充满敌意的世界中生存下去",
-        "personality": "警觉、机智、表面冷漠但渴望被理解"
+        "personality": "警觉、机智、表面冷漠但渴望被理解",
+        "belief_system": """
+        worldview:
+          - 世界对弱者充满恶意
+          - 只能依靠自己才能生存
+          - 信任别人就是自寻死路
+        selfview:
+          - 我必须时刻保持警惕
+          - 我没有朋友，只有利益
+          - 我是个无家可归的流浪者
+        values:
+          - 生存高于一切
+          - 自由胜过安全
+          - 独立比依赖更可靠
+        """
     },
     "scholar_thane": {
-        "name": "塞恩",
+        "name": "塞恩", 
         "role": "学者",
         "core_motivation": "追寻古老的智慧与真理",
-        "personality": "博学、好奇、有时过于沉迷于理论"
+        "personality": "博学、好奇、有时过于沉迷于理论",
+        "belief_system": """
+        worldview:
+          - 知识是世界上最宝贵的财富
+          - 真理往往隐藏在古老的文献中
+          - 理解过去能预测未来
+        selfview:
+          - 我是智慧的追求者
+          - 我有义务传播知识
+          - 我常常沉浸在思考中
+        values:
+          - 智慧比财富更重要
+          - 真理胜过方便的谎言
+          - 学习是终生的使命
+        """
     }
 }
+
+# 简单的内存存储，替代Zep
+conversation_store = {}
+
+# 辅助函数
+async def ensure_user_exists(user_id: str):
+    """确保用户存在（简化版）"""
+    # 简化实现，只是确保用户在我们的内存store中
+    pass
+
+async def get_conversation_history(session_id: str, limit: int = 10):
+    """从内存获取对话历史"""
+    try:
+        if session_id in conversation_store:
+            history = conversation_store[session_id][-limit:]
+            return history
+        return []
+    except Exception as e:
+        print(f"获取对话历史失败: {e}")
+        return []
+
+async def save_conversation_to_memory(session_id: str, user_message: str, assistant_message: str):
+    """保存对话到内存"""
+    try:
+        if session_id not in conversation_store:
+            conversation_store[session_id] = []
+        
+        conversation_store[session_id].extend([
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": assistant_message}
+        ])
+        
+        # 保持最近20条记录
+        if len(conversation_store[session_id]) > 20:
+            conversation_store[session_id] = conversation_store[session_id][-20:]
+            
+    except Exception as e:
+        print(f"保存对话失败: {e}")
+
+async def save_to_supabase(table: str, data: Dict):
+    """保存数据到Supabase"""
+    try:
+        result = supabase.table(table).insert(data).execute()
+        return result.data
+    except Exception as e:
+        print(f"保存到Supabase失败: {e}")
+        return None
+
+async def call_tongyi_llm(system_prompt: str, user_message: str, model: str = "qwen-plus"):
+    """调用通义千问LLM"""
+    try:
+        response = tongyi_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=1000,
+            temperature=0.8
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"调用通义千问失败: {e}")
+        # 返回fallback响应
+        return f"*系统繁忙，请稍后再试* (错误: {str(e)})"
 
 @app.get("/")
 async def root():
@@ -75,60 +205,65 @@ async def chat_with_npc(request: ChatRequest):
     """Agent Core - 处理玩家与NPC的对话"""
     try:
         # 1. 验证NPC存在
-        if request.npc_id not in MOCK_NPCS:
-            # 如果没有指定NPC，选择默认的守卫
+        if request.npc_id not in NPCS_CONFIG:
             request.npc_id = "guard_alvin"
         
-        npc = MOCK_NPCS[request.npc_id]
+        npc = NPCS_CONFIG[request.npc_id]
+        session_id = f"{request.player_id}_{request.npc_id}"
         
-        # 2. 模拟信念加载（后续从Supabase读取）
-        belief_system = f"我是{npc['name']}，{npc['role']}。我的核心动机是{npc['core_motivation']}。我的性格特点：{npc['personality']}"
+        # 2. 确保用户在Zep中存在
+        await ensure_user_exists(request.player_id)
         
-        # 3. 模拟记忆检索（后续从Zep读取）
-        # 这里暂时用简单的上下文
+        # 3. 获取对话历史
+        conversation_history = await get_conversation_history(session_id)
         
-        # 4. 模拟LLM调用（后续通过Vercel AI Gateway）
-        # 根据NPC性格生成简单响应
-        response_templates = {
-            "guard_alvin": [
-                f"*{npc['name']}严肃地看着你* 外乡人，在我的管辖区内要遵守规矩。你有什么事？",
-                f"*{npc['name']}点了点头* 很好，这样的话我能理解。继续说吧。",
-                f"*{npc['name']}皱起眉头* 这听起来不太对劲...你确定这样做是明智的吗？"
-            ],
-            "wanderer_karin": [
-                f"*{npc['name']}警觉地看了你一眼* 又是一个想要什么的人...直说吧，别浪费时间。",
-                f"*{npc['name']}冷笑一声* 有趣...不过我为什么要相信你？",
-                f"*{npc['name']}稍微放松了警惕* 也许你和其他人不太一样..."
-            ],
-            "scholar_thane": [
-                f"*{npc['name']}抬起头看向你* 啊，有人对知识感兴趣吗？请坐，我们可以谈谈。",
-                f"*{npc['name']}若有所思* 这个问题很有深度...让我想想古籍中的记载...",
-                f"*{npc['name']}兴奋地翻阅书籍* 你说得对！这正证实了我的理论！"
-            ]
-        }
+        # 4. 构建系统提示词
+        system_prompt = f"""
+你是{npc['name']}，{npc['role']}。你的核心动机是：{npc['core_motivation']}
+你的性格特点：{npc['personality']}
+
+你的信念系统：
+{npc['belief_system']}
+
+请严格按照你的信念系统和性格特点来回应。保持角色一致性，使用第一人称，并在回应中体现你的动机和价值观。
+
+场景：港口酒馆，这里聚集着各色人物。
+
+回应格式：直接的角色对话，可以包含动作描述（用*包围）。
+"""
         
-        import random
-        response_text = random.choice(response_templates.get(request.npc_id, ["*NPC看着你，等待回应*"]))
+        # 5. 构建上下文消息
+        context_messages = ""
+        if conversation_history:
+            context_messages = "\n".join([f"{msg['role']}: {msg['content']}" for msg in conversation_history[-5:]])
+            system_prompt += f"\n\n最近的对话历史：\n{context_messages}"
         
-        # 5. 模拟日志记录（后续写入agent_logs表）
+        # 6. 调用LLM生成响应
+        response_text = await call_tongyi_llm(system_prompt, request.message)
+        
+        # 7. 保存对话到内存
+        await save_conversation_to_memory(session_id, request.message, response_text)
+        
+        # 8. 记录到数据库
         log_entry = {
             "timestamp": time.time(),
+            "player_id": request.player_id,
             "character_id": request.npc_id,
             "scene_id": request.scene_id,
             "action_type": "dialogue",
             "input": request.message,
             "output": response_text,
-            "player_id": request.player_id
+            "session_id": session_id
         }
         
-        # 这里可以添加到内存中的日志数组，后续存储到数据库
-        print(f"[LOG] {json.dumps(log_entry, ensure_ascii=False)}")
+        # 尝试保存到Supabase
+        await save_to_supabase("agent_logs", log_entry)
         
         return ChatResponse(
             npc_id=request.npc_id,
             response=response_text,
             timestamp=time.time(),
-            belief_influenced=False
+            belief_influenced=True
         )
         
     except Exception as e:
@@ -138,25 +273,66 @@ async def chat_with_npc(request: ChatRequest):
 async def chamber_of_echoes(request: EchoRequest):
     """回响之室 - 生成主观因果解释"""
     try:
-        # 模拟从数据库读取玩家信念系统和相关事件
-        # 这里使用模拟数据
+        # 1. 从数据库获取玩家的行为日志
+        player_logs = supabase.table("agent_logs").select("*").eq("player_id", request.player_id).order("timestamp", desc=True).limit(10).execute()
         
-        mock_attributions = [
-            "也许是因为我太过急躁了...总是想要快速得到结果，反而让对方感到了压迫感。",
-            "我发现自己习惯性地不信任他人的动机，这种防御心态可能让我错过了真正的善意。",
-            "回想起来，我似乎总是在证明自己是对的，而不是去理解别人的观点。",
-            "我的内心深处可能害怕被拒绝，所以选择了先疏远别人...这样就不会受伤了。"
-        ]
+        # 2. 构建用于分析的提示词
+        system_prompt = """
+你是一个深度心理分析师，专门帮助人们理解自己的行为模式和内在动机。
+
+请基于用户最近的行为和对话，生成一段第一人称的、深刻的自我反思。这个反思应该：
+1. 揭示用户行为背后可能的心理动机
+2. 帮助用户看到自己的行为模式
+3. 提供富有洞察力的因果解释
+4. 语调要温和、理解性，避免批判
+
+同时，请提供2-3个支撑这个分析的"记忆片段"或"行为证据"。
+
+回应格式：
+{
+  "attribution": "第一人称的深度自我反思...",
+  "evidence": ["支撑证据1", "支撑证据2", "支撑证据3"]
+}
+"""
         
-        mock_memories = [
-            "记得小时候，我也曾经因为类似的行为被大人批评过...",
-            "昨天在市场上，我用同样的方式对待商贩，结果也不太愉快。",
-            "我想起了母亲常说的话：'急于求成往往适得其反'。"
-        ]
+        # 3. 准备用户数据
+        if player_logs.data:
+            recent_interactions = []
+            for log in player_logs.data:
+                recent_interactions.append(f"与{log.get('character_id', '未知角色')}的对话: {log.get('input', '')} -> {log.get('output', '')}")
+            
+            user_context = f"用户最近的行为记录：\n" + "\n".join(recent_interactions)
+        else:
+            user_context = "用户还没有足够的互动记录，请基于一般的心理模式提供深度反思。"
         
-        import random
-        attribution = random.choice(mock_attributions)
-        evidence = random.sample(mock_memories, min(2, len(mock_memories)))
+        # 4. 调用LLM生成回响之室内容
+        response_text = await call_tongyi_llm(system_prompt, user_context)
+        
+        try:
+            # 尝试解析JSON格式的响应
+            import json
+            parsed_response = json.loads(response_text)
+            attribution = parsed_response.get("attribution", response_text)
+            evidence = parsed_response.get("evidence", [])
+        except:
+            # 如果不是JSON格式，使用原始文本
+            attribution = response_text
+            evidence = [
+                "你在与他人交流时表现出的某些模式...", 
+                "你对不同情况的反应方式...",
+                "你内心深处的某些倾向..."
+            ]
+        
+        # 5. 记录回响之室的使用
+        echo_log = {
+            "timestamp": time.time(),
+            "player_id": request.player_id,
+            "event_type": "echo_chamber",
+            "attribution": attribution,
+            "evidence": evidence
+        }
+        
+        await save_to_supabase("echo_logs", echo_log)
         
         return EchoResponse(
             attribution=attribution,
@@ -165,7 +341,19 @@ async def chamber_of_echoes(request: EchoRequest):
         )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Echo processing failed: {str(e)}")
+        # 提供fallback响应
+        fallback_attribution = "在这个镜子般的时刻，我感受到了自己内心深处的某些东西...也许我需要更多的互动来真正理解自己。"
+        fallback_evidence = [
+            "我注意到自己在面对未知时的第一反应...",
+            "我发现自己与他人互动的方式反映了某些内在的模式...",
+            "我意识到自己的选择背后可能有更深层的动机..."
+        ]
+        
+        return EchoResponse(
+            attribution=fallback_attribution,
+            memory_evidence=fallback_evidence,
+            timestamp=time.time()
+        )
 
 if __name__ == "__main__":
     import uvicorn
