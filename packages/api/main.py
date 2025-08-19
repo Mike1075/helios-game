@@ -244,90 +244,127 @@ async def select_responding_npc(user_message: str, available_npcs: list) -> str:
         # 出错时返回第一个可用的NPC
         return available_npcs[0][0]
 
-async def generate_npc_dialogue(scene_id: str, player_id: Optional[str] = None):
+async def generate_npc_dialogue(scene_id: str, player_id: Optional[str] = None, continue_conversation: bool = False):
     """生成NPC之间的自主对话"""
     try:
-        # 1. 随机选择两个不同的NPC
-        available_npcs = list(NPCS_CONFIG.keys())
-        if len(available_npcs) < 2:
-            return None
+        # 1. 获取最近的NPC对话历史
+        recent_npc_dialogue = []
+        current_topic = ""
+        current_speakers = None
+        
+        try:
+            # 获取最近的NPC对话记录
+            recent_logs = supabase.table("agent_logs").select("*").eq("action_type", "npc_dialogue").order("timestamp", desc=True).limit(10).execute()
+            if recent_logs.data:
+                recent_npc_dialogue = recent_logs.data
+                
+                # 如果要继续对话，使用最近的对话者
+                if continue_conversation and len(recent_npc_dialogue) >= 2:
+                    last_speaker = recent_npc_dialogue[0].get('character_id')
+                    second_last_speaker = recent_npc_dialogue[1].get('character_id')
+                    
+                    if last_speaker and second_last_speaker and last_speaker != second_last_speaker:
+                        # 继续使用相同的对话者，但交换角色
+                        current_speakers = (second_last_speaker, last_speaker)
+                        
+                        # 分析最近对话的主题
+                        recent_messages = [log.get('output', '') for log in recent_npc_dialogue[:3]]
+                        current_topic = f"继续刚才关于：{recent_messages[0][:20]}... 的话题"
+        except Exception as e:
+            print(f"获取NPC对话历史失败: {e}")
+        
+        # 2. 选择对话者
+        if not current_speakers:
+            # 如果没有继续对话，随机选择两个NPC
+            available_npcs = list(NPCS_CONFIG.keys())
+            if len(available_npcs) < 2:
+                return None
+                
+            import random
+            speaker_id, listener_id = random.sample(available_npcs, 2)
+        else:
+            speaker_id, listener_id = current_speakers
             
-        import random
-        speaker_id, listener_id = random.sample(available_npcs, 2)
         speaker = NPCS_CONFIG[speaker_id]
         listener = NPCS_CONFIG[listener_id]
         
-        # 2. 获取最近的对话上下文（如果有player_id）
-        recent_context = ""
-        if player_id:
-            try:
-                recent_logs = supabase.table("agent_logs").select("input,output,character_id").eq("player_id", player_id).order("timestamp", desc=True).limit(5).execute()
-                if recent_logs.data:
-                    context_items = []
-                    for log in recent_logs.data:
-                        context_items.append(f"{log.get('character_id', '某人')}: {log.get('output', '')}")
-                    recent_context = f"\n\n最近的酒馆话题：\n" + "\n".join(context_items[:3])
-            except:
-                pass
+        # 3. 构建对话上下文
+        dialogue_context = ""
+        if recent_npc_dialogue:
+            recent_exchanges = []
+            for log in recent_npc_dialogue[:4]:  # 获取最近4轮对话
+                char_name = NPCS_CONFIG.get(log.get('character_id', ''), {}).get('name', '某人')
+                recent_exchanges.append(f"{char_name}: {log.get('output', '')}")
+            dialogue_context = f"\n\n最近的对话内容：\n" + "\n".join(recent_exchanges)
         
-        # 3. 生成对话话题
-        topic_prompts = [
-            "谈论港口最近的变化",
-            "分享各自的经历和见解", 
-            "讨论酒馆里的其他客人",
-            "聊聊最近听到的传闻",
-            "谈论天气和港口生活",
-            "讨论各自的工作和责任",
-            "分享对这个世界的看法"
-        ]
+        # 4. 确定话题
+        if not current_topic:
+            if recent_npc_dialogue:
+                # 基于最近的对话生成相关话题
+                recent_content = " ".join([log.get('output', '') for log in recent_npc_dialogue[:2]])
+                current_topic = "延续刚才的话题并深入讨论"
+            else:
+                # 新话题
+                topic_prompts = [
+                    "港口最近发生的奇怪事件",
+                    "古老传说中的神秘力量", 
+                    "这座城市隐藏的秘密",
+                    "流传在酒馆中的神秘故事",
+                    "外来者带来的不寻常消息",
+                    "港口深处的未解之谜"
+                ]
+                import random
+                current_topic = random.choice(topic_prompts)
         
-        selected_topic = random.choice(topic_prompts)
-        
-        # 4. 构建对话生成提示词
+        # 5. 生成连贯的对话
         dialogue_prompt = f"""
-你正在港口酒馆中，需要生成两个NPC之间的自然对话。
+你需要生成港口酒馆中两个NPC的连贯对话。
 
-说话者：{speaker['name']}（{speaker['role']}) - {speaker['core_motivation']}
-听话者：{listener['name']}（{listener['role']}) - {listener['core_motivation']}
+角色设定：
+- 说话者：{speaker['name']}（{speaker['role']}) - 性格：{speaker['personality']}
+- 听话者：{listener['name']}（{listener['role']}) - 性格：{listener['personality']}
 
-对话话题：{selected_topic}
+当前话题：{current_topic}
 
-{speaker['name']}的信念系统：
-{speaker['belief_system']}
+{dialogue_context}
 
-请生成{speaker['name']}对{listener['name']}说的一句话，要求：
-1. 符合{speaker['name']}的性格和信念
-2. 自然地开启{selected_topic}这个话题
-3. 语言风格符合角色设定
-4. 长度适中（1-2句话）
-5. 可以包含动作描述（用*包围）
+要求：
+1. 如果有对话历史，请延续之前的话题，让对话更加深入
+2. {speaker['name']}应该基于之前的内容提出新的观点或问题
+3. {listener['name']}需要给出有建设性的回应，推进话题发展
+4. 保持角色性格一致性
+5. 让对话自然深入，避免重复
 
-{recent_context}
-
-只需要返回{speaker['name']}说的话，不要包含其他内容。
+请生成格式：
+说话者：[{speaker['name']}的话]
+听话者：[{listener['name']}的回应]
 """
 
-        # 5. 生成第一轮对话
-        speaker_message = await call_tongyi_llm(dialogue_prompt, f"请{speaker['name']}开始{selected_topic}的对话")
+        # 6. 生成对话
+        full_dialogue = await call_tongyi_llm(dialogue_prompt, f"围绕{current_topic}生成深入的对话")
         
-        # 6. 生成回应
-        response_prompt = f"""
-你是{listener['name']}（{listener['role']})，刚刚听到{speaker['name']}说："{speaker_message}"
-
-{listener['name']}的信念系统：
-{listener['belief_system']}
-
-请作为{listener['name']}回应{speaker['name']}，要求：
-1. 符合{listener['name']}的性格特点和价值观
-2. 对{speaker['name']}的话题做出自然回应
-3. 体现两个角色之间的关系动态
-4. 长度适中（1-2句话）
-5. 可以包含动作描述（用*包围）
-
-只需要返回{listener['name']}的回应，不要包含其他内容。
-"""
-
-        listener_response = await call_tongyi_llm(response_prompt, speaker_message)
+        # 7. 解析对话内容
+        lines = full_dialogue.strip().split('\n')
+        speaker_message = ""
+        listener_response = ""
+        
+        for line in lines:
+            if line.startswith('说话者：') or line.startswith(speaker['name']):
+                speaker_message = line.split('：', 1)[1] if '：' in line else line
+            elif line.startswith('听话者：') or line.startswith(listener['name']):
+                listener_response = line.split('：', 1)[1] if '：' in line else line
+        
+        # 如果解析失败，生成基于上下文的默认消息
+        if not speaker_message:
+            if recent_npc_dialogue:
+                speaker_message = f"*{speaker['name']}继续刚才的话题* 我还想补充一点..."
+            else:
+                speaker_message = f"*{speaker['name']}看向{listener['name']}* 关于{current_topic}，你怎么看？"
+        if not listener_response:
+            if recent_npc_dialogue:
+                listener_response = f"*{listener['name']}若有所思* 确实，这让我想到..."
+            else:
+                listener_response = f"*{listener['name']}思考了一下* 这个话题很值得深入讨论..."
         
         return {
             "speaker_id": speaker_id,
@@ -518,7 +555,18 @@ async def chamber_of_echoes(request: EchoRequest):
 async def generate_npc_to_npc_dialogue(request: NPCDialogueRequest):
     """生成NPC之间的自主对话"""
     try:
-        dialogue_data = await generate_npc_dialogue(request.scene_id, request.player_id)
+        # 检查是否有最近的NPC对话来判断是否继续对话
+        recent_npc_logs = supabase.table("agent_logs").select("timestamp").eq("action_type", "npc_dialogue").order("timestamp", desc=True).limit(1).execute()
+        
+        continue_conversation = False
+        if recent_npc_logs.data:
+            # 如果最近5分钟内有NPC对话，则继续对话
+            last_npc_time = recent_npc_logs.data[0]['timestamp']
+            current_time = time.time()
+            if current_time - last_npc_time < 300:  # 5分钟内
+                continue_conversation = True
+        
+        dialogue_data = await generate_npc_dialogue(request.scene_id, request.player_id, continue_conversation)
         
         if not dialogue_data:
             raise HTTPException(status_code=500, detail="Failed to generate NPC dialogue")

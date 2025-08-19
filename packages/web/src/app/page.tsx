@@ -62,8 +62,9 @@ export default function Home() {
   const [npcDialogueTimer, setNpcDialogueTimer] = useState<NodeJS.Timeout | null>(null)
   const [isNpcDialogueActive, setIsNpcDialogueActive] = useState(false)
   const [inputFocused, setInputFocused] = useState(false)
-  const [currentNpcSpeakers, setCurrentNpcSpeakers] = useState<{speaker: string, listener: string} | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const isNpcDialogueActiveRef = useRef(false)
+  const inputFocusedRef = useRef(false)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -73,28 +74,35 @@ export default function Home() {
     scrollToBottom()
   }, [messages])
 
+  // 同步ref状态
+  useEffect(() => {
+    isNpcDialogueActiveRef.current = isNpcDialogueActive
+  }, [isNpcDialogueActive])
+
+  useEffect(() => {
+    inputFocusedRef.current = inputFocused
+  }, [inputFocused])
+
   // 管理NPC自主对话计时器
   useEffect(() => {
-    // 如果用户正在输入，不要启动NPC对话
-    if (inputFocused) {
-      setIsNpcDialogueActive(false)
-      if (npcDialogueTimer) {
-        clearTimeout(npcDialogueTimer)
-        setNpcDialogueTimer(null)
-      }
-      return
-    }
-
     // 清理现有计时器
     if (npcDialogueTimer) {
       clearTimeout(npcDialogueTimer)
     }
     
-    // 设置新的30秒计时器
+    // 如果用户正在输入，不启动新的计时器
+    if (inputFocused) {
+      return
+    }
+    
+    // 设置新的30秒计时器启动NPC对话
     const newTimer = setTimeout(() => {
-      setIsNpcDialogueActive(true)
-      triggerNpcDialogue()
-    }, 30000) // 30秒
+      if (!inputFocusedRef.current) { // 再次确认用户没有在输入
+        console.log('30秒计时器触发 - 启动NPC对话')
+        setIsNpcDialogueActive(true)
+        triggerNpcDialogue()
+      }
+    }, 5000) // 5秒后开始NPC对话（调试用）
     
     setNpcDialogueTimer(newTimer)
     
@@ -107,9 +115,12 @@ export default function Home() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return
 
-    // 停止NPC自主对话
+    // 停止NPC对话
     setIsNpcDialogueActive(false)
-    setCurrentNpcSpeakers(null)
+    if (npcDialogueTimer) {
+      clearTimeout(npcDialogueTimer)
+      setNpcDialogueTimer(null)
+    }
 
     const playerMessage: Message = {
       id: Date.now().toString(),
@@ -231,7 +242,12 @@ export default function Home() {
     }
   }
 
-  const triggerNpcDialogue = async (continuePreviousConversation = false) => {
+  const triggerNpcDialogue = async () => {
+    console.log('triggerNpcDialogue 被调用，当前状态:', {
+      isNpcDialogueActive: isNpcDialogueActiveRef.current,
+      inputFocused: inputFocusedRef.current
+    })
+    
     try {
       const response = await fetch('/api/npc-dialogue', {
         method: 'POST',
@@ -253,12 +269,6 @@ export default function Home() {
       // 找到对应的NPC名称
       const speakerName = NPCS.find(npc => npc.id === data.npc_speaker)?.name || data.npc_speaker
       const listenerName = NPCS.find(npc => npc.id === data.npc_listener)?.name || data.npc_listener
-
-      // 记录当前对话的角色
-      setCurrentNpcSpeakers({
-        speaker: data.npc_speaker,
-        listener: data.npc_listener
-      })
 
       // 添加说话者的消息
       const speakerMessage: Message = {
@@ -287,18 +297,36 @@ export default function Home() {
       setTimeout(() => {
         setMessages(prev => [...prev, listenerMessage])
         
-        // 继续对话（如果用户没有开始输入）
-        setTimeout(() => {
-          if (!inputFocused && isNpcDialogueActive) {
-            triggerNpcDialogue(true)
-          }
-        }, 3000) // 3秒后继续下一轮对话
+        // 立即安排下一轮对话，无条件继续（除非用户干预）
+        console.log('添加回应消息完成，准备下一轮对话...')
+        scheduleNextDialogue()
       }, 2000)
 
     } catch (error) {
       console.error('Error triggering NPC dialogue:', error)
+      // 出错时停止对话
       setIsNpcDialogueActive(false)
     }
+  }
+
+  const scheduleNextDialogue = () => {
+    setTimeout(() => {
+      console.log('检查是否继续对话:', {
+        isNpcDialogueActive: isNpcDialogueActiveRef.current,
+        inputFocused: inputFocusedRef.current
+      })
+      
+      // 只要对话是活跃的且用户没有在输入，就继续
+      if (isNpcDialogueActiveRef.current && !inputFocusedRef.current) {
+        console.log('继续下一轮NPC对话')
+        triggerNpcDialogue()
+      } else {
+        console.log('停止NPC对话：', {
+          dialogueActive: isNpcDialogueActiveRef.current,
+          userTyping: inputFocusedRef.current
+        })
+      }
+    }, 2000) // 2秒后继续（调试用）
   }
 
 
@@ -362,6 +390,26 @@ export default function Home() {
                   '🪞 进入回响之室'
                 )}
               </button>
+              
+              <button
+                onClick={() => {
+                  if (isNpcDialogueActive) {
+                    console.log('手动停止NPC对话')
+                    setIsNpcDialogueActive(false)
+                  } else {
+                    console.log('手动开始NPC对话')
+                    setIsNpcDialogueActive(true)
+                    triggerNpcDialogue()
+                  }
+                }}
+                className={`w-full mt-2 p-3 rounded-lg font-medium transition-all ${
+                  isNpcDialogueActive
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {isNpcDialogueActive ? '🛑 停止NPC对话' : '💬 开始NPC对话'}
+              </button>
             </div>
           </div>
 
@@ -411,8 +459,15 @@ export default function Home() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  onFocus={() => setInputFocused(true)}
-                  onBlur={() => setInputFocused(false)}
+                  onFocus={() => {
+                    console.log('用户开始输入 - 停止NPC对话')
+                    setInputFocused(true)
+                    setIsNpcDialogueActive(false) // 用户开始输入时停止NPC对话
+                  }}
+                  onBlur={() => {
+                    console.log('用户停止输入')
+                    setInputFocused(false)
+                  }}
                   placeholder={selectedNpc === 'auto' ? '说些什么，AI会帮你找到最合适的聊天对象...' : `对${NPCS.find(n => n.id === selectedNpc)?.name}说些什么...`}
                   className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   disabled={isLoading}
