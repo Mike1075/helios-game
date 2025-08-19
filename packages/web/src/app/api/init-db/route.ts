@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     // 初始化或更新核心角色状态 - 设置高无聊值以便立即触发AI行动
     const coreCharacterStates = [
       {
+        id: `state_linxi_${Date.now()}`,
         character_id: 'linxi',
         energy: 75.0,
         focus: 80.0,
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
         last_updated: Date.now()
       },
       {
+        id: `state_chenhao_${Date.now() + 1}`,
         character_id: 'chenhao',
         energy: 60.0,
         focus: 50.0,
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
     // 2. 初始化信念系统
     const beliefSystems = [
       {
+        id: `belief_linxi_${Date.now()}`,
         character_id: 'linxi',
         worldview: [
           { belief: "世界充满隐藏的真相", strength: 0.9 },
@@ -96,6 +99,7 @@ export async function POST(request: NextRequest) {
         confidence_score: 0.8
       },
       {
+        id: `belief_chenhao_${Date.now() + 1}`,
         character_id: 'chenhao',
         worldview: [
           { belief: "世界基本上是安全的", strength: 0.6 },
