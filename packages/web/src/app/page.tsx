@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // 2035年AI角色定义
 const characters2035 = {
@@ -69,6 +69,7 @@ export default function Helios2035MVP() {
   const [showEchoRoom, setShowEchoRoom] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [groupChatActive, setGroupChatActive] = useState(false);
+  const [npcAutoChat, setNpcAutoChat] = useState(true); // NPC自主对话开关
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,6 +255,96 @@ export default function Helios2035MVP() {
       });
     }
   };
+
+  // NPC自主对话功能
+  const triggerNPCAutoChat = async () => {
+    if (!npcAutoChat || !groupChatActive || isTyping) return;
+    
+    try {
+      const recentHistory = messages.slice(-8).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        character: msg.character
+      }));
+
+      const response = await fetch('/api/npc-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationHistory: recentHistory,
+          timeOfDay: 'evening',
+          barActivity: 'quiet'
+        }),
+      });
+
+      if (!response.ok) return;
+
+      const result = await response.json();
+      
+      if (result.hasConversation) {
+        setIsTyping(true);
+        
+        // 显示发起者的消息
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            role: 'assistant' as const,
+            content: result.initiatorResponse,
+            character: result.initiator,
+            timestamp: new Date().toLocaleTimeString(),
+            interactionType: 'auto_chat'
+          }]);
+        }, 1500);
+        
+        // 显示跟进回应
+        result.followUpResponses.forEach((followUp: any, index: number) => {
+          setTimeout(() => {
+            setMessages(prev => [...prev, {
+              role: 'assistant' as const,
+              content: followUp.response,
+              character: followUp.character,
+              timestamp: new Date().toLocaleTimeString(),
+              interactionType: 'auto_follow_up'
+            }]);
+            
+            // 最后一个回应完成后停止打字状态
+            if (index === result.followUpResponses.length - 1) {
+              setIsTyping(false);
+            }
+          }, 1500 + (index + 1) * 3000);
+        });
+        
+        // 如果没有跟进回应，也要停止打字状态
+        if (result.followUpResponses.length === 0) {
+          setTimeout(() => setIsTyping(false), 2000);
+        }
+      }
+    } catch (error) {
+      console.error('NPC auto chat error:', error);
+    }
+  };
+
+  // 自动触发NPC对话的定时器
+  useEffect(() => {
+    if (!groupChatActive || !npcAutoChat) return;
+    
+    // 在群聊激活后设置定时器，每30-60秒检查一次是否触发自主对话
+    const interval = setInterval(() => {
+      // 检查最近是否有活动，如果太安静就可能触发NPC自主对话
+      const lastMessageTime = messages.length > 0 ? 
+        new Date(messages[messages.length - 1].timestamp || new Date()).getTime() : 0;
+      const currentTime = new Date().getTime();
+      const silentDuration = currentTime - lastMessageTime;
+      
+      // 如果沉默超过30秒，有概率触发自主对话
+      if (silentDuration > 30000) {
+        triggerNPCAutoChat();
+      }
+    }, 45000); // 每45秒检查一次
+
+    return () => clearInterval(interval);
+  }, [groupChatActive, npcAutoChat, messages.length, isTyping]);
 
   // 生成群聊回应的核心逻辑（作为API调用失败时的回退）
   const generateGroupResponse = (userInput: string) => {
@@ -774,6 +865,28 @@ export default function Helios2035MVP() {
                 2035新弧光城 · MVP v0.1
               </div>
             </div>
+            
+            {/* NPC自主对话控制 */}
+            {groupChatActive && (
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-800/40 rounded-lg border border-gray-700/30">
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="text-gray-400">NPC自主对话</span>
+                  <div className={`w-1.5 h-1.5 rounded-full ${npcAutoChat ? 'bg-cyan-400 animate-pulse' : 'bg-gray-500'}`}></div>
+                </div>
+                <button
+                  onClick={() => setNpcAutoChat(!npcAutoChat)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
+                    npcAutoChat ? 'bg-cyan-600' : 'bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      npcAutoChat ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
             
             {!groupChatActive && (
               <p className="text-center text-gray-500 text-sm">

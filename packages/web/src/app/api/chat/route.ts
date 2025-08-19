@@ -540,61 +540,125 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // 群聊模式
+    // 群聊模式 - 重新设计的真实朋友式对话
     if (mode === 'group') {
       const topicType = topic?.type || 'general';
       const responseOrder = determineResponseOrder(topicType);
-      
       const groupResponses = [];
-      let lastRespondingNPC = '';
       
-      // 检测潜在的信念冲突
-      const detectedConflict = detectBeliefConflict(message, topicType);
-      let conflictTriggered = false;
+      // 构建完整的群聊历史上下文（关键：所有NPC都能看到完整对话）
+      const fullConversationContext = conversationHistory.map(msg => {
+        if (msg.role === 'user') {
+          return `用户: ${msg.content}`;
+        } else if (msg.character) {
+          const charName = characters[msg.character as keyof typeof characters]?.name || msg.character;
+          return `${charName}: ${msg.content}`;
+        }
+        return msg.content;
+      }).join('\n');
       
-      // 生成主要回应（对用户消息的回应）
-      for (const charId of responseOrder) {
-        const npc = characters[charId as keyof typeof characters];
-        
-        // 构建每个角色的对话上下文
-        const messages = [
-          { role: 'system' as const, content: npc.systemPrompt },
-          ...conversationHistory.map(msg => ({
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content
-          })),
-          { role: 'user' as const, content: message }
-        ];
+      // 生成主要回应（第一个NPC对用户的回应）
+      const firstResponder = responseOrder[0];
+      const firstNPC = characters[firstResponder as keyof typeof characters];
+      
+      // 为第一个回应者构建真实群聊上下文
+      const firstGroupContext = `
+# 群聊场景
+你现在在港口酒馆和朋友们一起聊天。参与者：
+- 用户（当前发言者）
+- ${characters.alex.name}（数据分析师）
+- ${characters.nova.name}（原生AI）  
+- ${characters.rachel.name}（酒保）
 
-        let response: string;
-        
-        // 如果检测到冲突且冲突强度高，使用冲突驱动的回应
-        if (detectedConflict && detectedConflict.intensity > 0.7 && !conflictTriggered) {
-          response = generateConflictResponse(charId, detectedConflict, message);
-          conflictTriggered = true;
-        } else {
-          // 添加群聊上下文
-          const groupContext = `\n\n你正在参与一个三人群聊，其他两位是${responseOrder.filter(c => c !== charId).map(c => characters[c as keyof typeof characters].name).join('和')}。请用你独特的视角回应，但保持与群聊的连贯性。话题类型：${topicType}`;
-          const contextualPrompt = npc.systemPrompt + groupContext;
+# 最近的对话历史
+${fullConversationContext}
 
-          // 使用Vercel AI Gateway生成回应
-          const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
-          console.log('AI Gateway check:', {
-            hasKey: !!aiGatewayKey,
-            keyLength: aiGatewayKey ? aiGatewayKey.length : 0,
-            charId
+# 当前发言
+用户: ${message}
+
+# 你的回应指导
+- 你是${firstNPC.name}，请用你的个性和观点自然回应
+- 这是朋友间的真实聊天，要听懂上下文
+- 可以评论、提问、同意或不同意
+- 保持你角色的一致性，但要像真人聊天一样自然`;
+
+      let firstResponse: string;
+      
+      // 生成第一个回应
+      const aiGatewayKey = process.env.AI_GATEWAY_API_KEY;
+      if (aiGatewayKey) {
+        try {
+          const result = await streamText({
+            model: 'openai/gpt-4o-mini',
+            messages: [
+              { role: 'system', content: firstNPC.systemPrompt + firstGroupContext },
+              { role: 'user', content: `请回应: ${message}` }
+            ],
+            temperature: 0.8,
           });
           
+          let fullResponse = '';
+          for await (const chunk of result.textStream) {
+            fullResponse += chunk;
+          }
+          firstResponse = fullResponse;
+          console.log('First group response generated for', firstResponder);
+        } catch (error) {
+          console.error('AI Gateway error for first responder:', error);
+          firstResponse = mockLLMCall(firstNPC.systemPrompt, message);
+        }
+      } else {
+        firstResponse = mockLLMCall(firstNPC.systemPrompt, message);
+      }
+      
+      groupResponses.push({
+        character: firstResponder,
+        response: firstResponse,
+        type: 'primary'
+      });
+      
+      // 更新对话历史，加入第一个回应
+      let updatedContext = fullConversationContext + 
+        `\n用户: ${message}` +
+        `\n${firstNPC.name}: ${firstResponse}`;
+      
+      // 其他NPC可能会对第一个NPC的回应进行反应
+      const remainingNPCs = responseOrder.slice(1);
+      
+      for (const charId of remainingNPCs) {
+        const currentNPC = characters[charId as keyof typeof characters];
+        
+        // 决定是否回应（基于关系、话题和随机性）
+        const shouldRespond = Math.random() < 0.7; // 70%概率回应
+        
+        if (shouldRespond) {
+          // 构建回应上下文，包含刚才的对话
+          const responseContext = `
+# 群聊场景
+你现在在港口酒馆和朋友们聊天。刚才的对话：
+
+${updatedContext}
+
+# 你的回应指导
+- 你是${currentNPC.name}，可以：
+  * 回应用户的原始问题
+  * 对${firstNPC.name}刚才的话发表看法  
+  * 提出新的观点或问题
+- 要像真正的朋友聊天，自然、连贯
+- 保持你的角色个性和观点
+- 如果有不同意见，可以友好地讨论`;
+
+          let response: string;
+          
           if (aiGatewayKey) {
-            console.log('Using AI Gateway for', charId);
             try {
               const result = await streamText({
                 model: 'openai/gpt-4o-mini',
                 messages: [
-                  { role: 'system', content: contextualPrompt },
-                  { role: 'user', content: message }
+                  { role: 'system', content: currentNPC.systemPrompt + responseContext },
+                  { role: 'user', content: `请自然地参与这个对话` }
                 ],
-                temperature: 0.7,
+                temperature: 0.8,
               });
               
               let fullResponse = '';
@@ -602,94 +666,23 @@ export async function POST(req: NextRequest) {
                 fullResponse += chunk;
               }
               response = fullResponse;
-              console.log('AI Gateway response successful for', charId, '- length:', fullResponse.length);
+              console.log('Follow-up response generated for', charId);
             } catch (error) {
-              console.error('AI Gateway error for', charId, ':', error);
-              console.log('Falling back to mock response for', charId);
-              response = mockLLMCall(contextualPrompt, message);
+              console.error('AI Gateway error for follow-up:', error);
+              response = mockLLMCall(currentNPC.systemPrompt, message);
             }
           } else {
-            console.log('No AI_GATEWAY_API_KEY found, using mock response for', charId);
-            response = mockLLMCall(contextualPrompt, message);
-          }
-        }
-        
-        groupResponses.push({
-          character: charId,
-          response: response,
-          type: 'primary',
-          conflict: detectedConflict ? {
-            topic: detectedConflict.topic,
-            intensity: detectedConflict.intensity,
-            userAlignment: detectedConflict.userAlignment
-          } : undefined
-        });
-        
-        lastRespondingNPC = charId;
-      }
-      
-      // 生成NPC间的交互回应（基于关系动态和冲突）
-      const allNPCs = ['alex', 'nova', 'rachel'];
-      for (const currentNPC of allNPCs) {
-        if (currentNPC === lastRespondingNPC) continue; // 跳过刚说话的NPC
-        
-        // 如果有冲突，增加互动概率
-        const baseChance = shouldNPCRespond(currentNPC, lastRespondingNPC, topicType);
-        const conflictBonus = detectedConflict && detectedConflict.intensity > 0.6;
-        
-        if (baseChance || (conflictBonus && Math.random() < 0.6)) {
-          let interactionResponse: string;
-          
-          // 如果有冲突，优先使用冲突回应
-          if (detectedConflict && conflictBonus) {
-            interactionResponse = generateConflictResponse(currentNPC, detectedConflict, message);
-          } else {
-            interactionResponse = generateNPCInteraction(currentNPC, lastRespondingNPC, message);
+            response = mockLLMCall(currentNPC.systemPrompt, message);
           }
           
-          if (interactionResponse) {
-            groupResponses.push({
-              character: currentNPC,
-              response: interactionResponse,
-              type: 'interaction',
-              target: lastRespondingNPC,
-              conflict: detectedConflict ? {
-                topic: detectedConflict.topic,
-                intensity: detectedConflict.intensity,
-                userAlignment: detectedConflict.userAlignment
-              } : undefined
-            });
-            
-            // 冲突时更容易引发连锁反应
-            const chainChance = conflictBonus ? 0.5 : 0.3;
-            if (Math.random() < chainChance) {
-              const thirdNPC = allNPCs.find(id => id !== currentNPC && id !== lastRespondingNPC);
-              if (thirdNPC && (shouldNPCRespond(thirdNPC, currentNPC, topicType) || conflictBonus)) {
-                let chainResponse: string;
-                
-                if (detectedConflict && conflictBonus) {
-                  chainResponse = generateConflictResponse(thirdNPC, detectedConflict, message);
-                } else {
-                  chainResponse = generateNPCInteraction(thirdNPC, currentNPC, message);
-                }
-                
-                if (chainResponse) {
-                  groupResponses.push({
-                    character: thirdNPC,
-                    response: chainResponse,
-                    type: 'chain_reaction',
-                    target: currentNPC,
-                    conflict: detectedConflict ? {
-                      topic: detectedConflict.topic,
-                      intensity: detectedConflict.intensity,
-                      userAlignment: detectedConflict.userAlignment
-                    } : undefined
-                  });
-                }
-              }
-            }
-            break; // 只允许一个主要交互，避免过于混乱
-          }
+          groupResponses.push({
+            character: charId,
+            response: response,
+            type: 'follow_up'
+          });
+          
+          // 更新上下文，为下一个可能的回应做准备
+          updatedContext += `\n${currentNPC.name}: ${response}`;
         }
       }
       
@@ -697,13 +690,7 @@ export async function POST(req: NextRequest) {
         responses: groupResponses,
         mode: 'group',
         topic: topicType,
-        interactions: groupResponses.filter(r => r.type !== 'primary').length,
-        conflict: detectedConflict ? {
-          topic: detectedConflict.topic,
-          intensity: detectedConflict.intensity,
-          userAlignment: detectedConflict.userAlignment,
-          triggered: conflictTriggered
-        } : null
+        interactions: groupResponses.filter(r => r.type !== 'primary').length
       });
     }
     
