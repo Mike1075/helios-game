@@ -59,6 +59,10 @@ export default function Home() {
   const [playerId] = useState(() => `player_${Math.random().toString(36).substr(2, 9)}`)
   const [isLoading, setIsLoading] = useState(false)
   const [isEchoLoading, setIsEchoLoading] = useState(false)
+  const [npcDialogueTimer, setNpcDialogueTimer] = useState<NodeJS.Timeout | null>(null)
+  const [isNpcDialogueActive, setIsNpcDialogueActive] = useState(false)
+  const [inputFocused, setInputFocused] = useState(false)
+  const [currentNpcSpeakers, setCurrentNpcSpeakers] = useState<{speaker: string, listener: string} | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -69,8 +73,43 @@ export default function Home() {
     scrollToBottom()
   }, [messages])
 
+  // 管理NPC自主对话计时器
+  useEffect(() => {
+    // 如果用户正在输入，不要启动NPC对话
+    if (inputFocused) {
+      setIsNpcDialogueActive(false)
+      if (npcDialogueTimer) {
+        clearTimeout(npcDialogueTimer)
+        setNpcDialogueTimer(null)
+      }
+      return
+    }
+
+    // 清理现有计时器
+    if (npcDialogueTimer) {
+      clearTimeout(npcDialogueTimer)
+    }
+    
+    // 设置新的30秒计时器
+    const newTimer = setTimeout(() => {
+      setIsNpcDialogueActive(true)
+      triggerNpcDialogue()
+    }, 30000) // 30秒
+    
+    setNpcDialogueTimer(newTimer)
+    
+    // 清理函数
+    return () => {
+      clearTimeout(newTimer)
+    }
+  }, [messages.filter(msg => msg.sender === 'player').length, inputFocused]) // 当玩家消息数量变化或焦点状态变化时重置
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return
+
+    // 停止NPC自主对话
+    setIsNpcDialogueActive(false)
+    setCurrentNpcSpeakers(null)
 
     const playerMessage: Message = {
       id: Date.now().toString(),
@@ -192,6 +231,77 @@ export default function Home() {
     }
   }
 
+  const triggerNpcDialogue = async (continuePreviousConversation = false) => {
+    try {
+      const response = await fetch('/api/npc-dialogue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          scene_id: 'tavern',
+          player_id: playerId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
+      }
+
+      const data = await response.json()
+
+      // 找到对应的NPC名称
+      const speakerName = NPCS.find(npc => npc.id === data.npc_speaker)?.name || data.npc_speaker
+      const listenerName = NPCS.find(npc => npc.id === data.npc_listener)?.name || data.npc_listener
+
+      // 记录当前对话的角色
+      setCurrentNpcSpeakers({
+        speaker: data.npc_speaker,
+        listener: data.npc_listener
+      })
+
+      // 添加说话者的消息
+      const speakerMessage: Message = {
+        id: Date.now().toString() + '_npc_speaker',
+        sender: 'npc',
+        content: data.message,
+        npcId: data.npc_speaker,
+        npcName: speakerName,
+        timestamp: data.timestamp
+      }
+
+      // 添加回应者的消息
+      const listenerMessage: Message = {
+        id: Date.now().toString() + '_npc_listener',
+        sender: 'npc',
+        content: data.response,
+        npcId: data.npc_listener,
+        npcName: listenerName,
+        timestamp: data.timestamp + 1000
+      }
+
+      // 依次添加消息
+      setMessages(prev => [...prev, speakerMessage])
+      
+      // 延迟添加回应消息，模拟真实对话节奏
+      setTimeout(() => {
+        setMessages(prev => [...prev, listenerMessage])
+        
+        // 继续对话（如果用户没有开始输入）
+        setTimeout(() => {
+          if (!inputFocused && isNpcDialogueActive) {
+            triggerNpcDialogue(true)
+          }
+        }, 3000) // 3秒后继续下一轮对话
+      }, 2000)
+
+    } catch (error) {
+      console.error('Error triggering NPC dialogue:', error)
+      setIsNpcDialogueActive(false)
+    }
+  }
+
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -301,6 +411,8 @@ export default function Home() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
                   placeholder={selectedNpc === 'auto' ? '说些什么，AI会帮你找到最合适的聊天对象...' : `对${NPCS.find(n => n.id === selectedNpc)?.name}说些什么...`}
                   className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   disabled={isLoading}

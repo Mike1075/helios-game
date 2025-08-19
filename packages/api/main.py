@@ -63,6 +63,17 @@ class EchoResponse(BaseModel):
     memory_evidence: List[str]
     timestamp: float
 
+class NPCDialogueRequest(BaseModel):
+    scene_id: str = "tavern"
+    player_id: Optional[str] = None  # 用于获取上下文
+
+class NPCDialogueResponse(BaseModel):
+    npc_speaker: str
+    npc_listener: str
+    message: str
+    response: str
+    timestamp: float
+
 # NPC配置数据
 NPCS_CONFIG = {
     "guard_alvin": {
@@ -232,6 +243,105 @@ async def select_responding_npc(user_message: str, available_npcs: list) -> str:
         print(f"NPC选择失败: {e}")
         # 出错时返回第一个可用的NPC
         return available_npcs[0][0]
+
+async def generate_npc_dialogue(scene_id: str, player_id: Optional[str] = None):
+    """生成NPC之间的自主对话"""
+    try:
+        # 1. 随机选择两个不同的NPC
+        available_npcs = list(NPCS_CONFIG.keys())
+        if len(available_npcs) < 2:
+            return None
+            
+        import random
+        speaker_id, listener_id = random.sample(available_npcs, 2)
+        speaker = NPCS_CONFIG[speaker_id]
+        listener = NPCS_CONFIG[listener_id]
+        
+        # 2. 获取最近的对话上下文（如果有player_id）
+        recent_context = ""
+        if player_id:
+            try:
+                recent_logs = supabase.table("agent_logs").select("input,output,character_id").eq("player_id", player_id).order("timestamp", desc=True).limit(5).execute()
+                if recent_logs.data:
+                    context_items = []
+                    for log in recent_logs.data:
+                        context_items.append(f"{log.get('character_id', '某人')}: {log.get('output', '')}")
+                    recent_context = f"\n\n最近的酒馆话题：\n" + "\n".join(context_items[:3])
+            except:
+                pass
+        
+        # 3. 生成对话话题
+        topic_prompts = [
+            "谈论港口最近的变化",
+            "分享各自的经历和见解", 
+            "讨论酒馆里的其他客人",
+            "聊聊最近听到的传闻",
+            "谈论天气和港口生活",
+            "讨论各自的工作和责任",
+            "分享对这个世界的看法"
+        ]
+        
+        selected_topic = random.choice(topic_prompts)
+        
+        # 4. 构建对话生成提示词
+        dialogue_prompt = f"""
+你正在港口酒馆中，需要生成两个NPC之间的自然对话。
+
+说话者：{speaker['name']}（{speaker['role']}) - {speaker['core_motivation']}
+听话者：{listener['name']}（{listener['role']}) - {listener['core_motivation']}
+
+对话话题：{selected_topic}
+
+{speaker['name']}的信念系统：
+{speaker['belief_system']}
+
+请生成{speaker['name']}对{listener['name']}说的一句话，要求：
+1. 符合{speaker['name']}的性格和信念
+2. 自然地开启{selected_topic}这个话题
+3. 语言风格符合角色设定
+4. 长度适中（1-2句话）
+5. 可以包含动作描述（用*包围）
+
+{recent_context}
+
+只需要返回{speaker['name']}说的话，不要包含其他内容。
+"""
+
+        # 5. 生成第一轮对话
+        speaker_message = await call_tongyi_llm(dialogue_prompt, f"请{speaker['name']}开始{selected_topic}的对话")
+        
+        # 6. 生成回应
+        response_prompt = f"""
+你是{listener['name']}（{listener['role']})，刚刚听到{speaker['name']}说："{speaker_message}"
+
+{listener['name']}的信念系统：
+{listener['belief_system']}
+
+请作为{listener['name']}回应{speaker['name']}，要求：
+1. 符合{listener['name']}的性格特点和价值观
+2. 对{speaker['name']}的话题做出自然回应
+3. 体现两个角色之间的关系动态
+4. 长度适中（1-2句话）
+5. 可以包含动作描述（用*包围）
+
+只需要返回{listener['name']}的回应，不要包含其他内容。
+"""
+
+        listener_response = await call_tongyi_llm(response_prompt, speaker_message)
+        
+        return {
+            "speaker_id": speaker_id,
+            "listener_id": listener_id,
+            "speaker_name": speaker['name'],
+            "listener_name": listener['name'],
+            "message": speaker_message,
+            "response": listener_response,
+            "timestamp": time.time()
+        }
+        
+    except Exception as e:
+        print(f"生成NPC对话失败: {e}")
+        return None
 
 @app.get("/")
 async def root():
@@ -403,6 +513,55 @@ async def chamber_of_echoes(request: EchoRequest):
             memory_evidence=fallback_evidence,
             timestamp=time.time()
         )
+
+@app.post("/api/npc-dialogue", response_model=NPCDialogueResponse)
+async def generate_npc_to_npc_dialogue(request: NPCDialogueRequest):
+    """生成NPC之间的自主对话"""
+    try:
+        dialogue_data = await generate_npc_dialogue(request.scene_id, request.player_id)
+        
+        if not dialogue_data:
+            raise HTTPException(status_code=500, detail="Failed to generate NPC dialogue")
+        
+        # 记录NPC对话到数据库
+        npc_log_speaker = {
+            "timestamp": dialogue_data["timestamp"],
+            "player_id": request.player_id or "system",
+            "character_id": dialogue_data["speaker_id"],
+            "scene_id": request.scene_id,
+            "action_type": "npc_dialogue",
+            "input": f"与{dialogue_data['listener_name']}的对话",
+            "output": dialogue_data["message"],
+            "session_id": f"npc_{dialogue_data['speaker_id']}_{dialogue_data['listener_id']}",
+            "belief_influenced": True
+        }
+        
+        npc_log_listener = {
+            "timestamp": dialogue_data["timestamp"] + 0.1,
+            "player_id": request.player_id or "system", 
+            "character_id": dialogue_data["listener_id"],
+            "scene_id": request.scene_id,
+            "action_type": "npc_dialogue",
+            "input": dialogue_data["message"],
+            "output": dialogue_data["response"],
+            "session_id": f"npc_{dialogue_data['speaker_id']}_{dialogue_data['listener_id']}",
+            "belief_influenced": True
+        }
+        
+        # 保存双方对话记录
+        await save_to_supabase("agent_logs", npc_log_speaker)
+        await save_to_supabase("agent_logs", npc_log_listener)
+        
+        return NPCDialogueResponse(
+            npc_speaker=dialogue_data["speaker_id"],
+            npc_listener=dialogue_data["listener_id"],
+            message=dialogue_data["message"],
+            response=dialogue_data["response"],
+            timestamp=dialogue_data["timestamp"]
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"NPC dialogue generation failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
