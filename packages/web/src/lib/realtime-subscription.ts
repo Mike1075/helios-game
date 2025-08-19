@@ -13,11 +13,12 @@ interface SceneEvent {
   id: string;
   scene_id: string;
   character_id: string;
-  event_type: 'dialogue' | 'action' | 'environment' | 'system';
+  event_type: 'dialogue' | 'action' | 'environment' | 'system' | 'cognitive_dissonance' | 'echo_session';
   content: string;
   timestamp: number;
   is_autonomous?: boolean;
   emotion_context?: string;
+  metadata?: Record<string, any>; // 支持各种元数据
 }
 
 interface PlayerEvent {

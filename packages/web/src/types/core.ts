@@ -99,7 +99,9 @@ export type EventType =
   | 'action'        // 行动
   | 'thought'       // 内心想法（仅日志）
   | 'environment'   // 环境变化
-  | 'system';       // 系统事件
+  | 'system'        // 系统事件
+  | 'cognitive_dissonance' // 认知失调事件
+  | 'echo_session'; // 回响之室会话
 
 /**
  * 游戏消息/事件
@@ -116,6 +118,7 @@ export interface GameEvent {
   is_autonomous?: boolean; // 是否为AI自主行为
   emotion_context?: string; // 情绪上下文
   belief_trigger?: string[]; // 触发的信念
+  metadata?: Record<string, any>; // 事件元数据，支持各种扩展信息
 }
 
 /**
