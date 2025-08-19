@@ -458,8 +458,10 @@ function generateContextualResponse(characterId: string, userMessage: string, co
   const message = userMessage.toLowerCase();
   console.log('🔍 Analyzing message keywords:', message);
   
-  // 吃饭/生活关心类
-  if (message.includes('吃饭') || message.includes('吃了吗') || message.includes('饿') || message.includes('用餐')) {
+  // 吃饭/生活关心类 - 优化关键词匹配
+  if (message.includes('吃') && (message.includes('饭') || message.includes('餐')) || 
+      message.includes('吃了吗') || message.includes('饿') || message.includes('用餐') ||
+      message.includes('吃啥') || message.includes('吃什么') || message.includes('晚餐') || message.includes('午餐')) {
     console.log('✅ 匹配到吃饭相关关键词，角色:', characterId);
     const mealResponses = {
       alex: '哈哈，刚才工作太专注了，差点忘记吃饭！你呢？在酒馆点什么好吃的吗？',
@@ -524,12 +526,16 @@ function generateContextualResponse(characterId: string, userMessage: string, co
     return emotions[characterId as keyof typeof emotions] || '我理解你的感受。';
   }
   
-  // 默认回应 - 更自然的兜底回应
-  console.log('⚠️ 没有匹配到特定关键词，使用默认回应，角色:', characterId);
+  // 默认回应 - 基于上下文的智能回应
+  console.log('⚠️ 没有匹配到特定关键词，使用智能默认回应，角色:', characterId);
+  console.log('📝 用户消息内容:', userMessage);
+  console.log('📝 对话上下文:', conversationContext);
+  
+  // 基于消息内容生成更自然的回应
   const defaults = {
-    alex: `你说的很有道理。从我的角度看，这确实是个值得深入思考的话题。`,
-    nova: `你的话让我想到很多。这种思考方式很有启发性，让我对世界有了新的认识。`,
-    rachel: `听你这么说，我想起了很多在酒馆里听到的故事。每个人都有自己的见解，这很珍贵。`
+    alex: `嗯，这个话题挺有意思的。作为数据分析师，我觉得可以从不同角度来看这个问题。你怎么看？`,
+    nova: `这让我想起了一些有趣的观察。作为AI，我很好奇你们人类是怎么思考这类问题的。`,
+    rachel: `在酒馆里我听过很多类似的讨论。每个人都有自己的想法，这很正常。你想聊聊你的看法吗？`
   };
   
   const response = defaults[characterId as keyof typeof defaults] || '这很有意思，告诉我更多吧。';
@@ -574,9 +580,11 @@ export async function POST(req: NextRequest) {
       // 使用AI Gateway生成回应
       const aiGatewayConfigured = isAIGatewayConfigured();
       const aiGatewayStatus = getAIGatewayStatus();
-      console.log('Single chat AI Gateway check:', {
+      console.log('🔍 Single chat AI Gateway check:', {
         ...aiGatewayStatus,
-        character
+        character,
+        configured: aiGatewayConfigured,
+        envValue: process.env.AI_GATEWAY_API_KEY ? 'EXISTS' : 'MISSING'
       });
       
       if (aiGatewayConfigured) {
@@ -663,10 +671,12 @@ ${fullConversationContext}
       // 生成第一个回应
       const aiGatewayConfigured = isAIGatewayConfigured();
       const aiGatewayStatus = getAIGatewayStatus();
-      console.log('Group chat AI Gateway check:', {
+      console.log('🔍 Group chat AI Gateway check:', {
         ...aiGatewayStatus,
         firstResponder,
-        messageLength: message.length
+        messageLength: message.length,
+        configured: aiGatewayConfigured,
+        envValue: process.env.AI_GATEWAY_API_KEY ? 'EXISTS' : 'MISSING'
       });
       
       if (aiGatewayConfigured) {

@@ -202,8 +202,16 @@ ${selectedTopic}
 
     let initiatorResponse: string;
     
-    // 使用AI生成自主对话，尝试多个模型
+    // 使用AI生成自主对话
     const aiGatewayConfigured = isAIGatewayConfigured();
+    console.log('🔍 NPC自主对话 AI Gateway check:', {
+      configured: aiGatewayConfigured,
+      hasKey: !!process.env.AI_GATEWAY_API_KEY,
+      keyLength: process.env.AI_GATEWAY_API_KEY?.length || 0,
+      envValue: process.env.AI_GATEWAY_API_KEY ? 'EXISTS' : 'MISSING',
+      initiator: initiatorId
+    });
+    
     if (aiGatewayConfigured) {
       try {
         initiatorResponse = await callAIGateway(
