@@ -42,10 +42,10 @@ serve(async (req) => {
       let actionReason = ''
 
       // 基于无聊值的行为触发
-      if (state.boredom > 75) {
+      if (state.boredom > 50) {
         shouldAct = true
         actionReason = 'high_boredom'
-      } else if (state.boredom > 60 && Math.random() < 0.4) {
+      } else if (state.boredom > 35 && Math.random() < 0.6) {
         shouldAct = true
         actionReason = 'moderate_boredom'
       }
@@ -59,8 +59,8 @@ serve(async (req) => {
         actionReason = 'high_anxiety'
       }
 
-      // 时间冷却检查（至少3分钟间隔）
-      if (timeSinceLastAction < 180000) {
+      // 时间冷却检查（至少1分钟间隔）
+      if (timeSinceLastAction < 60000) {
         shouldAct = false
       }
 

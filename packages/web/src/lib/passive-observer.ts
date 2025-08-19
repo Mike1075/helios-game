@@ -214,8 +214,8 @@ class PassiveObserverManager {
     // 检查是否是动态角色
     const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
     if (dynamicChar) {
-      // 用户要求显示职能而不是姓名（如"服务员"而不是"阿若"）
-      return dynamicChar.role;
+      // 显示更友好的名称：职能+姓名
+      return `${dynamicChar.role} ${dynamicChar.name}`;
     }
 
     return nameMap[characterId] || characterId;

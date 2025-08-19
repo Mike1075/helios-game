@@ -88,9 +88,9 @@ ${conversationHistory}
 4. 如果涉及金钱、订单等，要根据你的记忆准确回应
 5. 对老客人要表现出熟悉感，对新客人要适当介绍自己
 
-现在，${playerName}对你说："${playerMessage}"
+现在，有位客人对你说："${playerMessage}"
 
-请自然地回应：`;
+请自然地回应（如果不知道对方姓名，可以礼貌地询问如何称呼）：`;
 
     const userPrompt = `${playerName}: ${playerMessage}`;
 

@@ -120,7 +120,7 @@ export default function Home() {
       
       initializeGame();
       
-      worldEngine.startHeartbeat(120000); // 2分钟心跳，配合3分钟AI行动冷却
+      worldEngine.startHeartbeat(45000); // 45秒心跳，配合1分钟AI行动冷却
       
       // 订阅世界事件
       const unsubscribe = worldEngine.subscribe((event: GameEvent) => {
@@ -174,7 +174,7 @@ export default function Home() {
         })));
       });
       
-      // 定期更新状态
+      // 定期更新状态 - 降低更新频率减少INP
       const stateUpdateInterval = setInterval(() => {
         const worldState = worldEngine.getWorldState();
         setCharacters(Array.from(worldState.characters.values()));
@@ -185,7 +185,7 @@ export default function Home() {
         if (playerBelief) {
           setPlayerBeliefs(playerBelief);
         }
-      }, 5000);
+      }, 10000);
       
       return () => {
         unsubscribe();
@@ -396,6 +396,12 @@ export default function Home() {
     // 万能AI角色
     const universalRole = universalAIRoles[characterId];
     if (universalRole) return universalRole.name;
+    
+    // 检查是否是动态角色
+    const dynamicChar = dynamicCharacterManager.getCharacterById(characterId);
+    if (dynamicChar) {
+      return `${dynamicChar.role} ${dynamicChar.name}`;
+    }
     
     const character = characters.find(c => c.id === characterId);
     return character?.name || characterId;
@@ -743,9 +749,9 @@ export default function Home() {
               </div>
             </div>
             
-            {/* 事件流 */}
+            {/* 事件流 - 优化渲染性能 */}
             <div className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1">
-              {events.map((event, index) => (
+              {events.slice(-50).map((event, index) => (
                 <div 
                   key={event.id} 
                   className={`p-3 rounded-lg border ${getEventStyle(event)} transition-all duration-300 ease-in-out hover:scale-[1.01]`}
