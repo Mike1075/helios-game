@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// 使用服务端key绕过RLS策略
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * 数据库初始化API
@@ -10,7 +15,7 @@ export async function POST(request: NextRequest) {
     console.log('🗄️ 开始初始化数据库...');
 
     // 1. 检查和初始化角色状态表
-    const { data: existingStates, error: statesError } = await supabase
+    const { data: existingStates, error: statesError } = await supabaseAdmin
       .from('character_states')
       .select('character_id')
       .in('character_id', ['linxi', 'chenhao']);
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const stateResults = [];
     for (const state of coreCharacterStates) {
-      const { data: upsertData, error: upsertError } = await supabase
+      const { data: upsertData, error: upsertError } = await supabaseAdmin
         .from('character_states')
         .upsert(state, { 
           onConflict: 'character_id',
@@ -112,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const beliefResults = [];
     for (const belief of beliefSystems) {
-      const { data: beliefData, error: beliefError } = await supabase
+      const { data: beliefData, error: beliefError } = await supabaseAdmin
         .from('belief_systems')
         .upsert(belief, { 
           onConflict: 'character_id',
@@ -137,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // 3. 清理旧的事件（可选）
     const oneHourAgo = Date.now() - (60 * 60 * 1000);
-    const { error: cleanupError } = await supabase
+    const { error: cleanupError } = await supabaseAdmin
       .from('scene_events')
       .delete()
       .lt('timestamp', oneHourAgo);
