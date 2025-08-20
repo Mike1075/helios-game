@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// 立即执行的测试日志
-console.log('🚀 [CRITICAL TEST] page.tsx文件开始加载 - 时间戳:', Date.now());
+// Main game page
 import { worldEngine } from '../systems/WorldEngine';
 import { beliefObserver } from '../systems/BeliefObserver';
 import { Character, GameEvent, InternalState, BeliefSystem } from '../types/core';
@@ -14,7 +13,6 @@ import ChamberOfEchoes from '@/components/ChamberOfEchoes';
 // 移除前端直接调用，改为通过API路由调用
 
 export default function Home() {
-  console.log('🔥 [CRITICAL TEST] Home组件开始渲染 - 时间戳:', Date.now());
   
   // 游戏状态
   const [gameStarted, setGameStarted] = useState(false);
@@ -100,19 +98,16 @@ export default function Home() {
 
   // 初始化世界引擎和被动观察体验
   useEffect(() => {
-    console.log('🔍 [DEBUG] useEffect触发，gameStarted:', gameStarted, 'playerName:', playerName);
     if (gameStarted) {
-      console.log('🌍 [DEBUG v2.0] 游戏已开始，初始化《本我之境》世界...');
+      console.log('🌍 游戏已开始，初始化世界...');
       
       let passiveObserverCleanup: (() => void) | null = null;
       
       // 异步初始化世界引擎和被动观察
       const initializeGame = async () => {
         try {
-          console.log('🚀 [DEBUG v2.0] 开始初始化世界引擎...');
           // 1. 初始化世界引擎
           await worldEngine.initializeWorld();
-          console.log('✅ [DEBUG v2.0] 世界引擎初始化完成');
           
           // 2. 设置被动观察体验
           passiveObserverCleanup = await passiveObserver.setupPassiveObservation(
@@ -391,7 +386,6 @@ export default function Home() {
 
   // 开始游戏
   const startGame = async () => {
-    console.log('🎮 [DEBUG] startGame被调用，playerName:', playerName);
     if (!playerName.trim()) return;
     
     setLoading(true);
@@ -437,9 +431,7 @@ export default function Home() {
       // 启动会话状态监控
       startSessionMonitoring(newSessionId);
       
-      console.log('🎯 [DEBUG] 即将设置gameStarted为true...');
       setGameStarted(true);
-      console.log('🎯 [DEBUG] gameStarted已设置为true');
       
       // 发布玩家进入事件
       const enterEvent = {
