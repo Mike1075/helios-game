@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       NODE_ENV: process.env.NODE_ENV
     };
 
@@ -30,8 +31,9 @@ export async function GET(request: NextRequest) {
     console.log('📊 环境变量检查:', envCheck);
 
     // 尝试基础的fetch测试（不使用Supabase client）
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json({
@@ -68,7 +70,35 @@ export async function GET(request: NextRequest) {
       console.log('📄 响应文本:', responseText);
     }
 
-    // 测试2: 检查Supabase项目健康状态
+    // 测试2: 使用Service Key测试（如果可用）
+    let serviceKeyTest = null;
+    if (supabaseServiceKey) {
+      console.log('🔑 使用Service Key测试...');
+      const serviceTestUrl = `${supabaseUrl}/rest/v1/scene_events?select=count`;
+      const serviceResponse = await fetch(serviceTestUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': supabaseServiceKey,
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      let serviceResponseText = '';
+      try {
+        serviceResponseText = await serviceResponse.text();
+      } catch (e) {
+        serviceResponseText = 'Failed to read response';
+      }
+      
+      serviceKeyTest = {
+        status: serviceResponse.status,
+        ok: serviceResponse.ok,
+        response_preview: serviceResponseText?.substring(0, 200)
+      };
+    }
+
+    // 测试3: 检查Supabase项目健康状态
     console.log('🏥 检查项目健康状态...');
     const healthUrl = `${supabaseUrl}/rest/v1/`;
     const healthResponse = await fetch(healthUrl, {
@@ -92,6 +122,7 @@ export async function GET(request: NextRequest) {
           response_preview: responseText?.substring(0, 200),
           parsed_data: responseData
         },
+        service_key_test: serviceKeyTest,
         health_check: {
           status: healthResponse.status,
           ok: healthResponse.ok

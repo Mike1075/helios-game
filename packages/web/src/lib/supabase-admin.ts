@@ -5,8 +5,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // 管理员客户端 - 用于API路由中的数据库操作
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -21,7 +21,7 @@ export function checkSupabaseConfig() {
   const config = {
     url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
     anon_key: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    service_key: !!process.env.SUPABASE_SERVICE_KEY,
+    service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     ai_gateway_key: !!process.env.AI_GATEWAY_API_KEY,
     zep_key: !!process.env.ZEP_API_KEY
   };
