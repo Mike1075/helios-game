@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
@@ -16,13 +18,22 @@ export default function Home() {
           </p>
           
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-4">MVP "棱镜之心" 正在构建中...</h3>
+            <h3 className="text-lg font-semibold mb-4">MVP &quot;棱镜之心&quot; 正在构建中...</h3>
             <div className="text-sm text-gray-400">
               <p>🔮 信念系统</p>
               <p>🤖 NPC代理核心</p>
               <p>🪞 回响之室</p>
               <p>🎭 导演引擎</p>
             </div>
+          </div>
+
+          <div className="mt-10">
+            <Link
+              href="/gallery"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+            >
+              进入 低语画廊
+            </Link>
           </div>
         </div>
       </div>
