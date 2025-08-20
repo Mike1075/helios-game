@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
@@ -23,6 +25,15 @@ export default function Home() {
               <p>🪞 回响之室</p>
               <p>🎭 导演引擎</p>
             </div>
+          </div>
+
+          <div className="mt-10">
+            <Link
+              href="/gallery"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+            >
+              进入 低语画廊
+            </Link>
           </div>
         </div>
       </div>
