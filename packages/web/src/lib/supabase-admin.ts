@@ -5,8 +5,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// 环境变量检查，避免构建时报错
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key';
 
 // 管理员客户端 - 用于API路由中的数据库操作
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -31,11 +32,30 @@ export function checkSupabaseConfig() {
   return config;
 }
 
+// 运行时环境变量验证
+export function validateRuntimeConfig(): boolean {
+  const hasValidUrl = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co';
+  const hasValidKey = process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY !== 'placeholder-key';
+  
+  if (!hasValidUrl || !hasValidKey) {
+    console.error('❌ Supabase环境变量未正确配置');
+    return false;
+  }
+  
+  return true;
+}
+
 // 数据库操作辅助函数
 export async function withErrorHandling<T>(
   operation: () => Promise<{ data: T | null; error: any }>,
   operationName: string
 ): Promise<T | null> {
+  // 运行时检查环境变量
+  if (!validateRuntimeConfig()) {
+    console.error(`${operationName} 失败: 环境变量未配置`);
+    return null;
+  }
+
   try {
     const { data, error } = await operation();
     
