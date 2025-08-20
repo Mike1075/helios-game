@@ -124,8 +124,8 @@ export default function Home() {
                 const eventFlow = initialState.recentEvents.map(event => ({
                   id: event.id,
                   type: (event.type as any) || 'system',
-                  character_id: 'system', // 使用系统作为角色ID
-                  content: `${getCharacterDisplayName(event.character_id || 'unknown')}: ${event.content}`,
+                  character_id: (event as any).character_id || 'system',
+                  content: `${getCharacterDisplayName((event as any).character_id || 'unknown')}: ${event.content}`,
                   timestamp: event.timestamp,
                   scene_id: 'moonlight_tavern',
                   is_autonomous: event.is_autonomous
