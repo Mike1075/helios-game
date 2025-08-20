@@ -130,7 +130,7 @@ export default function Home() {
                   id: event.id,
                   type: (event.type as any) || 'system',
                   character_id: 'system', // 使用系统作为角色ID
-                  content: `${event.character_name}: ${event.content}`,
+                  content: `${getCharacterDisplayName(event.character_id || 'unknown')}: ${event.content}`,
                   timestamp: event.timestamp,
                   scene_id: 'moonlight_tavern',
                   is_autonomous: event.is_autonomous
@@ -146,7 +146,7 @@ export default function Home() {
                   id: event.id,
                   type: (event.type as any) || 'system',
                   character_id: 'ai_character',
-                  content: `${event.character_name}: ${event.content}`,
+                  content: `${getCharacterDisplayName(event.character_id || 'unknown')}: ${event.content}`,
                   timestamp: event.timestamp,
                   scene_id: 'moonlight_tavern',
                   is_autonomous: event.is_autonomous
@@ -601,10 +601,10 @@ export default function Home() {
     return { shouldShow: true, displayContent: event.content };
   };
 
-  // 获取角色显示名称
+  // 获取角色显示名称 - 显示职能而非真名
   const getCharacterDisplayName = (characterId: string): string => {
     const char = allCharacters.find(c => c.id === characterId);
-    return char ? char.name : characterId;
+    return char ? char.role : characterId;
   };
 
   // 触发认知失调测试
@@ -1133,9 +1133,9 @@ export default function Home() {
                             : 'bg-blue-600/50 hover:bg-blue-600'
                           : 'bg-green-600/50 hover:bg-green-600'
                       }`}
-                      title={`与${char.name}对话 - ${char.role}`}
+                      title={`与${char.role}对话 - ${char.name}`}
                     >
-                      @{char.name}
+                      @{char.role}
                     </button>
                   ))}
                   
