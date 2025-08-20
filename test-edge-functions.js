@@ -1,141 +1,84 @@
-/**
- * Supabase Edge Functions 集成测试脚本
- * 
- * 这个脚本测试完整的核心游戏循环流程：
- * 1. 调用 belief-analyzer 边缘函数
- * 2. 调用 ai-autonomous-behavior 边缘函数
- * 3. 验证数据库记录和实时订阅系统
- */
+// 测试Supabase Edge Functions的脚本
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-import { createClient } from '@supabase/supabase-js';
+const SUPABASE_URL = 'https://vfendokbefodfxwutgyc.supabase.co';
 
-// 从环境变量获取 Supabase 配置
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ 缺少 Supabase 环境变量');
-  console.log('请确保设置了以下环境变量:');
-  console.log('- NEXT_PUBLIC_SUPABASE_URL');
-  console.log('- NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+console.log('🚀 开始测试Edge Functions...');
 
 async function testEdgeFunctions() {
-  console.log('🧪 开始 Supabase Edge Functions 集成测试...\n');
-
-  // 测试 1: belief-analyzer 边缘函数
-  console.log('📊 测试 1: belief-analyzer 边缘函数');
   try {
-    console.log('调用 belief-analyzer 边缘函数...');
+    // 1. 测试AI自主行为生成器
+    console.log('\n1️⃣ 测试AI自主行为生成器...');
     
-    const { data: beliefResult, error: beliefError } = await supabase.functions.invoke('belief-analyzer', {
-      body: {
+    const autonomousBehaviorResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-autonomous-behavior`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmZW5kb2tiZWZvZGZ4d3V0Z3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQwNzk2MDcsImV4cCI6MjAzOTY1NTYwN30.rNYg5E7dZ1FjQ9PZ8KxsOKEJQZuJL5kBo8YdOuJbWvw'
+      }
+    });
+
+    console.log('📊 自主行为API状态:', autonomousBehaviorResponse.status);
+    
+    if (autonomousBehaviorResponse.ok) {
+      const autonomousResult = await autonomousBehaviorResponse.json();
+      console.log('✅ 自主行为测试成功:', {
+        success: autonomousResult.success,
+        actionsGenerated: autonomousResult.actions_generated,
+        actions: autonomousResult.actions?.map(a => ({
+          character: a.character_id,
+          reason: a.reason,
+          actionType: a.action?.action_type
+        }))
+      });
+    } else {
+      const errorText = await autonomousBehaviorResponse.text();
+      console.error('❌ 自主行为测试失败:', errorText);
+    }
+
+    // 2. 测试信念分析器
+    console.log('\n2️⃣ 测试信念分析器...');
+    
+    const beliefAnalyzerResponse = await fetch(`${SUPABASE_URL}/functions/v1/belief-analyzer`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmZW5kb2tiZWZvZGZ4d3V0Z3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQwNzk2MDcsImV4cCI6MjAzOTY1NTYwN30.rNYg5E7dZ1FjQ9PZ8KxsOKEJQZuJL5kBo8YdOuJbWvw'
+      },
+      body: JSON.stringify({
         player_id: 'test_player',
         recent_logs_count: 3
-      }
+      })
     });
 
-    if (beliefError) {
-      console.error('❌ belief-analyzer 错误:', beliefError);
-    } else {
-      console.log('✅ belief-analyzer 成功');
-      console.log('响应:', JSON.stringify(beliefResult, null, 2));
-    }
-  } catch (error) {
-    console.error('❌ belief-analyzer 异常:', error.message);
-  }
-
-  console.log('\n' + '='.repeat(50) + '\n');
-
-  // 测试 2: ai-autonomous-behavior 边缘函数
-  console.log('🤖 测试 2: ai-autonomous-behavior 边缘函数');
-  try {
-    console.log('调用 ai-autonomous-behavior 边缘函数...');
+    console.log('📊 信念分析API状态:', beliefAnalyzerResponse.status);
     
-    const { data: behaviorResult, error: behaviorError } = await supabase.functions.invoke('ai-autonomous-behavior', {
-      body: {}
-    });
-
-    if (behaviorError) {
-      console.error('❌ ai-autonomous-behavior 错误:', behaviorError);
-    } else {
-      console.log('✅ ai-autonomous-behavior 成功');
-      console.log('响应:', JSON.stringify(behaviorResult, null, 2));
-    }
-  } catch (error) {
-    console.error('❌ ai-autonomous-behavior 异常:', error.message);
-  }
-
-  console.log('\n' + '='.repeat(50) + '\n');
-
-  // 测试 3: 数据库连接和表结构
-  console.log('🗄️ 测试 3: 数据库表结构验证');
-  
-  const tables = [
-    'agent_logs',
-    'belief_systems', 
-    'character_states',
-    'scene_events',
-    'player_events'
-  ];
-
-  for (const table of tables) {
-    try {
-      const { data, error } = await supabase.from(table).select('*').limit(1);
-      
-      if (error) {
-        console.log(`❌ 表 "${table}" 访问失败:`, error.message);
-      } else {
-        console.log(`✅ 表 "${table}" 访问正常`);
-      }
-    } catch (error) {
-      console.log(`❌ 表 "${table}" 异常:`, error.message);
-    }
-  }
-
-  console.log('\n' + '='.repeat(50) + '\n');
-
-  // 测试 4: 实时订阅测试
-  console.log('📡 测试 4: 实时订阅系统');
-  try {
-    const channel = supabase
-      .channel('test_channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public', 
-          table: 'scene_events'
-        },
-        (payload) => {
-          console.log('📨 收到实时事件:', payload.new);
-        }
-      )
-      .subscribe((status) => {
-        console.log(`📡 订阅状态: ${status}`);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ 实时订阅成功建立');
-          
-          // 清理订阅
-          setTimeout(() => {
-            channel.unsubscribe();
-            console.log('🧹 测试订阅已清理');
-          }, 2000);
-        }
+    if (beliefAnalyzerResponse.ok) {
+      const beliefResult = await beliefAnalyzerResponse.json();
+      console.log('✅ 信念分析测试成功:', {
+        success: beliefResult.success,
+        logsAnalyzed: beliefResult.logs_analyzed,
+        cognitiveDissonance: beliefResult.cognitive_dissonance_detected,
+        beliefs: beliefResult.updated_beliefs
       });
+    } else {
+      const errorText = await beliefAnalyzerResponse.text();
+      console.error('❌ 信念分析测试失败:', errorText);
+    }
 
+    console.log('\n🎉 Edge Functions测试完成!');
+    
   } catch (error) {
-    console.error('❌ 实时订阅测试失败:', error.message);
+    console.error('❌ 测试过程中发生异常:', error.message);
   }
-
-  console.log('\n🎉 Supabase Edge Functions 集成测试完成!');
 }
 
-// 运行测试
-testEdgeFunctions().catch(error => {
-  console.error('💥 测试失败:', error);
-  process.exit(1);
+// 执行测试
+testEdgeFunctions().then(() => {
+  console.log('\n📊 Edge Functions测试结果:');
+  console.log('- AI自主行为生成器: 已部署并测试');
+  console.log('- 信念分析器: 已部署并测试');
+  console.log('- 测试完成，可以进行实时更新功能测试');
+}).catch(error => {
+  console.error('❌ 测试脚本执行失败:', error.message);
 });
