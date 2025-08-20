@@ -3,7 +3,7 @@ import { supabaseAdmin, checkSupabaseConfig } from '@/lib/supabase-admin';
 
 // Vercel AI Gateway配置
 const VERCEL_AI_GATEWAY_URL = process.env.VERCEL_AI_GATEWAY_URL || 'https://api.vercel.com/v1/ai';
-const VERCEL_AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY!;
+const VERCEL_AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY || 'placeholder-key';
 
 interface EchoRequest {
   player_id: string;
