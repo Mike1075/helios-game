@@ -16,7 +16,61 @@ The MVP goal is "Prism Heart" - a minimal world with 2 core NPCs and 1 simple sc
 - **Database**: Supabase (PostgreSQL + pgvector)
 - **Memory Engine**: Zep (conversation history)
 - **AI Gateway**: Vercel AI Gateway (mandatory for all LLM calls)
-- **Workflow Engine**: n8n (cognitive dissonance triggers)
+- **Intelligent Backend**: Supabase Edge Functions + Database Triggers
+
+## Architecture Redesign v5.0 (Unified Game State Management)
+
+**Problem Solved**: Eliminated 401/400 database errors and character management chaos by implementing a single-point-of-entry architecture.
+
+### Core Design Principles
+1. **Single Data Source**: All frontend operations go through one unified API
+2. **Character Hierarchy**: Core NPCs (林溪, 陈浩) → Dynamic NPCs → System Roles
+3. **Unified Authentication**: Frontend never directly accesses Supabase
+4. **Event-Driven Updates**: Real-time character and state synchronization
+
+### New Architecture Flow
+```
+Frontend (page.tsx)
+    ↓ Single HTTP Request
+Unified Game API (/api/game-state)
+    ↓ Internal Service Calls  
+Game State Manager (supabase-admin)
+    ↓ Authenticated Database Access
+Supabase Database
+```
+
+### Key Components
+
+**1. Unified Game State API** (`/api/game-state`)
+- Single endpoint for all game operations: chat, character management, events
+- Replaces scattered API calls: `/api/chat`, `/api/echo`, `/api/trigger-dissonance`
+- Internal routing based on action type
+
+**2. Character Management System**
+```typescript
+interface Character {
+  id: string;
+  name: string;
+  type: 'core_npc' | 'dynamic_npc' | 'system';
+  source: 'predefined' | 'ai_created';
+}
+
+// Core Characters (Always Present)
+const CORE_CHARACTERS = [
+  { id: 'linxi', name: '林溪', type: 'core_npc' },
+  { id: 'chenhao', name: '陈浩', type: 'core_npc' }
+];
+```
+
+**3. Game State Manager**
+- Centralized service layer handling all database operations
+- Uses `supabase-admin` with SERVICE_KEY for all database access
+- Manages character creation, event logging, belief systems
+
+**4. Frontend Simplification**
+- Single `gameState` object containing all game data
+- No direct Supabase client usage in frontend
+- Event-driven UI updates through unified API responses
 
 ## Monorepo Structure
 
@@ -45,6 +99,49 @@ npm run dev:api
 
 **Important**: Local development runs without API keys. External API calls will fail (expected behavior). Complete functionality testing is done via GitHub PR Vercel preview environments.
 
+## Real-time Architecture v4.1 (No n8n)
+
+### Edge Function-Driven Backend
+All intelligent backend processing is now handled by **Supabase Edge Functions** and **Database Triggers**:
+
+**Architecture Flow:**
+```
+Player Action → Database Insert → Trigger → Edge Function → AI Analysis → Real-time Update
+```
+
+**Key Advantages:**
+- **Performance**: Millisecond response time (vs n8n's seconds)
+- **Cost**: Uses cheap Qwen models (`alibaba/qwen-2.5-14b-instruct`) 
+- **Simplicity**: No external workflow engine required
+- **Scalability**: Global edge deployment via Supabase
+
+### Real-time Subscription System
+Frontend subscribes to **world slices** instead of traditional request-response:
+
+```typescript
+// Example: Subscribe to scene events and player status
+const sceneChannel = supabase.channel(`scene_events:moonlight_tavern`)
+const playerChannel = supabase.channel(`player_status:${playerId}`)
+```
+
+**Subscription Channels:**
+- `scene_events:${sceneId}` - AI autonomous actions, environmental changes
+- `player_status:${playerId}` - Belief updates, cognitive dissonance triggers
+- `character_states:${characterId}` - Internal state changes for AI characters
+
+### Database-Driven Intelligence
+**Cognitive Dissonance Detection:**
+```sql
+CREATE TRIGGER cognitive_dissonance_trigger
+  AFTER INSERT ON agent_logs
+  FOR EACH ROW EXECUTE FUNCTION detect_cognitive_dissonance();
+```
+
+**Edge Function Processing:**
+- Belief system analysis and updates
+- Chamber of Echoes content generation  
+- AI character autonomous behavior decisions
+
 ## Core System Components
 
 ### 1. Belief System (信念系统)
@@ -64,9 +161,10 @@ npm run dev:api
 - **Output**: Subjective attribution + 1-2 supporting "memory evidence" events
 
 ### 4. Director Engine (导演引擎)
-- **Implementation**: n8n workflow monitoring `agent_logs`
-- **Trigger Logic**: Detects cognitive dissonance (positive actions → negative feedback)
-- **Action**: Inserts records into `events` table to trigger Chamber of Echoes opportunities
+- **Implementation**: Supabase Database Triggers + Edge Functions
+- **Trigger Logic**: Real-time cognitive dissonance detection via database functions
+- **Performance**: Millisecond-level response time (vs n8n's second-level)
+- **Action**: Automatically inserts records into `player_events` table to trigger Chamber of Echoes
 
 ## Mandatory Development Contracts
 
@@ -142,7 +240,7 @@ def call_llm(model_name: str, system_prompt: str, user_prompt: str):
 - Simple belief system generation
 - One scenario (tavern setting)
 - Two NPCs with Belief DSL-defined personalities
-- Complete core loop: conversation → logging → conflict detection → Chamber of Echoes trigger → subjective attribution
+- Complete core loop: conversation → real-time logging → database trigger → edge function analysis → Chamber of Echoes invitation
 
 ### ❌ Out of Scope
 - Graphics, images, visual content
@@ -155,7 +253,7 @@ def call_llm(model_name: str, system_prompt: str, user_prompt: str):
 
 1. **Belief Consistency**: NPCs demonstrate clear alignment between behavior and defined belief systems
 2. **"Aha!" Moments**: Players experience "my thoughts created this outcome" realizations in Chamber of Echoes
-3. **Technical Viability**: Full stack integration (Vercel, Supabase, n8n, Zep) operates smoothly
+3. **Technical Viability**: Full stack integration (Vercel, Supabase Edge Functions, Zep) operates smoothly with real-time performance
 
 ## Key Files to Watch
 
