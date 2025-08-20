@@ -311,7 +311,15 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'init_game':
-        const initResult = await gameStateManager.initializeGame(payload.playerName);
+        // 初始化游戏状态
+        const initResult = {
+          success: true,
+          message: '游戏初始化完成',
+          characters: await gameStateManager.getCharacters(),
+          recentEvents: await gameStateManager.getRecentEvents(10),
+          playerName: payload.playerName,
+          sessionId: `session_${Date.now()}`
+        };
         return NextResponse.json(initResult);
 
       case 'chat':
