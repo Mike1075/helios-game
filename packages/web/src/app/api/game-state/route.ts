@@ -362,11 +362,37 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(chamberResult);
 
       case 'trigger_autonomous_behavior':
-        const autonomousResult = await gameStateManager.triggerAutonomousBehavior(
-          payload.sessionId,
-          payload.playerName
-        );
-        return NextResponse.json(autonomousResult);
+        // 触发AI自主行为（通过Edge Function）
+        try {
+          const { data, error } = await supabaseAdmin.functions.invoke('ai-autonomous-behavior', {
+            body: {
+              session_id: payload.sessionId,
+              player_name: payload.playerName
+            }
+          });
+          
+          if (error) {
+            console.error('触发自主行为失败:', error);
+            return NextResponse.json({
+              success: false,
+              error: error.message,
+              message: '自主行为触发失败，但不影响游戏进行'
+            });
+          }
+
+          return NextResponse.json({
+            success: true,
+            message: '自主行为触发成功',
+            data
+          });
+        } catch (error) {
+          console.error('自主行为触发异常:', error);
+          return NextResponse.json({
+            success: false,
+            error: error instanceof Error ? error.message : '未知错误',
+            message: '自主行为触发失败，但不影响游戏进行'
+          });
+        }
 
       default:
         return NextResponse.json(
