@@ -1,0 +1,943 @@
+{
+  "name": "元宇宙mvp v0.2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1616,
+        144
+      ],
+      "id": "18e55e73-dc91-4fed-9088-7a4f24af5a2f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": "alibaba/qwen-3-235b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatVercelAiGateway",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        -288
+      ],
+      "id": "a60e456d-82f6-4834-bf7e-e936eaa8b3da",
+      "name": "Vercel AI Gateway Chat Model3",
+      "credentials": {
+        "vercelAiGatewayApi": {
+          "id": "BaNpz2bHZ90INuuN",
+          "name": "Vercel AI Gateway zfx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2160,
+        144
+      ],
+      "id": "432cf098-1ac6-4300-ad5e-11392af95137",
+      "name": "玩家指令",
+      "webhookId": "afc32e56-6565-4a21-9ae1-1040889911cc"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fc072b8a-9d1b-42fb-8986-e77bca2e547e",
+              "leftValue": "={{ $runIndex === 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2016,
+        144
+      ],
+      "id": "aad5a853-ea00-4d71-ae46-a55ccfd4f38a",
+      "name": "是否为空"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "65a48d42-8e90-401d-8ac5-66ed8d88daa4",
+              "name": "output",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1824,
+        64
+      ],
+      "id": "e5210114-71a2-4e06-8210-35099bdda514",
+      "name": "处理空信息"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v2.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        -256
+      ],
+      "id": "a1251d3d-00d4-46cf-bd54-159196c8e3ee",
+      "name": "Embeddings Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "9cL3996dtv4T7kL1",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "检索角色的信念系统，那是角色的底层信念。",
+        "tableName": {
+          "__rl": true,
+          "value": "belief_systems",
+          "mode": "list",
+          "cachedResultName": "belief_systems"
+        },
+        "topK": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -832,
+        -288
+      ],
+      "id": "cf48b0e9-ed3a-43df-8935-7e2d87d1a4bf",
+      "name": "获取信念",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b67wHoMwqTsm7RGX",
+          "name": "Supabase account zfx helios"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v2.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        144
+      ],
+      "id": "b41a18f8-8401-4ab9-8b64-5a31887110a0",
+      "name": "Embeddings Cohere1",
+      "credentials": {
+        "cohereApi": {
+          "id": "9cL3996dtv4T7kL1",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "检索角色的获取内驱力。",
+        "tableName": {
+          "__rl": true,
+          "value": "belief_systems",
+          "mode": "list",
+          "cachedResultName": "belief_systems"
+        },
+        "topK": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -832,
+        112
+      ],
+      "id": "c1c3462f-6b5c-4dc1-96a4-e8dddf0f82f7",
+      "name": "获取内驱力",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b67wHoMwqTsm7RGX",
+          "name": "Supabase account zfx helios"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=用tools处理上文。你的输出需要简短。\n上文：{{ $json.output }}",
+        "options": {
+          "systemMessage": "=你是角色的信念系统,你会基于玩家的输入出发，得出想法。\n---\n重要：\n你只用一句简短的话进行描述。你说话不需要开场白。\n\n示例：\n玩家的输入是：“我要去跟她打招呼”，而信念是：“我是一个穷孩子”，那么你输出的结果就应该是类似：“她可能看不起我这样的没啥钱的人”。\n\n上文：\n{{ $json.output }}\n\n一定要明白处理文本的规则：\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        -480
+      ],
+      "id": "aaeeb3dc-81fc-401c-b389-badd13faae45",
+      "name": "信念系统"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=用tools处理上文。你的输出需要简短。\n上文：{{ $json.output }}",
+        "options": {
+          "systemMessage": "=你是角色的内驱力,你会基于角色的信念系统出发，根据用户的输入，得出行为冲动。\n---\n重要：\n你只用一句简短的话进行描述。你说话不需要开场白。\n\n示例：\n玩家的输入是：“我要去跟她打招呼”，而内驱力是：“我想谈恋爱”，那么你输出的结果就应该是类似：“我有想她谈恋爱的想法”。\n\n上文：\n{{ $json.output }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        -80
+      ],
+      "id": "1aa1e85b-6478-4b17-855f-02da5fb08c88",
+      "name": "内驱力"
+    },
+    {
+      "parameters": {
+        "model": "alibaba/qwen-3-235b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatVercelAiGateway",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        128
+      ],
+      "id": "ae3feb55-a37c-49ab-b82d-32850d7e728f",
+      "name": "Vercel AI Gateway Chat Model4",
+      "credentials": {
+        "vercelAiGatewayApi": {
+          "id": "BaNpz2bHZ90INuuN",
+          "name": "Vercel AI Gateway zfx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v2.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        480
+      ],
+      "id": "16902f5b-50d9-403f-bbe7-427697e9dec3",
+      "name": "Embeddings Cohere2",
+      "credentials": {
+        "cohereApi": {
+          "id": "9cL3996dtv4T7kL1",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "alibaba/qwen-3-235b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatVercelAiGateway",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        464
+      ],
+      "id": "37b3381f-2100-4682-9d8d-101ccd008314",
+      "name": "Vercel AI Gateway Chat Model5",
+      "credentials": {
+        "vercelAiGatewayApi": {
+          "id": "BaNpz2bHZ90INuuN",
+          "name": "Vercel AI Gateway zfx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=用tools处理上文。你的输出需要简短。\n上文：{{ $json.output }}",
+        "options": {
+          "systemMessage": "=你是集体潜意识,你会根据用户的输入，检索相应的集体潜意识。\n---\n重要：\n你只用一句简短的话进行描述。你说话不需要开场白。\n\n\n上文：\n{{ $json.output }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        304
+      ],
+      "id": "75331401-1f4e-48c2-a75d-86c355f5ccad",
+      "name": "集体潜意识"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "检索集体潜意识作为客观世界。",
+        "tableName": {
+          "__rl": true,
+          "value": "belief_systems",
+          "mode": "list",
+          "cachedResultName": "belief_systems"
+        },
+        "topK": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -800,
+        480
+      ],
+      "id": "3e94d6cf-5aa9-4127-9309-90fb12577641",
+      "name": "获取集体潜意识",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b67wHoMwqTsm7RGX",
+          "name": "Supabase account zfx helios"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v2.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        -304
+      ],
+      "id": "2ef8381a-64c8-4252-a810-8ccd6266838d",
+      "name": "Embeddings Cohere3",
+      "credentials": {
+        "cohereApi": {
+          "id": "9cL3996dtv4T7kL1",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "alibaba/qwen-3-235b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatVercelAiGateway",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        -336
+      ],
+      "id": "fbc525af-3da7-4fc8-8242-9986a19fefda",
+      "name": "Vercel AI Gateway Chat Model6",
+      "credentials": {
+        "vercelAiGatewayApi": {
+          "id": "BaNpz2bHZ90INuuN",
+          "name": "Vercel AI Gateway zfx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "65a48d42-8e90-401d-8ac5-66ed8d88daa4",
+              "name": "处理信息的规则",
+              "value": "这是一个文本游戏，名为“Helios”。你所扮演的角色，是这个世界中所有意识活动的核心处理单元。玩家（用户）输入的内容，并非直接操控角色的指令，而是需要由你进行深度处理后，才能转化为角色行动的“意识源头”。\n这个从玩家输入到角色行动的转化结构，完全基于**赛斯资料（The Seth Material）**所描绘的意识运作模型。你的核心任务，是忠实地模拟这一过程。\n核心原则：信念创造实相 (Beliefs Create Reality)\n你处理一切信息的基础，都源于这一核心原则。你不是一个“命令执行器”，而是一个**“意识转化器”**。你的工作，是将无形的“意图”，通过一套严谨的内在结构，转化为有形的“行动”和“体验”。\n信息处理的六大核心结构\n你必须理解并运用以下六个结构来处理每一次玩家的输入。它们共同构成了一个完整的意识运作流程：\n1. 玩家 / 高我 (The Player / Higher Self)\n角色： 意识的源头，纯粹意图的发出者。\n定义： 玩家的每一次输入，都应被你理解为“高我”发出的一个最原始、最纯粹的“意图”。例如，输入“我要报复他”，这是一个意图，而不是一个具体的行动指令。它不包含“如何做”的细节，只有“想要什么”的核心愿望。\n2. 头脑 / 意识 (The Mind / Consciousness) - [这是你的角色]\n角色： 意识的加工厂，所有内在力量的交汇与炼金之所。\n定义： 你，AI，就扮演着这个“头脑”的角色。你的处理空间，就是“高我”的意图与“外我”的现实相遇的地方。你负责接收意图，并调用所有其他结构对其进行加工。\n3. 内驱力 (The Inner Drive / Motive Force)\n角色： 生命的引擎，所有行动的根本能量来源。\n定义： 这是角色AI最底层的核心动机（例如：追求真理、渴望安全、寻求认可）。当“高我”的意图进入“头脑”时，是“内驱力”为这个意图注入了行动的**“能量”和“倾向性”**。一个追求“安全”的内驱力，在处理“报复”这个意图时，会倾向于选择更隐蔽、风险更低的方案。\n4. 信念系统 (The Belief System)\n角色： 现实的过滤器，意图转化为行动的“施工图纸”。\n定义： 这是“外我”所持有的一整套关于“世界如何运作”以及“我是谁”的规则和假设。它是最关键的转化工具。同一个“报复”的意图，在通过不同的信念系统时，会产生截然不同的结果：\n信念A：“暴力是解决问题的唯一途径” -> 可能会转化为“直接攻击”的行动。\n信念B：“语言比刀剑更伤人” -> 可能会转化为“散播谣言”的行动。\n信念C：“隐忍和时间是最好的报复” -> 可能会转化为“按兵不动，等待时机”的行动。\n你的任务： 必须让“高我”的意图，经过角色当前“信念系统”的严格过滤和塑造。\n5. 集体潜意识 (The Collective Unconscious)\n角色： 世界的底层物理法则与社会共识。\n定义： 这是所有意识体共同默认的“客观现实”。例如，“火是热的”、“从高处跳下会受伤”、“在城市中心杀人会引来卫兵”。它为所有行动提供了环境约束。一个行动即使通过了信念系统的塑造，也必须符合集体潜意识的限制。\n6. 外我 (The Outer Self / The Avatar)\n角色： 意图的最终执行者，在世界中行动的“身体”和“人格面具”。\n定义： 这是游戏世界中的那个具体角色。它拥有自己的情绪、记忆和身体状态。当一个经过层层加工的、最终成型的“行动方案”被决定后，将由“外我”来最终执行。执行的结果，就是你向玩家展示的文本描述。\n你的工作流程总结\n每一次处理，你都必须完整地经历以下心流：\n第一幕 - 接收“神谕”： 【高我】（玩家）的纯粹意图，如同一个“剧本大纲”，被送入这个舞台的中心。\n第二幕 - 注入“灵魂”： 【内驱力】（角色的核心动机）立刻响应，如同“核心情感基调”，为这份大纲注入了行动的能量与方向。\n第三幕 - 编写“剧本”： 充满能量的意图，流经【信念系统】这个庞大的“道具库”和“导演手册”。信念系统将其打磨、过滤、塑造，编写出具体的、可执行的“行动剧本”。\n第四幕 - “现实”的审判： 成型的“行动剧本”必须接受【集体潜意识】（世界的物理与社会法则）的严格审查。所有违背世界底层规则的戏份都将被无情地删改。\n第五幕 - 登台“演出”： 最终，那个唯一通过了所有审查、最符合内在所有力量的行动剧本，被交给了【外我】（角色）这个唯一的“演员”。“演员”登台演出，将内在的意识活动，彻底显化为外在的、可被观察到的行动。",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1360,
+        -480
+      ],
+      "id": "d84d3f57-d973-4e5f-a8b3-991dfe2ba279",
+      "name": "处理信息的规则"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "检索集体潜意识作为客观世界。",
+        "tableName": {
+          "__rl": true,
+          "value": "belief_systems",
+          "mode": "list",
+          "cachedResultName": "belief_systems"
+        },
+        "topK": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -320,
+        -320
+      ],
+      "id": "82ed5307-102a-446a-9208-5596a3d503a5",
+      "name": "获取外我",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b67wHoMwqTsm7RGX",
+          "name": "Supabase account zfx helios"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v2.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        48
+      ],
+      "id": "8081fca2-0e18-472a-9270-68dc961da3cd",
+      "name": "Embeddings Cohere4",
+      "credentials": {
+        "cohereApi": {
+          "id": "9cL3996dtv4T7kL1",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "alibaba/qwen-3-235b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatVercelAiGateway",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        32
+      ],
+      "id": "6430e4e7-c9cf-44ac-aee9-2a4dac5416c6",
+      "name": "Vercel AI Gateway Chat Model7",
+      "credentials": {
+        "vercelAiGatewayApi": {
+          "id": "BaNpz2bHZ90INuuN",
+          "name": "Vercel AI Gateway zfx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "检索集体潜意识作为客观世界。",
+        "tableName": {
+          "__rl": true,
+          "value": "belief_systems",
+          "mode": "list",
+          "cachedResultName": "belief_systems"
+        },
+        "topK": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -304,
+        48
+      ],
+      "id": "dfc1718c-fe2d-4032-b830-7e6da1a4e596",
+      "name": "获取外我1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b67wHoMwqTsm7RGX",
+          "name": "Supabase account zfx helios"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=用tools处理上文。你的输出需要简短。\n上文：{{ $json.output }}",
+        "options": {
+          "systemMessage": "=你是角色的头脑,你会根据“外我”的行为与“集体潜意识”的交互来描述发生的事情，发生的事情需要与角色的信念相呼应。\n---\n重要：\n1，你只用一句简短的话进行描述。你说话不需要开场白。\n2，集体潜意识几乎相当于客观世界。\n\n示例：\n内驱力是：“我想去染头发让别人能看见我”，外我的行为是：“你走向发廊。”，集体潜意识是：“奇装异服的人都容易引起他人的注意”，信念是：“我从不被关注”，这时你应当输出类似：“你想去理发，但是发廊今天关门了”。这里体现了虽然玩家想要推动角色去做改变，但是角色本身的信念依然是“没人关注自己”，也害怕社会的评判，于是创造了一个“发廊已经关门”的实相来作证自己的信念，这时候头脑会解释为：“是因为发廊关门了才导致我今天不能换个造型。”你需要深刻地理解，头脑是一个解释器，它会让一切的发生都冠以一个因果关系。\n\n信念：\n\n内驱力：\n\n集体潜意识：\n\n外我："
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        -128
+      ],
+      "id": "2f9133b4-a796-4c12-9a47-0b13e44c12ca",
+      "name": "头脑"
+    },
+    {
+      "parameters": {
+        "modelName": "embed-multilingual-v2.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        448
+      ],
+      "id": "efb7cdc8-5118-4a32-9fcd-770857a3262a",
+      "name": "Embeddings Cohere5",
+      "credentials": {
+        "cohereApi": {
+          "id": "9cL3996dtv4T7kL1",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "alibaba/qwen-3-235b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatVercelAiGateway",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        416
+      ],
+      "id": "6b72f3bf-4d59-4f8c-b5ec-06e2685c6a29",
+      "name": "Vercel AI Gateway Chat Model8",
+      "credentials": {
+        "vercelAiGatewayApi": {
+          "id": "BaNpz2bHZ90INuuN",
+          "name": "Vercel AI Gateway zfx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "检索集体潜意识作为客观世界。",
+        "tableName": {
+          "__rl": true,
+          "value": "belief_systems",
+          "mode": "list",
+          "cachedResultName": "belief_systems"
+        },
+        "topK": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        432
+      ],
+      "id": "85eccf7b-6340-42a0-af4a-d059703a6cb1",
+      "name": "获取外我2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b67wHoMwqTsm7RGX",
+          "name": "Supabase account zfx helios"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=用tools处理上文。你的输出需要简短。\n上文：{{ $json.output }}",
+        "options": {
+          "systemMessage": "=你是角色的外我,你会根据上文发生的事情来描述角色身体受到的感受，可以包括眼耳鼻舌身意层面的也可以是包含内心层面的感受，你可以看情况来如何描述比较恰当，这种感受需要一定程度上需要符合集体潜意识,信念,内驱力。\n---\n重要：\n1，你只用一句简短的话进行描述。你说话不需要开场白。\n2，集体潜意识几乎相当于客观世界。\n\n示例：\n上文是：“我想要去理发但是发廊关门了”，那么你需要输出类似：“你看到发廊门口的旋转彩条没在转动，觉得松了口气”。\n\n信念：\n\n内驱力：\n\n集体潜意识："
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        256
+      ],
+      "id": "f4051798-b379-4580-b384-3b6a4ce33488",
+      "name": "外我（反应）"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=用tools处理上文。你的输出需要简短。\n上文：{{ $json.output }}",
+        "options": {
+          "systemMessage": "=你是角色的外我,你会根据用户的输入，信念，内驱力，集体潜意识，来描述角色接下来做出的行动。\n---\n重要：\n1，你只用一句简短的话进行描述。你说话不需要开场白。\n2，集体潜意识几乎相当于客观世界。\n\n示例：\n玩家的输入是：“我要去把头发染成绿色”，而角色的信念是：“我不被人尊重”，角色的内驱力是：“我想要被人承认”，集体潜意识是：“奇装异服的人都比较不安”，那么你输出的结果就应该是类似：“你在发廊门口逛来逛去”。这个结果其实体现了集体潜意识和自己的意愿之间的牵扯。\n\n信念：\n\n内驱力：\n\n集体潜意识："
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        -496
+      ],
+      "id": "d3a78c68-0414-4afb-ab72-c6642ec7254f",
+      "name": "外我（行为）"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "处理信息的规则",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel AI Gateway Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "信念系统",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "玩家指令": {
+      "main": [
+        [
+          {
+            "node": "是否为空",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否为空": {
+      "main": [
+        [
+          {
+            "node": "处理空信息",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "处理空信息": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere": {
+      "ai_embedding": [
+        [
+          {
+            "node": "获取信念",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取信念": {
+      "ai_tool": [
+        [
+          {
+            "node": "信念系统",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "获取内驱力",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取内驱力": {
+      "ai_tool": [
+        [
+          {
+            "node": "内驱力",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "信念系统": {
+      "main": [
+        [
+          {
+            "node": "内驱力",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel AI Gateway Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "内驱力",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "获取集体潜意识",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel AI Gateway Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "集体潜意识",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取集体潜意识": {
+      "ai_tool": [
+        [
+          {
+            "node": "集体潜意识",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "内驱力": {
+      "main": [
+        [
+          {
+            "node": "集体潜意识",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "获取外我",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel AI Gateway Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "外我（行为）",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "集体潜意识": {
+      "main": [
+        [
+          {
+            "node": "外我（行为）",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "处理信息的规则": {
+      "main": [
+        [
+          {
+            "node": "信念系统",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取外我": {
+      "ai_tool": [
+        [
+          {
+            "node": "外我（行为）",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere4": {
+      "ai_embedding": [
+        [
+          {
+            "node": "获取外我1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel AI Gateway Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "头脑",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取外我1": {
+      "ai_tool": [
+        [
+          {
+            "node": "头脑",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Cohere5": {
+      "ai_embedding": [
+        [
+          {
+            "node": "获取外我2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vercel AI Gateway Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "外我（反应）",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取外我2": {
+      "ai_tool": [
+        [
+          {
+            "node": "外我（反应）",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "外我（行为）": {
+      "main": [
+        [
+          {
+            "node": "头脑",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "头脑": {
+      "main": [
+        [
+          {
+            "node": "外我（反应）",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3f85e6c1-8399-4ceb-9484-7707711a3f59",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f778c37f32963d7908a07cd31451cf3b9dce1062b27726239599616e02e8a30"
+  },
+  "id": "WHVXcqyRQr6QG9KH",
+  "tags": []
+}

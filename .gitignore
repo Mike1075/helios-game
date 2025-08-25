@@ -1,0 +1,66 @@
+# 敏感信息文件
+CREDENTIALS.md
+supabase-vercel-ai-credentials.md
+.env
+.env.local
+.env.production
+.env.staging
+docs/private/
+
+# API密钥和配置
+config.local.js
+secrets.json
+*.key
+*.pem
+
+# 操作系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 依赖目录
+node_modules/
+bower_components/
+
+# 构建输出
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.temp
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 其他
+.vercel

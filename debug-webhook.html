@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook 调试工具</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        textarea { height: 100px; resize: vertical; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Webhook 调试工具</h1>
+        
+        <div class="test-section">
+            <h3>1. 基础连接测试</h3>
+            <p>测试webhook是否可以访问</p>
+            <input type="text" id="webhook-url" value="https://n8n.aifunbox.com/webhook/58a6c8c7-52ff-4c2f-8809-101f1e16ed9a">
+            <button onclick="testBasicConnection()">测试基础连接</button>
+            <div id="basic-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. CORS 预检测试</h3>
+            <p>检查跨域请求是否被允许</p>
+            <button onclick="testCORS()">测试CORS</button>
+            <div id="cors-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 完整POST请求测试</h3>
+            <p>发送完整的聊天数据</p>
+            <textarea id="request-data" placeholder="请求数据（JSON格式）">{
+  "chatInput": "我想要变得更自信",
+  "character_id": "shy_student",
+  "sessionId": "test_session_123"
+}</textarea>
+            <button onclick="testFullRequest()">发送完整请求</button>
+            <div id="full-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 不同HTTP方法测试</h3>
+            <p>测试webhook支持的HTTP方法</p>
+            <button onclick="testMethod('GET')">GET</button>
+            <button onclick="testMethod('POST')">POST</button>
+            <button onclick="testMethod('OPTIONS')">OPTIONS</button>
+            <div id="method-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 网络诊断</h3>
+            <p>检查网络连接和DNS解析</p>
+            <button onclick="networkDiagnostic()">网络诊断</button>
+            <div id="network-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. 备用webhook测试</h3>
+            <p>测试JSON文件中的原始webhook ID</p>
+            <button onclick="testBackupWebhook()">测试备用webhook</button>
+            <div id="backup-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+            element.style.display = 'block';
+        }
+
+        async function testBasicConnection() {
+            const url = document.getElementById('webhook-url').value;
+            showResult('basic-result', '正在测试基础连接...', 'info');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'HEAD',
+                    mode: 'cors'
+                });
+                
+                showResult('basic-result', `✅ 基础连接成功
+状态码: ${response.status}
+状态文本: ${response.statusText}
+响应头: ${JSON.stringify([...response.headers.entries()], null, 2)}`, 'success');
+                
+            } catch (error) {
+                showResult('basic-result', `❌ 基础连接失败
+错误类型: ${error.name}
+错误信息: ${error.message}
+错误堆栈: ${error.stack}`, 'error');
+            }
+        }
+
+        async function testCORS() {
+            const url = document.getElementById('webhook-url').value;
+            showResult('cors-result', '正在测试CORS...', 'info');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                showResult('cors-result', `✅ CORS预检成功
+状态码: ${response.status}
+CORS头信息: ${JSON.stringify(corsHeaders, null, 2)}`, 'success');
+                
+            } catch (error) {
+                showResult('cors-result', `❌ CORS测试失败
+错误: ${error.message}
+
+这可能意味着：
+1. 服务器不支持CORS
+2. 需要在n8n中配置CORS设置
+3. 需要使用代理服务器`, 'error');
+            }
+        }
+
+        async function testFullRequest() {
+            const url = document.getElementById('webhook-url').value;
+            const requestDataText = document.getElementById('request-data').value;
+            
+            showResult('full-result', '正在发送完整请求...', 'info');
+            
+            try {
+                const requestData = JSON.parse(requestDataText);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const responseText = await response.text();
+                let responseData;
+                
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch {
+                    responseData = responseText;
+                }
+                
+                showResult('full-result', `✅ 请求成功！
+状态码: ${response.status}
+响应头: ${JSON.stringify([...response.headers.entries()], null, 2)}
+响应数据: ${JSON.stringify(responseData, null, 2)}`, 'success');
+                
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    showResult('full-result', `❌ JSON格式错误: ${error.message}`, 'error');
+                } else {
+                    showResult('full-result', `❌ 请求失败
+错误: ${error.message}
+类型: ${error.name}`, 'error');
+                }
+            }
+        }
+
+        async function testMethod(method) {
+            const url = document.getElementById('webhook-url').value;
+            showResult('method-result', `正在测试 ${method} 方法...`, 'info');
+            
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (method === 'POST') {
+                    options.body = JSON.stringify({test: true});
+                }
+                
+                const response = await fetch(url, options);
+                const responseText = await response.text();
+                
+                showResult('method-result', `${method} 方法测试结果:
+状态码: ${response.status}
+状态文本: ${response.statusText}
+响应内容: ${responseText}`, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('method-result', `${method} 方法失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function networkDiagnostic() {
+            showResult('network-result', '正在进行网络诊断...', 'info');
+            
+            const url = document.getElementById('webhook-url').value;
+            const hostname = new URL(url).hostname;
+            
+            let diagnosticInfo = `网络诊断报告:
+目标主机: ${hostname}
+完整URL: ${url}
+当前时间: ${new Date().toISOString()}
+用户代理: ${navigator.userAgent}
+`;
+
+            // 测试DNS解析
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`https://${hostname}`, {method: 'HEAD', mode: 'no-cors'});
+                const endTime = performance.now();
+                diagnosticInfo += `DNS解析: 成功 (${(endTime - startTime).toFixed(2)}ms)\n`;
+            } catch (error) {
+                diagnosticInfo += `DNS解析: 可能有问题 - ${error.message}\n`;
+            }
+
+            // 检查网络连接
+            diagnosticInfo += `在线状态: ${navigator.onLine ? '在线' : '离线'}\n`;
+            diagnosticInfo += `连接类型: ${navigator.connection ? navigator.connection.effectiveType : '未知'}\n`;
+
+            showResult('network-result', diagnosticInfo, 'info');
+        }
+
+        async function testBackupWebhook() {
+            const backupUrl = 'https://n8n.aifunbox.com/webhook/afc32e56-6565-4a21-9ae1-1040889911cc';
+            showResult('backup-result', '正在测试备用webhook...', 'info');
+            
+            try {
+                const response = await fetch(backupUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chatInput: '测试备用webhook',
+                        character_id: 'shy_student',
+                        sessionId: 'backup_test_' + Date.now()
+                    })
+                });
+                
+                const responseData = await response.text();
+                
+                showResult('backup-result', `备用webhook测试结果:
+URL: ${backupUrl}
+状态码: ${response.status}
+响应: ${responseData}`, response.ok ? 'success' : 'error');
+                
+            } catch (error) {
+                showResult('backup-result', `备用webhook测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时自动运行基础测试
+        window.addEventListener('load', function() {
+            setTimeout(testBasicConnection, 1000);
+        });
+    </script>
+</body>
+</html>

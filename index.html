@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helios - 意识游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 角色选择界面 -->
+    <div id="character-selection" class="screen active">
+        <div class="container">
+            <h1>Helios</h1>
+            <p class="subtitle">选择你的意识载体</p>
+            
+            <div class="character-grid">
+                <div class="character-card" data-character="shy_student">
+                    <h3>内向学生</h3>
+                    <p>一个22岁的大学生，总觉得自己不够好，害怕被人注意</p>
+                    <div class="character-traits">
+                        <span>敏感</span>
+                        <span>自卑</span>
+                        <span>渴望认同</span>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-character="ambitious_worker">
+                    <h3>上进青年</h3>
+                    <p>一个25岁的职场新人，渴望成功但经常焦虑</p>
+                    <div class="character-traits">
+                        <span>努力</span>
+                        <span>焦虑</span>
+                        <span>追求成功</span>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-character="lonely_artist">
+                    <h3>孤独艺术家</h3>
+                    <p>一个28岁的自由创作者，敏感而富有想象力</p>
+                    <div class="character-traits">
+                        <span>创造力</span>
+                        <span>孤独</span>
+                        <span>理想主义</span>
+                    </div>
+                </div>
+                
+                <div class="character-card" data-character="anxious_parent">
+                    <h3>焦虑家长</h3>
+                    <p>一个35岁的父母，总是担心孩子的未来</p>
+                    <div class="character-traits">
+                        <span>保护欲</span>
+                        <span>担忧</span>
+                        <span>责任感</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聊天界面 -->
+    <div id="chat-interface" class="screen">
+        <div class="chat-container">
+            <!-- 头部 -->
+            <div class="chat-header">
+                <div class="character-info">
+                    <span id="current-character-name">角色名称</span>
+                    <button id="change-character-btn">切换角色</button>
+                </div>
+            </div>
+            
+            <!-- 聊天区域 -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="message system">
+                    <div class="message-content">
+                        欢迎来到Helios意识世界。在这里，你的每一个想法都会经过复杂的内在转化，最终成为角色的行动和体验。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 输入区域 -->
+            <div class="chat-input-area">
+                <div class="input-container">
+                    <input type="text" id="message-input" placeholder="输入你的意图..." maxlength="500">
+                    <button id="send-btn">发送</button>
+                </div>
+                <div class="input-hint">
+                    提示：输入你的想法或意图，而不是具体的行动指令
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载提示 -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>意识正在转化中...</p>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
