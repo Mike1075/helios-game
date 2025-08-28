@@ -123,9 +123,16 @@ export default function Home() {
       setFullContent(content)
 
       let index = 0
+
+      // 立即显示第一个字符，避免漏字
+      if (content.length > 0) {
+        setTypingContent(content[0])
+        index = 1
+      }
+
       const timer = setInterval(() => {
         if (index < content.length) {
-          setTypingContent(prev => prev + content[index])
+          setTypingContent(content.substring(0, index + 1))
           index++
         } else {
           clearInterval(timer)
@@ -214,127 +221,23 @@ export default function Home() {
     try {
       console.log('🚀 开始传统HTTP意识转化流程')
 
-      // 模拟6个阶段的处理过程
-      const stages = [
-        { name: 'belief', label: '信念系统', description: '正在通过信念过滤器处理意图...' },
-        { name: 'drive', label: '内驱力', description: '正在注入行动能量...' },
-        { name: 'collective', label: '集体潜意识', description: '正在检索客观世界约束...' },
-        { name: 'behavior', label: '外我行为', description: '正在生成具体行动...' },
-        { name: 'mind', label: '头脑解释', description: '正在构建因果关系...' },
-        { name: 'reaction', label: '外我反应', description: '正在感受身心变化...' }
-      ]
+      // 同时启动两个异步任务：
+      // 1. 显示意识转化动画
+      // 2. 调用n8n工作流
 
-      // 逐步显示处理进度
-      for (let i = 0; i < stages.length; i++) {
-        const stage = stages[i]
+      const animationPromise = showConsciousnessAnimation()
+      const n8nPromise = callN8nWorkflow(userMessage)
 
-        // 更新当前阶段
-        setCurrentStage(stage.name)
-        setStreamingProgress(Math.round(((i + 1) / stages.length) * 100))
+      // 等待动画完成
+      await animationPromise
+      console.log('✅ 意识转化动画完成')
 
-        // 更新阶段状态为处理中
-        setStreamingStages(prev => ({
-          ...prev,
-          [stage.name]: `⏳ ${stage.description}`
-        }))
+      // 等待n8n结果
+      const n8nResult = await n8nPromise
+      console.log('✅ n8n工作流完成')
 
-        // 模拟处理时间
-        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
-
-        // 更新阶段状态为完成
-        setStreamingStages(prev => ({
-          ...prev,
-          [stage.name]: `✅ ${stage.label}处理完成`
-        }))
-      }
-
-      // 调用n8n工作流获取最终结果
-      console.log('📡 调用n8n工作流获取最终结果')
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage.content,
-          user_id: userId,
-          timestamp: userMessage.timestamp.toISOString()
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('✅ n8n响应成功:', data)
-
-        // 处理n8n的响应
-        let aiResponse = ''
-
-        if (typeof data === 'string') {
-          aiResponse = data
-        } else if (data && typeof data === 'object') {
-          // 尝试解析各个字段
-          if (data.formatted_beliefs || data.formatted_inner_drives || data.formatted_collective_unconscious ||
-              data.formatted_outerself1 || data.formatted_brain || data.formatted_outerself2) {
-            // 如果有格式化字段，组合显示
-            const parts = []
-            if (data.formatted_beliefs) parts.push(data.formatted_beliefs)
-            if (data.formatted_inner_drives) parts.push(data.formatted_inner_drives)
-            if (data.formatted_collective_unconscious) parts.push(data.formatted_collective_unconscious)
-            if (data.formatted_outerself1) parts.push(data.formatted_outerself1)
-            if (data.formatted_brain) parts.push(data.formatted_brain)
-            if (data.formatted_outerself2) parts.push(data.formatted_outerself2)
-            aiResponse = parts.join('\n\n')
-          } else if (data.output) {
-            aiResponse = data.output
-          } else if (data.response) {
-            aiResponse = data.response
-          } else if (data.result) {
-            aiResponse = data.result
-          } else if (data.message) {
-            aiResponse = data.message
-          } else {
-            aiResponse = JSON.stringify(data, null, 2).replace(/[{}",]/g, '').trim()
-          }
-        } else {
-          aiResponse = '角色正在深度思考中...'
-        }
-
-        // 清理响应文本
-        if (aiResponse.startsWith('"') && aiResponse.endsWith('"')) {
-          aiResponse = aiResponse.slice(1, -1)
-        }
-        aiResponse = aiResponse.trim()
-
-        if (!aiResponse) {
-          aiResponse = '角色沉默了一下，似乎在感受内心的变化...'
-        }
-
-        // 使用流式输出效果显示最终结果
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: '',
-          isUser: false,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, aiMessage])
-
-        // 流式输出效果
-        await typewriterEffect(aiResponse, 25)
-
-        // 更新消息内容
-        setMessages(prev => prev.map(msg =>
-          msg.id === aiMessage.id
-            ? { ...msg, content: aiResponse }
-            : msg
-        ))
-
-        // 清理意识转化状态（延迟清理，让用户看到完整过程）
-        clearConsciousnessState()
-
-      } else {
-        throw new Error(`n8n调用失败 (${response.status})`)
-      }
+      // 显示最终结果
+      await displayFinalResult(n8nResult)
 
     } catch (error) {
       console.error('❌ 传统HTTP流程错误:', error)
@@ -343,6 +246,142 @@ export default function Home() {
       clearConsciousnessState()
       throw error
     }
+  }
+
+  // 显示意识转化动画
+  const showConsciousnessAnimation = async () => {
+    const stages = [
+      { name: 'belief', label: '信念系统', description: '正在通过信念过滤器处理意图...' },
+      { name: 'drive', label: '内驱力', description: '正在注入行动能量...' },
+      { name: 'collective', label: '集体潜意识', description: '正在检索客观世界约束...' },
+      { name: 'behavior', label: '外我行为', description: '正在生成具体行动...' },
+      { name: 'mind', label: '头脑解释', description: '正在构建因果关系...' },
+      { name: 'reaction', label: '外我反应', description: '正在感受身心变化...' }
+    ]
+
+    // 逐步显示处理进度
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i]
+
+      // 更新当前阶段
+      setCurrentStage(stage.name)
+      setStreamingProgress(Math.round(((i + 1) / stages.length) * 100))
+
+      // 更新阶段状态为处理中
+      setStreamingStages(prev => ({
+        ...prev,
+        [stage.name]: `⏳ ${stage.description}`
+      }))
+
+      // 模拟处理时间（缩短一半）
+      await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 400))
+
+      // 更新阶段状态为完成
+      setStreamingStages(prev => ({
+        ...prev,
+        [stage.name]: `✅ ${stage.label}处理完成`
+      }))
+    }
+
+    // 动画完成，显示最终状态
+    setCurrentStage('complete')
+    setStreamingProgress(100)
+  }
+
+  // 调用n8n工作流
+  const callN8nWorkflow = async (userMessage: Message) => {
+    console.log('📡 并行调用n8n工作流')
+
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: userMessage.content,
+        user_id: userId,
+        timestamp: userMessage.timestamp.toISOString()
+      })
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      console.log('✅ n8n响应成功:', data)
+
+      // 处理n8n的响应
+      let aiResponse = ''
+
+      if (typeof data === 'string') {
+        aiResponse = data
+      } else if (data && typeof data === 'object') {
+        // 尝试解析各个字段
+        if (data.formatted_beliefs || data.formatted_inner_drives || data.formatted_collective_unconscious ||
+            data.formatted_outerself1 || data.formatted_brain || data.formatted_outerself2) {
+          // 如果有格式化字段，组合显示
+          const parts = []
+          if (data.formatted_beliefs) parts.push(data.formatted_beliefs)
+          if (data.formatted_inner_drives) parts.push(data.formatted_inner_drives)
+          if (data.formatted_collective_unconscious) parts.push(data.formatted_collective_unconscious)
+          if (data.formatted_outerself1) parts.push(data.formatted_outerself1)
+          if (data.formatted_brain) parts.push(data.formatted_brain)
+          if (data.formatted_outerself2) parts.push(data.formatted_outerself2)
+          aiResponse = parts.join('\n\n')
+        } else if (data.output) {
+          aiResponse = data.output
+        } else if (data.response) {
+          aiResponse = data.response
+        } else if (data.result) {
+          aiResponse = data.result
+        } else if (data.message) {
+          aiResponse = data.message
+        } else {
+          aiResponse = JSON.stringify(data, null, 2).replace(/[{}",]/g, '').trim()
+        }
+      } else {
+        aiResponse = '角色正在深度思考中...'
+      }
+
+      // 清理响应文本
+      if (aiResponse.startsWith('"') && aiResponse.endsWith('"')) {
+        aiResponse = aiResponse.slice(1, -1)
+      }
+      aiResponse = aiResponse.trim()
+
+      if (!aiResponse) {
+        aiResponse = '角色沉默了一下，似乎在感受内心的变化...'
+      }
+
+      return aiResponse
+    } else {
+      throw new Error(`n8n调用失败 (${response.status})`)
+    }
+  }
+
+  // 显示最终结果
+  const displayFinalResult = async (aiResponse: string) => {
+    console.log('📝 开始显示最终结果')
+
+    // 先添加一个空的消息占位符
+    const aiMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: '',
+      isUser: false,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, aiMessage])
+
+    // 流式输出效果
+    await typewriterEffect(aiResponse, 25)
+
+    // 更新消息内容
+    setMessages(prev => prev.map(msg =>
+      msg.id === aiMessage.id
+        ? { ...msg, content: aiResponse }
+        : msg
+    ))
+
+    // 清理意识转化状态（延迟清理，让用户看到完整过程）
+    clearConsciousnessState()
   }
 
   // 清理意识转化状态
@@ -502,50 +541,44 @@ export default function Home() {
               ))
             )}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white/20 text-gray-100 max-w-lg px-4 py-3 rounded-lg">
-                  <div className="text-sm mb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span>意识转化进行中...</span>
-                      <span className="text-xs text-blue-300">{streamingProgress}%</span>
-                    </div>
-
-                    {/* 进度条 */}
-                    <div className="w-full bg-white/10 rounded-full h-2 mb-3">
-                      <div
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${streamingProgress}%` }}
-                      ></div>
-                    </div>
-
-                    {/* 当前阶段指示 */}
-                    {currentStage && (
-                      <div className="text-xs text-yellow-300 mb-2">
-                        <span className="inline-block w-2 h-2 bg-yellow-300 rounded-full mr-2 animate-pulse"></span>
-                        当前阶段: {getStageLabel(currentStage)}
-                      </div>
-                    )}
+              <div className="flex justify-center my-8">
+                <div className="text-center">
+                  {/* 进度信息 */}
+                  <div className="text-gray-300 text-sm mb-2">
+                    意识转化进行中... {streamingProgress}%
                   </div>
 
-                  {/* 阶段结果列表 */}
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {Object.entries(streamingStages).map(([stage, content]) => (
-                      <div key={stage} className="text-xs">
-                        <div className="flex items-start space-x-2">
-                          <span className="text-green-400 mt-0.5">
-                            {content.startsWith('⏳') ? '⏳' : content.startsWith('❌') ? '❌' : '✓'}
-                          </span>
-                          <div className="flex-1">
-                            <span className="text-blue-200 font-medium">{getStageLabel(stage)}:</span>
-                            <div className="text-gray-300 mt-1 text-xs leading-relaxed">
-                              {content.replace(/^[⏳❌✓]\s*/, '').substring(0, 100)}
-                              {content.length > 100 ? '...' : ''}
-                            </div>
-                          </div>
+                  {/* 进度条 */}
+                  <div className="w-64 bg-white/10 rounded-full h-1 mb-6 mx-auto">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-1 rounded-full transition-all duration-500"
+                      style={{ width: `${streamingProgress}%` }}
+                    ></div>
+                  </div>
+
+                  {/* 当前阶段渐变显示区域 */}
+                  {currentStage && (
+                    <div className="min-h-[120px] flex items-center justify-center">
+                      <div
+                        className="text-center transition-all duration-500 ease-in-out transform"
+                        key={currentStage}
+                        style={{
+                          animation: 'fadeInScale 0.5s ease-in-out'
+                        }}
+                      >
+                        <div className="text-4xl mb-3 animate-pulse">
+                          {streamingStages[currentStage]?.startsWith('⏳') ? '⏳' :
+                           streamingStages[currentStage]?.startsWith('❌') ? '❌' : '✅'}
+                        </div>
+                        <div className="text-blue-200 font-medium text-xl mb-3">
+                          {getStageLabel(currentStage)}
+                        </div>
+                        <div className="text-gray-300 text-base leading-relaxed max-w-md">
+                          {streamingStages[currentStage]?.replace(/^[⏳❌✅]\s*/, '') || '处理中...'}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
