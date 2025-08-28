@@ -33,12 +33,10 @@ export default function Home() {
   const [showSetup, setShowSetup] = useState(true)
   const [testMode, setTestMode] = useState(true) // 默认启用测试模式
 
-  // SSE 相关状态
+  // 意识转化进度相关状态
   const [streamingStages, setStreamingStages] = useState<{[key: string]: string}>({})
   const [currentStage, setCurrentStage] = useState<string>('')
   const [streamingProgress, setStreamingProgress] = useState<number>(0)
-  const [currentSessionId, setCurrentSessionId] = useState<string>('')
-  const [eventSource, setEventSource] = useState<EventSource | null>(null)
 
   // 流式输出相关状态
   const [isTyping, setIsTyping] = useState<boolean>(false)
@@ -76,15 +74,7 @@ export default function Home() {
     }
   }, [])
 
-  // 清理EventSource连接
-  useEffect(() => {
-    return () => {
-      if (eventSource) {
-        console.log('🔌 组件卸载，关闭EventSource连接')
-        eventSource.close()
-      }
-    }
-  }, [eventSource])
+
 
   const handleCharacterSelect = (characterId: string) => {
     setSelectedCharacter(characterId)
@@ -208,8 +198,8 @@ export default function Home() {
         return
       }
 
-      // 使用真正的EventSource进行意识转化流程
-      await handleRealSSEConsciousnessFlow(userMessage)
+      // 使用传统HTTP调用n8n工作流
+      await handleTraditionalN8nFlow(userMessage)
 
     } catch (error) {
       console.error('发送消息错误:', error)
@@ -219,208 +209,149 @@ export default function Home() {
     }
   }
 
-  // 使用真正的EventSource进行意识转化流程
-  const handleRealSSEConsciousnessFlow = async (userMessage: Message) => {
+  // 使用传统HTTP调用n8n工作流
+  const handleTraditionalN8nFlow = async (userMessage: Message) => {
     try {
-      // 步骤1: 建立EventSource连接
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      setCurrentSessionId(sessionId)
+      console.log('🚀 开始传统HTTP意识转化流程')
 
-      console.log('🔗 建立EventSource连接:', sessionId)
+      // 模拟6个阶段的处理过程
+      const stages = [
+        { name: 'belief', label: '信念系统', description: '正在通过信念过滤器处理意图...' },
+        { name: 'drive', label: '内驱力', description: '正在注入行动能量...' },
+        { name: 'collective', label: '集体潜意识', description: '正在检索客观世界约束...' },
+        { name: 'behavior', label: '外我行为', description: '正在生成具体行动...' },
+        { name: 'mind', label: '头脑解释', description: '正在构建因果关系...' },
+        { name: 'reaction', label: '外我反应', description: '正在感受身心变化...' }
+      ]
 
-      const sseUrl = `/api/sse-stream?userId=${userId}&sessionId=${sessionId}`
-      const newEventSource = new EventSource(sseUrl)
-      setEventSource(newEventSource)
+      // 逐步显示处理进度
+      for (let i = 0; i < stages.length; i++) {
+        const stage = stages[i]
 
-      // 设置EventSource事件监听器
-      newEventSource.onopen = () => {
-        console.log('✅ EventSource连接已建立')
+        // 更新当前阶段
+        setCurrentStage(stage.name)
+        setStreamingProgress(Math.round(((i + 1) / stages.length) * 100))
+
+        // 更新阶段状态为处理中
+        setStreamingStages(prev => ({
+          ...prev,
+          [stage.name]: `⏳ ${stage.description}`
+        }))
+
+        // 模拟处理时间
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200))
+
+        // 更新阶段状态为完成
+        setStreamingStages(prev => ({
+          ...prev,
+          [stage.name]: `✅ ${stage.label}处理完成`
+        }))
       }
 
-      newEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          console.log('📨 收到EventSource消息:', data)
-          handleStreamData(data)
-        } catch (e) {
-          console.error('❌ 解析EventSource数据失败:', e, event.data)
-        }
-      }
+      // 调用n8n工作流获取最终结果
+      console.log('📡 调用n8n工作流获取最终结果')
 
-      newEventSource.onerror = (error) => {
-        console.error('❌ EventSource连接错误:', error)
-        newEventSource.close()
-        setEventSource(null)
-
-        // 如果连接失败，显示错误消息
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: 'EventSource连接失败，请刷新页面重试',
-          isUser: false,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, errorMessage])
-      }
-
-      // 等待连接建立
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('EventSource连接超时'))
-        }, 5000)
-
-        newEventSource.onopen = () => {
-          clearTimeout(timeout)
-          console.log('✅ EventSource连接已建立')
-          resolve(true)
-        }
-
-        newEventSource.onerror = () => {
-          clearTimeout(timeout)
-          reject(new Error('EventSource连接失败'))
-        }
-      })
-
-      // 步骤2: 触发意识转化流程
-      console.log('🚀 触发意识转化流程')
-      const triggerResponse = await fetch('/api/trigger-consciousness', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionId,
-          userId,
-          message: userMessage.content
+          message: userMessage.content,
+          user_id: userId,
+          timestamp: userMessage.timestamp.toISOString()
         })
       })
 
-      if (!triggerResponse.ok) {
-        const errorData = await triggerResponse.json()
-        throw new Error(`触发意识转化失败: ${errorData.error}`)
-      }
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ n8n响应成功:', data)
 
-      const result = await triggerResponse.json()
-      console.log('✅ 意识转化已触发:', result.message)
+        // 处理n8n的响应
+        let aiResponse = ''
 
-    } catch (error) {
-      console.error('❌ 真正的SSE流程错误:', error)
-
-      // 清理EventSource连接
-      if (eventSource) {
-        eventSource.close()
-        setEventSource(null)
-      }
-
-      throw error
-    }
-  }
-
-  // 处理EventSource流式数据
-  const handleStreamData = (data: any) => {
-    console.log('📨 处理EventSource数据:', data)
-
-    // 根据消息类型处理不同的事件
-    switch (data.type) {
-      case 'connection':
-        console.log('🔗 EventSource连接确认:', data.message)
-        break
-
-      case 'consciousness_start':
-        console.log('🧠 意识转化开始:', data.message)
-        setStreamingProgress(0)
-        setCurrentStage('开始')
-        break
-
-      case 'stage_update':
-        const stageName = data.stage
-        const stageLabel = getStageLabel(stageName)
-
-        setCurrentStage(stageName)
-        setStreamingProgress(data.progress || 0)
-
-        if (data.status === 'processing') {
-          // 阶段处理中
-          setStreamingStages(prev => ({
-            ...prev,
-            [stageName]: `⏳ ${data.content}`
-          }))
-        } else if (data.status === 'completed') {
-          // 阶段完成
-          setStreamingStages(prev => ({
-            ...prev,
-            [stageName]: data.content
-          }))
-          console.log(`✅ ${stageLabel}完成:`, data.content)
-        } else if (data.status === 'error') {
-          // 阶段错误
-          setStreamingStages(prev => ({
-            ...prev,
-            [stageName]: `❌ ${data.content}`
-          }))
-          console.error(`❌ ${stageLabel}错误:`, data.content)
+        if (typeof data === 'string') {
+          aiResponse = data
+        } else if (data && typeof data === 'object') {
+          // 尝试解析各个字段
+          if (data.formatted_beliefs || data.formatted_inner_drives || data.formatted_collective_unconscious ||
+              data.formatted_outerself1 || data.formatted_brain || data.formatted_outerself2) {
+            // 如果有格式化字段，组合显示
+            const parts = []
+            if (data.formatted_beliefs) parts.push(data.formatted_beliefs)
+            if (data.formatted_inner_drives) parts.push(data.formatted_inner_drives)
+            if (data.formatted_collective_unconscious) parts.push(data.formatted_collective_unconscious)
+            if (data.formatted_outerself1) parts.push(data.formatted_outerself1)
+            if (data.formatted_brain) parts.push(data.formatted_brain)
+            if (data.formatted_outerself2) parts.push(data.formatted_outerself2)
+            aiResponse = parts.join('\n\n')
+          } else if (data.output) {
+            aiResponse = data.output
+          } else if (data.response) {
+            aiResponse = data.response
+          } else if (data.result) {
+            aiResponse = data.result
+          } else if (data.message) {
+            aiResponse = data.message
+          } else {
+            aiResponse = JSON.stringify(data, null, 2).replace(/[{}",]/g, '').trim()
+          }
+        } else {
+          aiResponse = '角色正在深度思考中...'
         }
-        break
 
-      case 'session_complete':
-        // 整个意识转化流程完成
-        console.log('🎉 意识转化完成!')
+        // 清理响应文本
+        if (aiResponse.startsWith('"') && aiResponse.endsWith('"')) {
+          aiResponse = aiResponse.slice(1, -1)
+        }
+        aiResponse = aiResponse.trim()
 
-        // 先添加一个空的消息占位符
-        const messageId = (Date.now() + 1).toString()
-        const placeholderMessage: Message = {
-          id: messageId,
+        if (!aiResponse) {
+          aiResponse = '角色沉默了一下，似乎在感受内心的变化...'
+        }
+
+        // 使用流式输出效果显示最终结果
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
           content: '',
           isUser: false,
           timestamp: new Date()
         }
-        setMessages(prev => [...prev, placeholderMessage])
+        setMessages(prev => [...prev, aiMessage])
 
-        // 使用流式输出效果显示最终结果
-        typewriterEffect(data.content, 25).then(() => {
-          // 流式输出完成后，更新消息内容
-          setMessages(prev => prev.map(msg =>
-            msg.id === messageId
-              ? { ...msg, content: data.content }
-              : msg
-          ))
-        })
+        // 流式输出效果
+        await typewriterEffect(aiResponse, 25)
 
-        // 关闭EventSource连接
-        if (eventSource) {
-          eventSource.close()
-          setEventSource(null)
-        }
+        // 更新消息内容
+        setMessages(prev => prev.map(msg =>
+          msg.id === aiMessage.id
+            ? { ...msg, content: aiResponse }
+            : msg
+        ))
 
-        // 清理SSE状态
-        setTimeout(() => {
-          setStreamingStages({})
-          setCurrentStage('')
-          setStreamingProgress(0)
-          setCurrentSessionId('')
-        }, 2000)
-        break
+        // 清理意识转化状态（延迟清理，让用户看到完整过程）
+        clearConsciousnessState()
 
-      case 'error':
-        console.error('❌ 意识转化错误:', data.message)
+      } else {
+        throw new Error(`n8n调用失败 (${response.status})`)
+      }
 
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `意识转化出现错误: ${data.message}`,
-          isUser: false,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, errorMessage])
+    } catch (error) {
+      console.error('❌ 传统HTTP流程错误:', error)
 
-        // 关闭EventSource连接
-        if (eventSource) {
-          eventSource.close()
-          setEventSource(null)
-        }
-        break
-
-      default:
-        console.log('📨 未知消息类型:', data)
+      // 即使出错也要清理状态
+      clearConsciousnessState()
+      throw error
     }
+  }
+
+  // 清理意识转化状态
+  const clearConsciousnessState = () => {
+    setTimeout(() => {
+      setStreamingStages({})
+      setCurrentStage('')
+      setStreamingProgress(0)
+    }, 3000) // 延长显示时间，让用户看到完整过程
   }
 
   // 处理发送消息错误
