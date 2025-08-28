@@ -113,8 +113,17 @@ export async function POST(
 
   } catch (error) {
     console.error(`Webhook处理失败: stage=${params.stage}`, error)
+
+    // 安全地提取错误信息
+    let errorMessage = 'Webhook处理异常'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     )
   }

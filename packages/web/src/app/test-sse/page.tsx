@@ -67,7 +67,8 @@ export default function TestSSE() {
       }
     } catch (error) {
       console.error('SSE连接错误:', error)
-      setMessages(prev => [...prev, `连接错误: ${error.message}`])
+      const errorMessage = error instanceof Error ? error.message : 'SSE连接异常'
+      setMessages(prev => [...prev, `连接错误: ${errorMessage}`])
       setIsConnected(false)
     }
   }

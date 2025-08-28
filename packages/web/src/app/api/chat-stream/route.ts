@@ -163,6 +163,16 @@ async function processConsciousnessFlow(controller: ReadableStreamDefaultControl
       } catch (stageError) {
         console.error(`阶段 ${stage.name} 执行错误:`, stageError)
 
+        // 安全地提取错误信息
+        let errorMessage = '网络连接异常'
+        if (stageError instanceof Error) {
+          errorMessage = stageError.message
+        } else if (typeof stageError === 'string') {
+          errorMessage = stageError
+        } else if (stageError && typeof stageError === 'object' && 'message' in stageError) {
+          errorMessage = String(stageError.message)
+        }
+
         const errorContent = `${stage.label}：网络连接问题，跳过此阶段...`
         accumulatedResults[stage.name] = errorContent
 
@@ -171,7 +181,7 @@ async function processConsciousnessFlow(controller: ReadableStreamDefaultControl
           status: 'error',
           content: errorContent,
           progress: Math.round(((i + 1) / stages.length) * 100),
-          error: stageError.message
+          error: errorMessage
         })}\n\n`))
       }
     }
@@ -193,11 +203,22 @@ async function processConsciousnessFlow(controller: ReadableStreamDefaultControl
 
   } catch (error) {
     console.error('SSE流程全局错误:', error)
+
+    // 安全地提取错误信息
+    let errorMessage = '未知错误'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String(error.message)
+    }
+
     controller.enqueue(encoder.encode(`data: ${JSON.stringify({
       stage: 'error',
       status: 'failed',
       content: '意识转化过程出现严重错误，请稍后重试',
-      error: error.message
+      error: errorMessage
     })}\n\n`))
   } finally {
     controller.close()

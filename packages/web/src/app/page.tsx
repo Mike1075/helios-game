@@ -154,7 +154,7 @@ export default function Home() {
           ]
         }
         
-        const responses = mockResponses[selectedCharacter] || ['角色正在思考中...']
+        const responses = mockResponses[selectedCharacter as keyof typeof mockResponses] || ['角色正在思考中...']
         const mockResponse = responses[Math.floor(Math.random() * responses.length)]
         
         // 模拟网络延迟
@@ -278,11 +278,16 @@ export default function Home() {
   const handleSendMessageError = (error: any) => {
     let errorText = '抱歉，连接出现问题。'
 
+    // 安全地获取错误信息
+    const errorMsg = error instanceof Error ? error.message :
+                     typeof error === 'string' ? error :
+                     error?.message || '未知错误'
+
     if (error.name === 'AbortError') {
       errorText = '处理超时，角色可能正在深度思考中。建议启用测试模式体验功能。'
-    } else if (error.message.includes('Failed to fetch') || error.message.includes('fetch failed')) {
+    } else if (errorMsg.includes('Failed to fetch') || errorMsg.includes('fetch failed')) {
       errorText = '无法连接到服务器。请点击右上角启用"测试模式"来体验基本功能。'
-    } else if (error.message.includes('NetworkError')) {
+    } else if (errorMsg.includes('NetworkError')) {
       errorText = '网络连接问题。建议启用测试模式继续体验。'
     }
 

@@ -84,9 +84,17 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('代理服务器错误:', error)
-    
+
+    // 安全地提取错误信息
+    let errorMessage = '代理服务器异常'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+
     return NextResponse.json(
-      { error: '代理服务器错误', details: error.message },
+      { error: '代理服务器错误', details: errorMessage },
       { 
         status: 500,
         headers: {

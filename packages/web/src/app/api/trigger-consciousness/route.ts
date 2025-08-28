@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
             }
           }
         } catch (error) {
-          console.log('n8n响应处理出错，可能是新版本工作流:', error.message)
+          const errorMessage = error instanceof Error ? error.message : '响应处理出错'
+          console.log('n8n响应处理出错，可能是新版本工作流:', errorMessage)
         }
       } else {
         const errorText = await response.text()
@@ -101,13 +102,21 @@ export async function POST(request: NextRequest) {
       }
     }).catch((error) => {
       console.error(`n8n工作流调用异常: ${sessionId}`, error)
-      
+
+      // 安全地提取错误信息
+      let errorMessage = 'n8n工作流调用异常'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+
       // 发送错误信息
       sseManager.sendToConnection(sessionId, {
         type: 'error',
         status: 'error',
         message: 'n8n工作流调用失败',
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       })
     })
@@ -120,8 +129,17 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('触发意识转化流程失败:', error)
+
+    // 安全地提取错误信息
+    let errorMessage = '内部服务器错误'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     )
   }

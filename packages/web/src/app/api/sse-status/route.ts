@@ -58,8 +58,17 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('获取SSE状态失败:', error)
+
+    // 安全地提取错误信息
+    let errorMessage = 'SSE状态获取异常'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     )
   }

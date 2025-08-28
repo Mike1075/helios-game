@@ -78,12 +78,7 @@ export default function TestRealSSE() {
       }, 3000)
     }
 
-    eventSource.onclose = () => {
-      console.log('SSE连接已关闭')
-      setConnectionStatus('disconnected')
-      setIsConnected(false)
-      setMessages(prev => [...prev, '🔌 SSE连接已关闭'])
-    }
+    // EventSource没有onclose事件，连接关闭会通过onerror处理
   }
 
   // 处理SSE消息
@@ -163,7 +158,8 @@ export default function TestRealSSE() {
       }
     } catch (error) {
       console.error('触发意识转化失败:', error)
-      setMessages(prev => [...prev, `❌ 触发异常: ${error.message}`])
+      const errorMessage = error instanceof Error ? error.message : '触发异常'
+      setMessages(prev => [...prev, `❌ 触发异常: ${errorMessage}`])
     }
   }
 
