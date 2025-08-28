@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // n8n webhook URL
-    const n8nWebhookUrl = 'https://n8n.aifunbox.com/webhook/1e211602-43af-4fdc-95df-27820c65d147'
+    const n8nWebhookUrl = 'https://n8n.aifunbox.com/webhook/6ea71436-5400-43a5-b881-ca0ff2173a96'
     
     console.log('代理请求到n8n:', body)
     console.log('用户ID格式检查:', {

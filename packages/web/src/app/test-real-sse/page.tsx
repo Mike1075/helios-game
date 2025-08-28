@@ -112,7 +112,35 @@ export default function TestRealSSE() {
         
       case 'session_complete':
         setMessages(prev => [...prev, `[${timestamp}] 🎉 意识转化完成!`])
-        setMessages(prev => [...prev, `📋 最终结果:\n${data.content}`])
+
+        // 添加流式输出效果
+        const finalResult = `📋 最终结果:\n${data.content}`
+        setMessages(prev => [...prev, '📋 最终结果: '])
+
+        // 模拟流式输出
+        let index = 0
+        const streamText = data.content || ''
+        const streamInterval = setInterval(() => {
+          if (index < streamText.length) {
+            const char = streamText[index]
+            setMessages(prev => {
+              const newMessages = [...prev]
+              const lastIndex = newMessages.length - 1
+              newMessages[lastIndex] = `📋 最终结果:\n${streamText.substring(0, index + 1)}${index < streamText.length - 1 ? '|' : ''}`
+              return newMessages
+            })
+            index++
+          } else {
+            clearInterval(streamInterval)
+            setMessages(prev => {
+              const newMessages = [...prev]
+              const lastIndex = newMessages.length - 1
+              newMessages[lastIndex] = finalResult
+              return newMessages
+            })
+          }
+        }, 30)
+
         setProgress(100)
         setCurrentStage('完成')
         break

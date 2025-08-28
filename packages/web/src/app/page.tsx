@@ -40,6 +40,11 @@ export default function Home() {
   const [currentSessionId, setCurrentSessionId] = useState<string>('')
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
 
+  // 流式输出相关状态
+  const [isTyping, setIsTyping] = useState<boolean>(false)
+  const [typingContent, setTypingContent] = useState<string>('')
+  const [fullContent, setFullContent] = useState<string>('')
+
   // 预设角色数据 (与数据库中的characters表匹配)
   const characters: Character[] = [
     { id: 'introverted_student', name: '内向学生', description: '20岁大学生，害怕说错话被嘲笑，渴望被理解' },
@@ -118,6 +123,27 @@ export default function Home() {
       'complete': '转化完成'
     }
     return stageLabels[stage] || stage
+  }
+
+  // 流式输出函数 - 模拟打字机效果
+  const typewriterEffect = (content: string, speed: number = 30) => {
+    return new Promise<void>((resolve) => {
+      setIsTyping(true)
+      setTypingContent('')
+      setFullContent(content)
+
+      let index = 0
+      const timer = setInterval(() => {
+        if (index < content.length) {
+          setTypingContent(prev => prev + content[index])
+          index++
+        } else {
+          clearInterval(timer)
+          setIsTyping(false)
+          resolve()
+        }
+      }, speed)
+    })
   }
 
   const sendMessage = async () => {
@@ -339,13 +365,25 @@ export default function Home() {
         // 整个意识转化流程完成
         console.log('🎉 意识转化完成!')
 
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: data.content,
+        // 先添加一个空的消息占位符
+        const messageId = (Date.now() + 1).toString()
+        const placeholderMessage: Message = {
+          id: messageId,
+          content: '',
           isUser: false,
           timestamp: new Date()
         }
-        setMessages(prev => [...prev, aiMessage])
+        setMessages(prev => [...prev, placeholderMessage])
+
+        // 使用流式输出效果显示最终结果
+        typewriterEffect(data.content, 25).then(() => {
+          // 流式输出完成后，更新消息内容
+          setMessages(prev => prev.map(msg =>
+            msg.id === messageId
+              ? { ...msg, content: data.content }
+              : msg
+          ))
+        })
 
         // 关闭EventSource连接
         if (eventSource) {
@@ -518,7 +556,13 @@ export default function Home() {
                         : 'bg-white/20 text-gray-100'
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {/* 如果是AI消息且正在流式输出，显示打字机效果 */}
+                      {!message.isUser && isTyping && message.content === ''
+                        ? typingContent + (isTyping ? '|' : '')
+                        : message.content
+                      }
+                    </p>
                     <p className="text-xs opacity-70 mt-1">
                       {message.timestamp.toLocaleTimeString()}
                     </p>

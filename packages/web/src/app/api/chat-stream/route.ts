@@ -71,7 +71,7 @@ async function processConsciousnessFlow(controller: ReadableStreamDefaultControl
     }
   ]
 
-  const n8nWebhookUrl = 'https://n8n.aifunbox.com/webhook/1e211602-43af-4fdc-95df-27820c65d147'
+  const n8nWebhookUrl = 'https://n8n.aifunbox.com/webhook/6ea71436-5400-43a5-b881-ca0ff2173a96'
   let accumulatedResults: {[key: string]: string} = {}
 
   try {
