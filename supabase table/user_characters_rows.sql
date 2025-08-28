@@ -1,0 +1,1 @@
+INSERT INTO "public"."user_characters" ("id", "user_id", "character_id", "is_active", "current_context", "memory_context", "created_at", "updated_at") VALUES ('181b32ce-5b1a-42e9-a667-ce75e56de30b', '6a477327-52ae-4853-afda-4e53d5760ad0', 'introverted_student', 'true', null, null, '2025-08-26 16:08:09.984379+00', '2025-08-27 01:13:47.201518+00');
