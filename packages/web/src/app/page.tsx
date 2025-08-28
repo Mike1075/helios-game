@@ -37,6 +37,8 @@ export default function Home() {
   const [streamingStages, setStreamingStages] = useState<{[key: string]: string}>({})
   const [currentStage, setCurrentStage] = useState<string>('')
   const [streamingProgress, setStreamingProgress] = useState<number>(0)
+  const [currentSessionId, setCurrentSessionId] = useState<string>('')
+  const [eventSource, setEventSource] = useState<EventSource | null>(null)
 
   // 预设角色数据 (与数据库中的characters表匹配)
   const characters: Character[] = [
@@ -68,6 +70,16 @@ export default function Home() {
       setShowSetup(false)
     }
   }, [])
+
+  // 清理EventSource连接
+  useEffect(() => {
+    return () => {
+      if (eventSource) {
+        console.log('🔌 组件卸载，关闭EventSource连接')
+        eventSource.close()
+      }
+    }
+  }, [eventSource])
 
   const handleCharacterSelect = (characterId: string) => {
     setSelectedCharacter(characterId)
@@ -170,8 +182,8 @@ export default function Home() {
         return
       }
 
-      // 使用SSE进行意识转化流程
-      await handleSSEConsciousnessFlow(userMessage)
+      // 使用真正的EventSource进行意识转化流程
+      await handleRealSSEConsciousnessFlow(userMessage)
 
     } catch (error) {
       console.error('发送消息错误:', error)
@@ -181,96 +193,195 @@ export default function Home() {
     }
   }
 
-  // 处理SSE意识转化流程
-  const handleSSEConsciousnessFlow = async (userMessage: Message) => {
+  // 使用真正的EventSource进行意识转化流程
+  const handleRealSSEConsciousnessFlow = async (userMessage: Message) => {
     try {
-      const response = await fetch('/api/chat-stream', {
+      // 步骤1: 建立EventSource连接
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      setCurrentSessionId(sessionId)
+
+      console.log('🔗 建立EventSource连接:', sessionId)
+
+      const sseUrl = `/api/sse-stream?userId=${userId}&sessionId=${sessionId}`
+      const newEventSource = new EventSource(sseUrl)
+      setEventSource(newEventSource)
+
+      // 设置EventSource事件监听器
+      newEventSource.onopen = () => {
+        console.log('✅ EventSource连接已建立')
+      }
+
+      newEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📨 收到EventSource消息:', data)
+          handleStreamData(data)
+        } catch (e) {
+          console.error('❌ 解析EventSource数据失败:', e, event.data)
+        }
+      }
+
+      newEventSource.onerror = (error) => {
+        console.error('❌ EventSource连接错误:', error)
+        newEventSource.close()
+        setEventSource(null)
+
+        // 如果连接失败，显示错误消息
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: 'EventSource连接失败，请刷新页面重试',
+          isUser: false,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
+      }
+
+      // 等待连接建立
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('EventSource连接超时'))
+        }, 5000)
+
+        newEventSource.onopen = () => {
+          clearTimeout(timeout)
+          console.log('✅ EventSource连接已建立')
+          resolve(true)
+        }
+
+        newEventSource.onerror = () => {
+          clearTimeout(timeout)
+          reject(new Error('EventSource连接失败'))
+        }
+      })
+
+      // 步骤2: 触发意识转化流程
+      console.log('🚀 触发意识转化流程')
+      const triggerResponse = await fetch('/api/trigger-consciousness', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage.content,
-          user_id: userId,
-          timestamp: userMessage.timestamp.toISOString()
+          sessionId,
+          userId,
+          message: userMessage.content
         })
       })
 
-      if (!response.body) {
-        throw new Error('No response body')
+      if (!triggerResponse.ok) {
+        const errorData = await triggerResponse.json()
+        throw new Error(`触发意识转化失败: ${errorData.error}`)
       }
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
+      const result = await triggerResponse.json()
+      console.log('✅ 意识转化已触发:', result.message)
 
-      while (true) {
-        const { done, value } = await reader.read()
-
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-              handleStreamData(data)
-            } catch (e) {
-              console.error('解析SSE数据失败:', e, 'Line:', line)
-            }
-          }
-        }
-      }
     } catch (error) {
-      console.error('SSE连接错误:', error)
+      console.error('❌ 真正的SSE流程错误:', error)
+
+      // 清理EventSource连接
+      if (eventSource) {
+        eventSource.close()
+        setEventSource(null)
+      }
+
       throw error
     }
   }
 
-  // 处理流式数据
+  // 处理EventSource流式数据
   const handleStreamData = (data: any) => {
-    console.log('收到SSE数据:', data)
+    console.log('📨 处理EventSource数据:', data)
 
-    setCurrentStage(data.stage)
-    setStreamingProgress(data.progress || 0)
+    // 根据消息类型处理不同的事件
+    switch (data.type) {
+      case 'connection':
+        console.log('🔗 EventSource连接确认:', data.message)
+        break
 
-    if (data.status === 'processing') {
-      // 更新当前处理阶段
-      setStreamingStages(prev => ({
-        ...prev,
-        [data.stage]: `⏳ ${data.content}`
-      }))
-    } else if (data.status === 'completed') {
-      // 阶段完成
-      setStreamingStages(prev => ({
-        ...prev,
-        [data.stage]: data.content
-      }))
-    } else if (data.status === 'error') {
-      // 阶段错误
-      setStreamingStages(prev => ({
-        ...prev,
-        [data.stage]: `❌ ${data.content}`
-      }))
-    } else if (data.stage === 'complete') {
-      // 整个流程完成，显示最终结果
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.content,
-        isUser: false,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, aiMessage])
-
-      // 清理SSE状态
-      setTimeout(() => {
-        setStreamingStages({})
-        setCurrentStage('')
+      case 'consciousness_start':
+        console.log('🧠 意识转化开始:', data.message)
         setStreamingProgress(0)
-      }, 2000)
+        setCurrentStage('开始')
+        break
+
+      case 'stage_update':
+        const stageName = data.stage
+        const stageLabel = getStageLabel(stageName)
+
+        setCurrentStage(stageName)
+        setStreamingProgress(data.progress || 0)
+
+        if (data.status === 'processing') {
+          // 阶段处理中
+          setStreamingStages(prev => ({
+            ...prev,
+            [stageName]: `⏳ ${data.content}`
+          }))
+        } else if (data.status === 'completed') {
+          // 阶段完成
+          setStreamingStages(prev => ({
+            ...prev,
+            [stageName]: data.content
+          }))
+          console.log(`✅ ${stageLabel}完成:`, data.content)
+        } else if (data.status === 'error') {
+          // 阶段错误
+          setStreamingStages(prev => ({
+            ...prev,
+            [stageName]: `❌ ${data.content}`
+          }))
+          console.error(`❌ ${stageLabel}错误:`, data.content)
+        }
+        break
+
+      case 'session_complete':
+        // 整个意识转化流程完成
+        console.log('🎉 意识转化完成!')
+
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: data.content,
+          isUser: false,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, aiMessage])
+
+        // 关闭EventSource连接
+        if (eventSource) {
+          eventSource.close()
+          setEventSource(null)
+        }
+
+        // 清理SSE状态
+        setTimeout(() => {
+          setStreamingStages({})
+          setCurrentStage('')
+          setStreamingProgress(0)
+          setCurrentSessionId('')
+        }, 2000)
+        break
+
+      case 'error':
+        console.error('❌ 意识转化错误:', data.message)
+
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: `意识转化出现错误: ${data.message}`,
+          isUser: false,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
+
+        // 关闭EventSource连接
+        if (eventSource) {
+          eventSource.close()
+          setEventSource(null)
+        }
+        break
+
+      default:
+        console.log('📨 未知消息类型:', data)
     }
   }
 
